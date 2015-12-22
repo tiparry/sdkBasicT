@@ -1,0 +1,107 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.6</source>
+          <target>1.6</target>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+  <groupId>com.actemium</groupId>
+  <artifactId>basicTvx_sdk</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>basicTvx_sdk</name>
+  <url>http://maven.apache.org</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+  
+  <repositories>
+	     <repository>
+        	<id>actemium_nexus_release</id>
+            <name> Nexus Release Repository</name>
+            <url>http://46.105.48.117:8081/nexus/content/repositories/releases/</url>
+            <releases>
+		    	<enabled>true</enabled>
+		 	</releases>
+		 	<snapshots>
+		    	<enabled>false</enabled>
+		 	</snapshots>
+        </repository>  
+        
+        <repository>
+            <id>actemium_nexus_snapshot</id>
+            <name> Nexus Snapshot Repository</name>
+            <url>http://46.105.48.117:8081/nexus/content/repositories/snapshots/</url>
+            <releases>
+		    	<enabled>false</enabled>
+		 	</releases>
+		 	<snapshots>
+		    	<enabled>true</enabled>
+		    	<updatePolicy>always</updatePolicy>
+		    	<checksumPolicy>warn</checksumPolicy>
+		 	</snapshots>
+       </repository>
+       
+       <repository>
+           <id>actemium_nexus_thirdparty</id>
+           <name> Nexus 3rd party Repository</name>
+           <url>http://46.105.48.117:8081/nexus/content/repositories/thirdparty</url>
+           <releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+       </repository>
+        
+		<repository>
+			<id>maven-repo2</id>
+			<url>http://repo2.maven.org/maven2/</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+	
+	</repositories>
+
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>3.8.1</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+		<groupId>org.apache.httpcomponents</groupId>
+		<artifactId>httpclient</artifactId>
+		<version>4.4</version>
+	</dependency>		
+    
+    <!-- Model basic travaux -->
+	<dependency>
+	  <groupId>com.rff</groupId>
+	  <artifactId>BasicTravaux</artifactId>
+	  <version>1.0-SNAPSHOT</version>
+	</dependency>
+	
+	<!-- lib de sérialisation-->
+	<dependency>
+  		<groupId>com.actemium</groupId>
+  		<artifactId>Marshalling</artifactId>
+  		<version>1.0.0-SNAPSHOT</version>
+	</dependency>
+  </dependencies>
+</project>
