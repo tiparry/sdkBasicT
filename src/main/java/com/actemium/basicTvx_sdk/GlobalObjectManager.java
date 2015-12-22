@@ -54,7 +54,7 @@ public class GlobalObjectManager implements EntityManager {
 
     private final Map<Object, Boolean> setIdObjHasChangedIndicator = new IdentityHashMap<Object, Boolean>();
 
-    private static GlobalObjectManager instance = new GlobalObjectManager();
+    private static GlobalObjectManager instance = null;
     
 
     /**
@@ -82,9 +82,9 @@ public class GlobalObjectManager implements EntityManager {
     /**
      * Instantiates a new global object manager.
      */
-    private GlobalObjectManager(){
+    private GlobalObjectManager(String httpLogin, String httpPwd, String gisementBaseUrl){
         this.factory = new ObjectFactory();
-        this.persistanceManager = new PersistanceManagerRest();
+        this.persistanceManager = new PersistanceManagerRest(httpLogin,  httpPwd, gisementBaseUrl);
     }
 
 
@@ -103,7 +103,10 @@ public class GlobalObjectManager implements EntityManager {
      *
      * @return single instance of GlobalObjectManager
      */
-    public static GlobalObjectManager getInstance(){
+    public static GlobalObjectManager getInstance(String httpLogin, String httpPwd, String gisementBaseUrl){
+        if (instance==null){
+        	instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl);
+        }
         return instance;
     }
 

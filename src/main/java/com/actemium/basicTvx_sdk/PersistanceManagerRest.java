@@ -29,10 +29,10 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	private AnnuaireWS annuaire;
 	
 
-	public PersistanceManagerRest() {
+	public PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl) {
 		super();
-		restClient = new RestClient(System.getProperty("http.login"), System.getProperty("http.pwd"));
-		gisementTravauxBaseUrl = System.getProperty("gisement.travaux.baseurl");
+		restClient = new RestClient(httpLogin, httpPwd);
+		gisementTravauxBaseUrl = gisementBaseUrl;
 		annuaire = AnnuaireWS.getInstance();
 	}
 
