@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
+import java.util.UUID;
+
 import com.rff.basictravaux.model.bdd.ObjetPersistant;
 
 import utils.TypeExtension;
@@ -18,6 +20,18 @@ public class ArianeHelper {
 			return ((ariane.modele.base.ObjetPersistant) objet).getId().toString();
 		//return UUID.randomUUID().toString();
 		return null; 
+	}
+	
+	public static <U> boolean setId(U objet, String id) {
+		if(objet instanceof ObjetPersistant){
+			((ObjetPersistant) objet).setId(UUID.fromString(id));
+			return true;
+		}
+		if(objet instanceof ariane.modele.base.ObjetPersistant){
+			((ariane.modele.base.ObjetPersistant) objet).setId(UUID.fromString(id));
+			return true;
+		}
+		return false;
 	}
 
 	@SuppressWarnings("rawtypes")

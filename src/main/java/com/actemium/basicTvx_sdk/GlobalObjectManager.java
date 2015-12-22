@@ -49,8 +49,6 @@ public class GlobalObjectManager implements EntityManager {
     /**la gestion du cache. */
 	private GestionCache gestionCache;
 	
-	private SetQueue<Object> objetsEnDevenir;
-	
 	private final Set<Class<?>> nonRecuperableViaWebService = new HashSet<Class<?>>();
 	
     /** The persistance manager. */
@@ -89,6 +87,7 @@ public class GlobalObjectManager implements EntityManager {
     private GlobalObjectManager(String httpLogin, String httpPwd, String gisementBaseUrl){
         this.factory = new ObjectFactory();
         this.persistanceManager = new PersistanceManagerRest(httpLogin,  httpPwd, gisementBaseUrl);
+        this.gestionCache = new GestionCache();
     }
     
    
@@ -202,7 +201,7 @@ public class GlobalObjectManager implements EntityManager {
 		queueAObtenirEnProfondeur.add(obj);
 	    ExecutorService executor = Executors.newFixedThreadPool(20);
 	    for (int i = 0; i < 20; i++) {
-	        executor.submit(new NewTask(enCoursDeTraitement, queueAObtenirEnProfondeur));
+	        executor.submit(new NewTask(queueAObtenirEnProfondeur, enCoursDeTraitement));
 	    }
 	    executor.shutdown();
 	    executor.awaitTermination(1, TimeUnit.DAYS);
@@ -336,7 +335,7 @@ public class GlobalObjectManager implements EntityManager {
 
     private void chargeObjectEnProfondeur(Queue<Object> aObtenir, Queue<Object> enCoursDeTraitement) throws ParseException, InstantiationException, IllegalAccessException, IllegalArgumentException, ClassNotFoundException, RestException, IOException, SAXException, ChampNotFund, InterruptedException{
     	Object tampon = new Object();
-    	while(!aObtenir.isEmpty() && !enCoursDeTraitement.isEmpty()){
+    	while(!aObtenir.isEmpty() || !enCoursDeTraitement.isEmpty()){
     		while(!aObtenir.isEmpty()){
     			//on fait en sorte que les deux listes ne soient jamais null en meme temps...
     			enCoursDeTraitement.add(tampon);
@@ -378,8 +377,8 @@ public class GlobalObjectManager implements EntityManager {
      * @see giraudsa.marshall.deserialisation.EntityManager#metEnCache(java.lang.String, java.lang.Object)
      */
     @Override public void metEnCache(final String id, final Object obj) {
-    	if(objetsEnDevenir != null) objetsEnDevenir.add(obj);
-        this.gestionCache.metEnCache(obj);
+    	if(ArianeHelper.setId(obj, id))
+    		this.gestionCache.metEnCache(obj);
     }
     
     class NewTask implements Runnable {
