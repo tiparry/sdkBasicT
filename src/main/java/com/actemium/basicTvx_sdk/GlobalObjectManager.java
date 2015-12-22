@@ -30,8 +30,6 @@ import utils.TypeExtension;
 import utils.champ.Champ;
 
 import com.actemium.basicTvx_sdk.restclient.RestException;
-import com.rff.basictravaux.model.bouchongaia.ResponseCorrespondanceIdReseauIdGaia;
-import com.rff.basictravaux.model.travaux.projetTravaux.Activite;
 import com.rff.basictravaux.model.webservice.reponse.Reponse;
 import com.rff.basictravaux.model.webservice.requete.Requete;
 
@@ -69,15 +67,6 @@ public class GlobalObjectManager implements EntityManager {
     }
 
     /**
-     * Sets the checks for changed.
-     *
-     * @param objet the new checks for changed
-     */
-    public void setHasChanged(final Object objet){
-        this.setIdObjHasChangedIndicator.put(objet, true);
-    }
-
-    /**
      * Met l'objet en cache.
      *
      * @param <U> the generic type
@@ -100,6 +89,15 @@ public class GlobalObjectManager implements EntityManager {
 
 
     /**
+	 * Sets the checks for changed.
+	 *
+	 * @param objet the new checks for changed
+	 */
+	public void setHasChanged(final Object objet){
+	    this.setIdObjHasChangedIndicator.put(objet, true);
+	}
+
+	/**
      * Gets the single instance of GlobalObjectManager.
      *
      * @return single instance of GlobalObjectManager
@@ -122,6 +120,113 @@ public class GlobalObjectManager implements EntityManager {
     }
 
     /**
+	 * Creates the object.
+	 *
+	 * @param <U> the generic type
+	 * @param clazz the clazz
+	 * @param date the date
+	 * @return the u
+	 */
+	public <U> U createObject(final Class<U> clazz, final Date date) throws InstantiationException, IllegalAccessException{
+	    final U obj = this.factory.newObject(clazz, date);
+	    this.putCache(obj);
+	    return obj;
+	}
+
+	/**
+	 * Gets the all object by type.
+	 *
+	 * @param <U> the generic type
+	 * @param clazz the clazz
+	 * @return the all object by type
+	 */
+	public <U> List<U> getAllObject(final Class<U> clazz) throws ParseException, IllegalArgumentException, IllegalAccessException, RestException, IOException, SAXException, ChampNotFund, ClassNotFoundException {
+	    if(gestionCache.estDejaCharge(clazz)) {
+	        return gestionCache.getClasse(clazz);
+	    }
+	    final List<U> listeObj = new ArrayList<U>();
+	    final boolean estRecupereViaWebServiceDirectement = !this.nonRecuperableViaWebService.contains(clazz) && this.persistanceManager.getAllObject(clazz, this, listeObj);
+	    if(estRecupereViaWebServiceDirectement) {
+	    	gestionCache.setClasseDejaChargee(clazz);
+	    } else {
+	        this.nonRecuperableViaWebService.add(clazz);
+	    }
+	    return listeObj;
+	}
+
+	/**
+	 * Recupere un objet en fonction de son type et de son id. Le crée s'il n'existe pas.
+	 *
+	 * @param <U> the generic type
+	 * @param clazz the clazz
+	 * @param id the id
+	 * @return the object by type and id
+	 */
+	public <U> U getObjectByTypeAndId(final Class<U> clazz, final String id) throws ParseException, InstantiationException, IllegalAccessException, RestException, IOException, SAXException, IllegalArgumentException, ChampNotFund, ClassNotFoundException{
+	    if(id == null || clazz == null) return null;
+		U obj = gestionCache.getObjectCharge(clazz, id); //on regarde en cache
+	    if(obj == null)
+	    	gestionCache.metEnCacheObjectCharge(gestionCache.getObject(clazz, id)); //s'il existe mais non chargé, il est mis dans le cache des objets chargés pour éviter qu'un autre thread le charge également.
+	    	obj = persistanceManager.getObjectById(clazz, id, this); //on regarde dans le gisement
+	    if (obj == null) {
+	        obj = this.factory.newObjectById(clazz, id);//s'il n'existe pas, c'est qu'il faut le créer
+	        this.putCache(obj);
+	    }
+	    gestionCache.metEnCacheObjectCharge(obj);
+	    return obj;
+	}
+
+	@SuppressWarnings("unchecked")
+	public <U> U getObjectEnProfondeurByTypeAndId(final Class<U> clazz, final String id) throws ParseException, InstantiationException, IllegalAccessException, RestException, IOException, SAXException, IllegalArgumentException, ChampNotFund, ClassNotFoundException, InterruptedException{
+	    Object obj = getObjectByTypeAndId(clazz, id);
+	    getObjetEnProfondeur(obj);
+	    return (U) obj;
+	}
+
+	private void getObjetEnProfondeur(Object obj) throws InterruptedException {
+		Queue<Object> queueAObtenirEnProfondeur = new SetQueue<Object>();
+		Queue<Object> enCoursDeTraitement = new SetQueue<Object>();
+		queueAObtenirEnProfondeur.add(obj);
+	    ExecutorService executor = Executors.newFixedThreadPool(20);
+	    for (int i = 0; i < 20; i++) {
+	        executor.submit(new NewTask(enCoursDeTraitement, queueAObtenirEnProfondeur));
+	    }
+	    executor.shutdown();
+	    executor.awaitTermination(100, TimeUnit.MILLISECONDS);
+	}
+
+	/**
+	 * Removes the.
+	 *
+	 * @param <U> the generic type
+	 * @param l the l
+	 */
+	public <U> void remove(final U l) {
+	    this.gestionCache.remove(l);
+	    this.factory.noMoreNew(l);
+	    this.setIdObjHasChangedIndicator.remove(l);
+	}
+
+	public Reponse getReponse(Requete request, boolean enProfondeur) throws InterruptedException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, ClassNotFoundException, IOException, RestException, NotImplementedSerializeException, SAXException{
+		Reponse reponse = persistanceManager.getReponse(request, this);
+		if(enProfondeur){
+			getObjetEnProfondeur(request);
+		}
+		return reponse;
+	}
+
+	/**
+	 * Méthode pour récupérer un objet depuis le cache du global object manager.
+	 * @param id
+	 * @param clazz
+	 * @return
+	 * @see giraudsa.marshall.deserialisation.EntityManager#findObject(java.lang.String, java.lang.Class)
+	 */
+	@Override public <U> U findObject(final String id, final Class<U> clazz) {
+	    return this.gestionCache.getObject(clazz, id);
+	}
+
+	/**
      * Gets the objet to save.
      *
      * @param <U> the generic type
@@ -216,82 +321,6 @@ public class GlobalObjectManager implements EntityManager {
         return i;
     }
 
-    /**
-     * Creates the object.
-     *
-     * @param <U> the generic type
-     * @param clazz the clazz
-     * @param date the date
-     * @return the u
-     */
-    public <U> U createObject(final Class<U> clazz, final Date date) throws InstantiationException, IllegalAccessException{
-        final U obj = this.factory.newObject(clazz, date);
-        this.putCache(obj);
-        return obj;
-    }
-      
-    
-    /**
-     * Gets the all object by type.
-     *
-     * @param <U> the generic type
-     * @param clazz the clazz
-     * @return the all object by type
-     */
-    public <U> List<U> getAllObject(final Class<U> clazz) throws ParseException, IllegalArgumentException, IllegalAccessException, RestException, IOException, SAXException, ChampNotFund, ClassNotFoundException {
-        if(gestionCache.estDejaCharge(clazz)) {
-            return gestionCache.getClasse(clazz);
-        }
-        final List<U> listeObj = new ArrayList<U>();
-        final boolean estRecupereViaWebServiceDirectement = !this.nonRecuperableViaWebService.contains(clazz) && this.persistanceManager.getAllObject(clazz, this, listeObj);
-        if(estRecupereViaWebServiceDirectement) {
-        	gestionCache.setClasseDejaChargee(clazz);
-        } else {
-            this.nonRecuperableViaWebService.add(clazz);
-        }
-        return listeObj;
-    }
-
-    /**
-     * Recupere un objet en fonction de son type et de son id. Le crée s'il n'existe pas.
-     *
-     * @param <U> the generic type
-     * @param clazz the clazz
-     * @param id the id
-     * @return the object by type and id
-     */
-    public synchronized <U> U getObjectByTypeAndId(final Class<U> clazz, final String id) throws ParseException, InstantiationException, IllegalAccessException, RestException, IOException, SAXException, IllegalArgumentException, ChampNotFund, ClassNotFoundException{
-        if(id == null || clazz == null) return null;
-    	U obj = gestionCache.getObjectCharge(clazz, id); //on regarde en cache
-        if(obj == null)
-        	gestionCache.metEnCacheObjectCharge(gestionCache.getObject(clazz, id)); //s'il existe mais non chargé, il est mis dans le cache des objets chargés pour éviter qu'un autre thread le charge également.
-        	obj = persistanceManager.getObjectById(clazz, id, this); //on regarde dans le gisement
-        if (obj == null) {
-            obj = this.factory.newObjectById(clazz, id);//s'il n'existe pas, c'est qu'il faut le créer
-            this.putCache(obj);
-        }
-        gestionCache.metEnCacheObjectCharge(obj);
-        return obj;
-    }
-    
-    @SuppressWarnings("unchecked")
-	public synchronized <U> U getObjectEnProfondeurByTypeAndId(final Class<U> clazz, final String id) throws ParseException, InstantiationException, IllegalAccessException, RestException, IOException, SAXException, IllegalArgumentException, ChampNotFund, ClassNotFoundException, InterruptedException{
-        Object obj = getObjectByTypeAndId(clazz, id);    	
-        return (U) obj;
-    }
-    
-    private void getObjetEnProfondeur(Object obj) throws InterruptedException {
-    	Queue<Object> queueAObtenirEnProfondeur = new SetQueue<Object>();
-    	Queue<Object> enCoursDeTraitement = new SetQueue<Object>();
-    	queueAObtenirEnProfondeur.add(obj);
-        ExecutorService executor = Executors.newFixedThreadPool(20);
-        for (int i = 0; i < 20; i++) {
-            executor.submit(new NewTask(enCoursDeTraitement, queueAObtenirEnProfondeur));
-        }
-        executor.shutdown();
-        executor.awaitTermination(100, TimeUnit.MILLISECONDS);
-	}
-    
     private void chargeObjectEnProfondeur(Queue<Object> aObtenir, Queue<Object> enCoursDeTraitement) throws ParseException, InstantiationException, IllegalAccessException, IllegalArgumentException, ClassNotFoundException, RestException, IOException, SAXException, ChampNotFund, InterruptedException{
     	Object tampon = new Object();
     	while(!aObtenir.isEmpty() && !enCoursDeTraitement.isEmpty()){
@@ -328,53 +357,6 @@ public class GlobalObjectManager implements EntityManager {
         return this.factory.isNew(obj);
     }
 
-
-    /**
-     * Removes the.
-     *
-     * @param <U> the generic type
-     * @param l the l
-     */
-    public <U> void remove(final U l) {
-        this.gestionCache.remove(l);
-        this.factory.noMoreNew(l);
-        this.setIdObjHasChangedIndicator.remove(l);
-    }
-
-    /**
-     * recupere une activite depuis basic travaux en fonction de l'id fonctionnel. L'id fonctionnel etant l'uuid de l'objet activity de laplace.
-     * @param idFonctionnel
-     * @return
-     */
-    public Activite getActiviteByIdFonctionnel(final String idFonctionnel) throws ParseException, ClassNotFoundException, RestException, IOException,
-    SAXException, InstantiationException, IllegalAccessException {
-        Activite activite = this.persistanceManager.getObjectByIdExterne(Activite.class, idFonctionnel, this);// TODO le webservice n'existe pas encore
-        if (activite == null) {
-            activite = this.factory.newObject(Activite.class, new Date());
-            activite.setIdFonctionnel(idFonctionnel);
-        }
-        this.putCache(activite);
-        return activite;
-    }
-    
-    public Reponse getReponse(Requete request, boolean enProfondeur) throws InterruptedException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, ClassNotFoundException, IOException, RestException, NotImplementedSerializeException, SAXException{
-    	Reponse reponse = persistanceManager.getReponse(request, this);
-    	if(enProfondeur){
-    		getObjetEnProfondeur(request);
-    	}
-    	return reponse;
-    }
-
-	/**
-     * Méthode pour récupérer un objet depuis le cache du global object manager.
-     * @param id
-     * @param clazz
-     * @return
-     * @see giraudsa.marshall.deserialisation.EntityManager#findObject(java.lang.String, java.lang.Class)
-     */
-    @Override public <U> U findObject(final String id, final Class<U> clazz) {
-        return this.gestionCache.getObject(clazz, id);
-    }
 
     /**
      * Méthode qui met en cache l'objet et son id comme clef de la map du cache.

@@ -152,7 +152,7 @@ public class RestClient {
 		entity.setContentEncoding("UTF-8");
 	    post.setEntity(entity);
 		
-	    CloseableHttpResponse response = client.execute(new HttpGet(url));
+	    CloseableHttpResponse response = client.execute(post);
 		try{
 			int statusCode = response.getStatusLine().getStatusCode();
 			if (statusCode==HttpStatus.SC_NOT_FOUND){
