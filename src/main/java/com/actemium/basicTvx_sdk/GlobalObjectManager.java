@@ -30,6 +30,7 @@ import utils.TypeExtension;
 import utils.champ.Champ;
 
 import com.actemium.basicTvx_sdk.restclient.RestException;
+import com.rff.basictravaux.model.bdd.ObjetPersistant;
 import com.rff.basictravaux.model.webservice.reponse.Reponse;
 import com.rff.basictravaux.model.webservice.requete.Requete;
 
@@ -162,23 +163,24 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param id the id
 	 * @return the object by type and id
 	 */
-	public <U> U getObjectByTypeAndId(final Class<U> clazz, final String id) throws ParseException, InstantiationException, IllegalAccessException, RestException, IOException, SAXException, IllegalArgumentException, ChampNotFund, ClassNotFoundException{
+	public <U> U getObject(final Class<U> clazz, final String id) throws ParseException, InstantiationException, IllegalAccessException, RestException, IOException, SAXException, IllegalArgumentException, ChampNotFund, ClassNotFoundException{
 	    if(id == null || clazz == null) return null;
 		U obj = gestionCache.getObjectCharge(clazz, id); //on regarde en cache
 	    if(obj == null)
 	    	gestionCache.metEnCacheObjectCharge(gestionCache.getObject(clazz, id)); //s'il existe mais non chargé, il est mis dans le cache des objets chargés pour éviter qu'un autre thread le charge également.
 	    	obj = persistanceManager.getObjectById(clazz, id, this); //on regarde dans le gisement
-	    if (obj == null) {
+	    if (gestionCache.getObject(clazz, id) == null && ObjetPersistant.class.isAssignableFrom(clazz)) {
 	        obj = this.factory.newObjectById(clazz, id);//s'il n'existe pas, c'est qu'il faut le créer
 	        this.putCache(obj);
 	    }
-	    gestionCache.metEnCacheObjectCharge(obj);
+	    if(obj != null)
+	    	gestionCache.metEnCacheObjectCharge(obj);
 	    return obj;
 	}
 
 	@SuppressWarnings("unchecked")
-	public <U> U getObjectEnProfondeurByTypeAndId(final Class<U> clazz, final String id) throws ParseException, InstantiationException, IllegalAccessException, RestException, IOException, SAXException, IllegalArgumentException, ChampNotFund, ClassNotFoundException, InterruptedException{
-	    Object obj = getObjectByTypeAndId(clazz, id);
+	public <U> U getObjectEnProfondeur(final Class<U> clazz, final String id) throws ParseException, InstantiationException, IllegalAccessException, RestException, IOException, SAXException, IllegalArgumentException, ChampNotFund, ClassNotFoundException, InterruptedException{
+	    Object obj = getObject(clazz, id);
 	    getObjetEnProfondeur(obj);
 	    return (U) obj;
 	}
@@ -192,7 +194,7 @@ public class GlobalObjectManager implements EntityManager {
 	        executor.submit(new NewTask(enCoursDeTraitement, queueAObtenirEnProfondeur));
 	    }
 	    executor.shutdown();
-	    executor.awaitTermination(100, TimeUnit.MILLISECONDS);
+	    executor.awaitTermination(1, TimeUnit.DAYS);
 	}
 
 	/**
@@ -333,7 +335,7 @@ public class GlobalObjectManager implements EntityManager {
     			//
     			if(!gestionCache.isObjectChargeEnProfondeur(obj)){ //l'objet est peut etre déjà chargé en profondeur
     				gestionCache.metEnCacheObjectChargeEnProfondeur(obj); //s'il existe mais non chargé, il est mis dans le cache des objets chargés en profondeur pour éviter qu'un autre thread le charge également.
-    				getObjectByTypeAndId(obj.getClass(), ArianeHelper.getId(obj));
+    				getObject(obj.getClass(), ArianeHelper.getId(obj));//charge si possible via webservice
     				ArianeHelper.addSousObject(obj, aObtenir);
     				enCoursDeTraitement.remove(obj);
     			}else if (!estDejaEnTraitement){
