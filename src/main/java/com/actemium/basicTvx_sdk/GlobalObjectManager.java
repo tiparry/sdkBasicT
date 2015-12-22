@@ -90,6 +90,8 @@ public class GlobalObjectManager implements EntityManager {
         this.factory = new ObjectFactory();
         this.persistanceManager = new PersistanceManagerRest(httpLogin,  httpPwd, gisementBaseUrl);
     }
+    
+   
 
 
 
@@ -107,11 +109,13 @@ public class GlobalObjectManager implements EntityManager {
      *
      * @return single instance of GlobalObjectManager
      */
-    public static GlobalObjectManager getInstance(String httpLogin, String httpPwd, String gisementBaseUrl){
-        if (instance==null){
-        	instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl);
-        }
+    public static GlobalObjectManager getInstance(){
         return instance;
+    }
+    
+    
+    public static void init(String httpLogin, String httpPwd, String gisementBaseUrl){
+    	instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl);
     }
 
     /**
