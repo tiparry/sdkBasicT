@@ -24,6 +24,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.http.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
 import utils.TypeExtension;
@@ -38,6 +40,8 @@ import com.rff.basictravaux.model.webservice.requete.Requete;
  * Le manager global des objets communiquants avec basic travaux
  */
 public class GlobalObjectManager implements EntityManager {
+	
+	private static final Logger LOGGER = LoggerFactory.getLogger(GlobalObjectManager.class);
 
     /** l'usine de creation des objets. */
     private final ObjectFactory factory;
@@ -390,35 +394,25 @@ public class GlobalObjectManager implements EntityManager {
             try {
 				chargeObjectEnProfondeur(queueAObtenir, enCoursDeTraitement);
 			} catch (ParseException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				LOGGER.error("",e);
 			} catch (InstantiationException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				LOGGER.error("",e);
 			} catch (IllegalAccessException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				LOGGER.error("",e);
 			} catch (IllegalArgumentException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				LOGGER.error("",e);
 			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				LOGGER.error("",e);
 			} catch (RestException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				LOGGER.error("",e);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				LOGGER.error("",e);
 			} catch (SAXException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				LOGGER.error("",e);
 			} catch (ChampNotFund e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				LOGGER.error("",e);
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				LOGGER.error("",e);
 			}
         }   
     }

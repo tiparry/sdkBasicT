@@ -27,11 +27,15 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.actemium.basicTvx_sdk.PersistanceManagerRest;
 
 
 
 public class RestClient {
-	
+	private static final Logger LOGGER = LoggerFactory.getLogger(RestClient.class);
 	
 	private static final int HTTP_CLIENT_MAX_POOL_SIZE = 25;
 	private static boolean bouchon = false;
@@ -65,6 +69,7 @@ public class RestClient {
 	
 
 	public String get(String url) throws RestException, ParseException, IOException{
+		LOGGER.debug("Appel gisement GET " + url);
 		if(bouchon) return "";
 		HttpRequest request = new HttpGet(url);
 		CloseableHttpResponse response = client.execute(new HttpGet(url));
@@ -93,6 +98,7 @@ public class RestClient {
 
 
 	public Reader getReader(String url) throws RestException, ParseException, IOException{
+		LOGGER.debug("Appel gisement GET " + url);
 		if(bouchon) return new StringReader("[]");
 		HttpRequest request = new HttpGet(url);
 
@@ -140,6 +146,8 @@ public class RestClient {
 	}
 	
 	public Reader postReader(String url, String message) throws IOException, RestException {
+		LOGGER.debug("Appel gisement POST " + url);
+		
 		if(bouchon) return null;
 		HttpPost post = new HttpPost(url);
 		 
@@ -179,6 +187,7 @@ public class RestClient {
 	
 
 	public String post(String url, String content) throws RestException, ParseException, IOException{
+		LOGGER.debug("Appel gisement POST " + url);
 		if(bouchon) return "";
 		HttpPost post = new HttpPost(url);
 		 
@@ -217,6 +226,7 @@ public class RestClient {
 	
 	
 	public String put(String url, String content) throws ClientProtocolException, IOException, RestException{
+		LOGGER.debug("Appel gisement PUT " + url);
 		if(bouchon) return "";
 		HttpPut put = new HttpPut(url);
 		put.addHeader("Content-Type", "application/xml");

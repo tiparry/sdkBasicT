@@ -11,6 +11,7 @@ import java.io.Reader;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URLEncoder;
 import java.util.List;
+
 import org.apache.http.ParseException;
 
 import com.actemium.basicTvx_sdk.restclient.RestClient;
@@ -19,9 +20,12 @@ import com.rff.basictravaux.model.AnnuaireWS;
 import com.rff.basictravaux.model.webservice.reponse.Reponse;
 import com.rff.basictravaux.model.webservice.requete.Requete;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
 public class PersistanceManagerRest extends PersistanceManagerAbstrait {
+	private static final Logger LOGGER = LoggerFactory.getLogger(PersistanceManagerRest.class);
 	private RestClient restClient;
 	
 	private String gisementTravauxBaseUrl;
@@ -30,6 +34,7 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	
 
 	public PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl) {
+		
 		super();
 		restClient = new RestClient(httpLogin, httpPwd);
 		gisementTravauxBaseUrl = gisementBaseUrl;
@@ -117,32 +122,23 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 		try {
 			return JsonUnmarshaller.fromJson(br, entityManager);
 		} catch (InstantiationException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.error("", e);
 		} catch (IllegalAccessException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.error("", e);
 		} catch (IllegalArgumentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.error("", e);
 		} catch (InvocationTargetException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.error("", e);
 		} catch (NoSuchMethodException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.error("", e);
 		} catch (SecurityException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.error("", e);
 		} catch (NotImplementedSerializeException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.error("", e);
 		} catch (JsonHandlerException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.error("", e);
 		} catch (java.text.ParseException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.error("", e);
 		}
 		return null;
 	}
