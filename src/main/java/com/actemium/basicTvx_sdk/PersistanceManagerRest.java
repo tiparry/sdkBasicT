@@ -33,7 +33,7 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	private AnnuaireWS annuaire;
 	
 
-	public PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl) {
+	PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl) {
 		
 		super();
 		restClient = new RestClient(httpLogin, httpPwd);
@@ -44,7 +44,7 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	
 
 	@Override
-	public  <U> void save(U obj) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, IOException,
+	 <U> void save(U obj) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, IOException,
 			RestException, NotImplementedSerializeException {
 		String dataToSend = ToJson(obj);
 		String constante = annuaire.putUrlExtension(obj.getClass());
@@ -55,7 +55,7 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	}
 	
 	@Override
-	public Reponse getReponse(Requete requete, EntityManager entityManager) throws IOException, RestException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, NotImplementedSerializeException, ClassNotFoundException, SAXException {
+	Reponse getReponse(Requete requete, EntityManager entityManager) throws IOException, RestException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, NotImplementedSerializeException, ClassNotFoundException, SAXException {
 		String urn = annuaire.getRequestUrl(requete.getClass());
 		if (urn == null) {
 			return null;
@@ -72,12 +72,12 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	}
 
 	@Override
-	public <U> U getObjectById(Class<U> clazz, String id, EntityManager entityManager) throws ParseException, RestException, IOException, SAXException, ClassNotFoundException {
+	<U> U getObjectById(Class<U> clazz, String id, EntityManager entityManager) throws ParseException, RestException, IOException, SAXException, ClassNotFoundException {
 		return getObject(clazz, id, annuaire.getUrlExtension(clazz), entityManager);
 	}
 
 	@Override
-	public <U> U getObjectByIdExterne(Class<U> clazz, String id, EntityManager entityManager) throws ParseException, RestException, IOException, SAXException, ClassNotFoundException {
+	<U> U getObjectByIdExterne(Class<U> clazz, String id, EntityManager entityManager) throws ParseException, RestException, IOException, SAXException, ClassNotFoundException {
 		return getObject(clazz, URLEncoder.encode(id, "UTF-8"), annuaire.getByIdExterneUrlExtension(clazz), entityManager);
 	}
 
@@ -98,7 +98,7 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	}
 
 	@Override
-	public <U> boolean getAllObject(Class<U> clazz, EntityManager entityManager, List<U> listeARemplir) throws ParseException, RestException, IOException, SAXException, ClassNotFoundException {
+	<U> boolean getAllObject(Class<U> clazz, EntityManager entityManager, List<U> listeARemplir) throws ParseException, RestException, IOException, SAXException, ClassNotFoundException {
 		String urn = annuaire.getAllUrlExtension(clazz);
 		if (urn == null) {
 			return false;

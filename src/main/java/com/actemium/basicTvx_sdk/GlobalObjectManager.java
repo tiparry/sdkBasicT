@@ -9,19 +9,15 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.http.ParseException;
 import org.slf4j.Logger;
@@ -32,7 +28,6 @@ import utils.TypeExtension;
 import utils.champ.Champ;
 
 import com.actemium.basicTvx_sdk.restclient.RestException;
-import com.rff.basictravaux.model.bdd.ObjetPersistant;
 import com.rff.basictravaux.model.webservice.reponse.Reponse;
 import com.rff.basictravaux.model.webservice.requete.Requete;
 
@@ -44,15 +39,21 @@ public class GlobalObjectManager implements EntityManager {
 	private static final Logger LOGGER = LoggerFactory.getLogger(GlobalObjectManager.class);
 
     /** l'usine de creation des objets. */
-    private final ObjectFactory factory;
+    final ObjectFactory factory;
     
     /**la gestion du cache. */
-	private GestionCache gestionCache;
+	GestionCache gestionCache;
 	
 	private final Set<Class<?>> nonRecuperableViaWebService = new HashSet<Class<?>>();
 	
     /** The persistance manager. */
     private final PersistanceManagerAbstrait persistanceManager;
+    
+    private ExecutorService executor = Executors.newFixedThreadPool(20);
+    private Set<Object> objetEnChargement = Collections.synchronizedSet(new HashSet<>());
+    boolean estDisponible() {
+		return objetEnChargement.isEmpty();
+	}
 
     private final Map<Object, Boolean> setIdObjHasChangedIndicator = new IdentityHashMap<Object, Boolean>();
 
@@ -68,18 +69,6 @@ public class GlobalObjectManager implements EntityManager {
     private Boolean hasChanged(final Object objet){
         return this.setIdObjHasChangedIndicator.containsKey(objet);
     }
-
-    /**
-     * Met l'objet en cache.
-     *
-     * @param <U> the generic type
-     * @param obj the obj
-     */
-    private <U> void putCache(final U obj){
-    	gestionCache.metEnCache(obj);
-    }
-
-
 
     /**
      * Instantiates a new global object manager.
@@ -139,8 +128,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @return the u
 	 */
 	public <U> U createObject(final Class<U> clazz, final Date date) throws InstantiationException, IllegalAccessException{
-	    final U obj = this.factory.newObject(clazz, date);
-	    this.putCache(obj);
+	    final U obj = this.factory.newObject(clazz, date, gestionCache);
 	    return obj;
 	}
 
@@ -175,17 +163,21 @@ public class GlobalObjectManager implements EntityManager {
 	 */
 	public <U> U getObject(final Class<U> clazz, final String id) throws ParseException, InstantiationException, IllegalAccessException, RestException, IOException, SAXException, IllegalArgumentException, ChampNotFund, ClassNotFoundException{
 	    if(id == null || clazz == null) return null;
-		U obj = gestionCache.getObjectCharge(clazz, id); //on regarde en cache
-	    if(obj == null)
-	    	gestionCache.metEnCacheObjectCharge(gestionCache.getObject(clazz, id)); //s'il existe mais non chargé, il est mis dans le cache des objets chargés pour éviter qu'un autre thread le charge également.
-	    	obj = persistanceManager.getObjectById(clazz, id, this); //on regarde dans le gisement
-	    if (gestionCache.getObject(clazz, id) == null && ObjetPersistant.class.isAssignableFrom(clazz)) {
-	        obj = this.factory.newObjectById(clazz, id);//s'il n'existe pas, c'est qu'il faut le créer
-	        this.putCache(obj);
+		U obj = gestionCache.getObject(clazz, id); //on regarde en cache
+	    if(obj == null){
+	    	obj = this.factory.newObjectById(clazz, id, gestionCache);
 	    }
-	    if(obj != null)
-	    	gestionCache.metEnCacheObjectCharge(obj);
+	    nourritObjet(obj);
 	    return obj;
+	}
+	
+	private <U> void nourritObjet(U obj) throws ParseException, ClassNotFoundException, RestException, IOException, SAXException{
+		if(!gestionCache.estCharge(obj) && !gestionCache.enChargement(obj) && gestionCache.setPrisEnChargePourChargement(obj)){
+			String id = gestionCache.getId(obj);
+			Class<?> clazz = obj.getClass();
+			persistanceManager.getObjectById(clazz, id, this);
+			gestionCache.setEstCharge(obj);
+		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -196,15 +188,10 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 	private void getObjetEnProfondeur(Object obj) throws InterruptedException {
-		Queue<Object> queueAObtenirEnProfondeur = new SetQueue<Object>();
-		Queue<Object> enCoursDeTraitement = new SetQueue<Object>();
-		queueAObtenirEnProfondeur.add(obj);
-	    ExecutorService executor = Executors.newFixedThreadPool(20);
-	    for (int i = 0; i < 20; i++) {
-	        executor.submit(new NewTask(queueAObtenirEnProfondeur, enCoursDeTraitement));
+		prendEnChargePourChargementEnProfondeur(obj);
+	    while(!estDisponible()){
+	    	Thread.sleep(100);
 	    }
-	    executor.shutdown();
-	    executor.awaitTermination(1, TimeUnit.DAYS);
 	}
 
 	/**
@@ -225,17 +212,6 @@ public class GlobalObjectManager implements EntityManager {
 			getObjetEnProfondeur(request);
 		}
 		return reponse;
-	}
-
-	/**
-	 * Méthode pour récupérer un objet depuis le cache du global object manager.
-	 * @param id
-	 * @param clazz
-	 * @return
-	 * @see giraudsa.marshall.deserialisation.EntityManager#findObject(java.lang.String, java.lang.Class)
-	 */
-	@Override public <U> U findObject(final String id, final Class<U> clazz) {
-	    return this.gestionCache.getObject(clazz, id);
 	}
 
 	/**
@@ -333,27 +309,10 @@ public class GlobalObjectManager implements EntityManager {
         return i;
     }
 
-    private void chargeObjectEnProfondeur(Queue<Object> aObtenir, Queue<Object> enCoursDeTraitement) throws ParseException, InstantiationException, IllegalAccessException, IllegalArgumentException, ClassNotFoundException, RestException, IOException, SAXException, ChampNotFund, InterruptedException{
-    	Object tampon = new Object();
-    	while(!aObtenir.isEmpty() || !enCoursDeTraitement.isEmpty()){
-    		while(!aObtenir.isEmpty()){
-    			//on fait en sorte que les deux listes ne soient jamais null en meme temps...
-    			enCoursDeTraitement.add(tampon);
-    			Object obj = aObtenir.poll();
-    			boolean estDejaEnTraitement = !enCoursDeTraitement.add(obj);
-    			enCoursDeTraitement.remove(tampon);
-    			//
-    			if(!gestionCache.isObjectChargeEnProfondeur(obj)){ //l'objet est peut etre déjà chargé en profondeur
-    				gestionCache.metEnCacheObjectChargeEnProfondeur(obj); //s'il existe mais non chargé, il est mis dans le cache des objets chargés en profondeur pour éviter qu'un autre thread le charge également.
-    				getObject(obj.getClass(), ArianeHelper.getId(obj));//charge si possible via webservice
-    				ArianeHelper.addSousObject(obj, aObtenir);
-    				enCoursDeTraitement.remove(obj);
-    			}else if (!estDejaEnTraitement){
-    				enCoursDeTraitement.remove(obj);
-    			}
-    		}
-    		wait(100);
-    	}
+    private void chargeObjectEnProfondeur(Object objetATraiter) throws ParseException, InstantiationException, IllegalAccessException, IllegalArgumentException, ClassNotFoundException, RestException, IOException, SAXException, ChampNotFund, InterruptedException{
+    	nourritObjet(objetATraiter);
+    	ArianeHelper.addSousObject(objetATraiter, this);
+    	gestionCache.setChargeEnProfondeur(objetATraiter);
     }
     
     
@@ -371,103 +330,53 @@ public class GlobalObjectManager implements EntityManager {
 
 
     /**
+	 * Méthode pour récupérer un objet depuis le cache du global object manager.
+	 * @param id
+	 * @param clazz
+	 * @return
+	 * @see giraudsa.marshall.deserialisation.EntityManager#findObject(java.lang.String, java.lang.Class)
+	 */
+	@Override public <U> U findObject(final String id, final Class<U> clazz) {
+	    return this.gestionCache.getObject(clazz, id);
+	}
+
+	/**
      * Méthode qui met en cache l'objet et son id comme clef de la map du cache.
      * @param id
      * @param obj
      * @see giraudsa.marshall.deserialisation.EntityManager#metEnCache(java.lang.String, java.lang.Object)
      */
     @Override public void metEnCache(final String id, final Object obj) {
-    	if(ArianeHelper.setId(obj, id))
-    		this.gestionCache.metEnCache(obj);
+   		gestionCache.metEnCache(id, obj);
     }
     
-    class NewTask implements Runnable {
+    void addAChargerEnProfondeur(Object o) {
+		gestionCache.addAChargerEnProfondeur(o, this);
+	}
+    
+    void prendEnChargePourChargementEnProfondeur(Object o) {
+    	executor.submit(new TacheChargementProfondeur(o));//multithread
+    	//new TacheChargementProfondeur(o).run();//monothread
+	}
+    
+    class TacheChargementProfondeur implements Runnable {
     	
-    	private Queue<Object> queueAObtenir; 
-    	private Queue<Object> enCoursDeTraitement;
-        
-		public NewTask(Queue<Object> queueAObtenir, Queue<Object> enCoursDeTraitement) {
+    	private Object objetATraiter;
+    	
+		public TacheChargementProfondeur(Object objetATraiter) {
 			super();
-			this.queueAObtenir = queueAObtenir;
-			this.enCoursDeTraitement = enCoursDeTraitement;
+			objetEnChargement.add(objetATraiter);
+			this.objetATraiter = objetATraiter;
 		}
 
 		@Override
         public void run() {
             try {
-				chargeObjectEnProfondeur(queueAObtenir, enCoursDeTraitement);
-			} catch (ParseException e) {
-				LOGGER.error("",e);
-			} catch (InstantiationException e) {
-				LOGGER.error("",e);
-			} catch (IllegalAccessException e) {
-				LOGGER.error("",e);
-			} catch (IllegalArgumentException e) {
-				LOGGER.error("",e);
-			} catch (ClassNotFoundException e) {
-				LOGGER.error("",e);
-			} catch (RestException e) {
-				LOGGER.error("",e);
-			} catch (IOException e) {
-				LOGGER.error("",e);
-			} catch (SAXException e) {
-				LOGGER.error("",e);
-			} catch (ChampNotFund e) {
-				LOGGER.error("",e);
-			} catch (InterruptedException e) {
+				chargeObjectEnProfondeur(objetATraiter);
+				objetEnChargement.remove(objetATraiter);
+			} catch (ParseException | InstantiationException | IllegalAccessException | IllegalArgumentException | ClassNotFoundException | RestException | IOException | SAXException | ChampNotFund | InterruptedException e) {
 				LOGGER.error("",e);
 			}
         }   
     }
-    
-    public class SetQueue<E> implements Queue<E>{
-
-        private final Set<E> queue = new LinkedHashSet<E>();
-        @Override public synchronized int size() {return this.queue.size();}
-        @Override public synchronized boolean isEmpty() {return this.queue.isEmpty();}
-        @Override public synchronized boolean contains(final Object o) {return this.queue.contains(o);}
-        @Override public synchronized Iterator<E> iterator() {return this.queue.iterator();}
-        @Override public synchronized Object[] toArray() {return this.queue.toArray();}
-        @Override public synchronized <T> T[] toArray(final T[] a) {return this.queue.toArray(a);}
-        @Override public synchronized boolean remove(final Object o) {return this.queue.remove(o);}
-        @Override public synchronized boolean containsAll(final Collection<?> c) {return this.queue.containsAll(c);}
-        @Override public synchronized boolean addAll(final Collection<? extends E> c) {return this.queue.addAll(c);}
-        @Override public synchronized boolean removeAll(final Collection<?> c) {return this.queue.removeAll(c);}
-        @Override public synchronized boolean retainAll(final Collection<?> c) {return this.queue.retainAll(c);}
-        @Override public synchronized void clear() {this.queue.clear();}
-        @Override public synchronized boolean add(final E e) {return this.queue.add(e);}
-        @Override public synchronized boolean offer(final E e) {return this.queue.add(e);}
-        @Override public synchronized E remove() {
-            if(this.queue.isEmpty()) {
-                throw new NoSuchElementException();
-            }
-            final E e = this.queue.iterator().next();
-            this.queue.remove(e);
-            return e;
-        }
-        @Override public synchronized E poll() {
-            if(this.queue.isEmpty()) {
-                return null;
-            }
-            final E e = this.queue.iterator().next();
-            this.queue.remove(e);
-            return e;
-        }
-        @Override public synchronized E element() {
-            if(this.queue.isEmpty()) {
-                return null;
-            }
-            final E e = this.queue.iterator().next();
-            return e;
-        }
-        @Override public synchronized E peek() {
-        	if(this.queue.isEmpty()) {
-        		throw new NoSuchElementException();
-        	}
-        	final E e = this.queue.iterator().next();
-        	return e;
-        }
-    }
-
-
 }

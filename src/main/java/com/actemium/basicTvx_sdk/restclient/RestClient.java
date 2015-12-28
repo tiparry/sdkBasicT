@@ -8,10 +8,10 @@ import java.io.StringReader;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.http.HttpEntity;
-import org.apache.http.HttpRequest;
 import org.apache.http.HttpStatus;
 import org.apache.http.ParseException;
 import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.AuthenticationException;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.CredentialsProvider;
@@ -22,6 +22,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.utils.HttpClientUtils;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -30,17 +31,17 @@ import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.actemium.basicTvx_sdk.PersistanceManagerRest;
-
 
 
 public class RestClient {
 	private static final Logger LOGGER = LoggerFactory.getLogger(RestClient.class);
 	
 	private static final int HTTP_CLIENT_MAX_POOL_SIZE = 25;
+	private static final int HTTP_CLIENT_MAX_POOL_PER_ROOT = 25;
 	private static boolean bouchon = false;
 	
 	private CloseableHttpClient client;
+	private UsernamePasswordCredentials credentials;
 	
 	
 	
@@ -49,12 +50,14 @@ public class RestClient {
 		CredentialsProvider provider = new BasicCredentialsProvider();
 		UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(login,pwd);
 		provider.setCredentials(AuthScope.ANY, credentials);
+		this.credentials = credentials;
 		
 		 // Create an HttpClient with the ThreadSafeClientConnManager.
         // This connection manager must be used if more than one thread will
         // be using the HttpClient.
         PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
         cm.setMaxTotal(HTTP_CLIENT_MAX_POOL_SIZE);
+        cm.setDefaultMaxPerRoute(HTTP_CLIENT_MAX_POOL_PER_ROOT);
         //cm.setDefaultSocketConfig( SocketConfig.custom().setSoKeepAlive( true ).setSoReuseAddress( true ).setSoTimeout( 3000 ).build() 
         //cm.setValidateAfterInactivity(1); // essai pour resoudre java.net.SocketException: Software caused connection abort: recv failed
 		
@@ -68,41 +71,18 @@ public class RestClient {
 	}
 	
 
-	public String get(String url) throws RestException, ParseException, IOException{
-		LOGGER.debug("Appel gisement GET " + url);
-		if(bouchon) return "";
-		HttpRequest request = new HttpGet(url);
-		CloseableHttpResponse response = client.execute(new HttpGet(url));
-		try{
-			int statusCode = response.getStatusLine().getStatusCode();
-			if (statusCode==HttpStatus.SC_NOT_FOUND){
-				return "";
-			}
-			 if (statusCode < 200 || statusCode >= 300) {
-		            throw new RestException(statusCode);
-		     }
-	
-	        HttpEntity entity = response.getEntity();
-	        if (entity != null) {
-	        	String resp = EntityUtils.toString(entity);
-	        	//LOGGER.debug("Response : " + resp);
-	            return resp;
-	        } else {
-	            return "";
-	        }
-		} finally {
-	    	response.close();
-	    }
-
-	}
-
 
 	public Reader getReader(String url) throws RestException, ParseException, IOException{
 		LOGGER.debug("Appel gisement GET " + url);
 		if(bouchon) return new StringReader("[]");
-		HttpRequest request = new HttpGet(url);
-
-		CloseableHttpResponse response = client.execute(new HttpGet(url));
+		HttpGet request = new HttpGet(url);
+		try {
+			request.addHeader(new BasicScheme().authenticate(credentials, request, null));
+		} catch (AuthenticationException e) {
+			//n'est jamais atteind avec un BasicScheme.
+			//http://stackoverflow.com/questions/2014700/preemptive-basic-authentication-with-apache-httpclient-4
+		}
+		CloseableHttpResponse response = client.execute(request);
 		try{
 			int statusCode = response.getStatusLine().getStatusCode();
 			if (statusCode==HttpStatus.SC_NOT_FOUND){

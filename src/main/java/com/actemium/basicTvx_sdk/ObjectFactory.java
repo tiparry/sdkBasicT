@@ -36,33 +36,34 @@ public class ObjectFactory {
 		return res;
 	}
 
-	public <U> U newObjectById(Class<U> clazz, String id) throws InstantiationException, IllegalAccessException {
+	<U> U newObjectById(Class<U> clazz, String id, GestionCache cache) throws InstantiationException, IllegalAccessException {
 		U ret = clazz.newInstance();
 		setId(ret, UUID.fromString(id));
-		mapNewObject.put(ret, true);
+		cache.metEnCache(id, ret);
 		return ret;
 	}
 
 
-	public <U> U newObject(Class<U> clazz, Date date) throws InstantiationException, IllegalAccessException{
+	<U> U newObject(Class<U> clazz, Date date, GestionCache cache) throws InstantiationException, IllegalAccessException{
 		U ret = clazz.newInstance();
 		UUID id = newUuid();
 		setId(ret, id);
 		setDateCration(ret, date);
 		mapNewObject.put(ret, true);
+		cache.metEnCache(id.toString(), ret);
 		return ret;
 	}
 
-	public <U> boolean isNew(U obj){
+	<U> boolean isNew(U obj){
 		return mapNewObject.containsKey(obj);
 	}
 	
-	public <U> void noMoreNew(U obj){
+	<U> void noMoreNew(U obj){
 		mapNewObject.remove(obj);
 	}
 
 	@SuppressWarnings("unchecked")
-	public <U> U getObjetInNewObject() {
+	<U> U getObjetInNewObject() {
 		if (mapNewObject.isEmpty())
 			return null;
 		return (U) mapNewObject.entrySet().iterator().next().getValue();
