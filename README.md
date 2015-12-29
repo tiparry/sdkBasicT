@@ -1,12 +1,93 @@
-utilisation
+1- Dependance maven
+-------------------------------------------------------------------------------------------------
 
-tous les objets doivent passer par l'instance singleton du GOM.
-les méthodes publiques sont : 
+L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes dans votre projet:
 
--public void setHasChanged(Object objet) : permet de spécifier si on a modifier un objet (sera ajouté à la liste des objets à sauvegarder)
+	<!-- SDK basic Travaux-->
+	<dependency>
+			<groupId>com.actemium</groupId>
+	  		<artifactId>basicTvx_sdk</artifactId>
+	  		<version>0.0.1-SNAPSHOT</version>
+	</dependency>
 
--void saveAll() : sauvegarde tous les objets qui ont été créés ou modifié
+	<!-- Apache HTTP Client-->
+	<dependency>
+		<groupId>org.apache.httpcomponents</groupId>
+		<artifactId>httpclient</artifactId>
+		<version>4.4</version>
+	</dependency>		
+    
+    <!-- Model basic travaux -->
+	<dependency>
+	  <groupId>com.rff</groupId>
+	  <artifactId>BasicTravaux</artifactId>
+	  <version>1.0-SNAPSHOT</version>
+	</dependency>
+	
+	<!-- lib de serialisation-->
+	<dependency>
+  		<groupId>com.actemium</groupId>
+  		<artifactId>Marshalling</artifactId>
+  		<version>1.0.0-SNAPSHOT</version>
+	</dependency>
 
+
+Il faudra au préalable ajouter les repository maven suivants dans votre projet : 
+	<repository>
+        	<id>actemium_nexus_release</id>
+            <name> Nexus Release Repository</name>
+            <url>http://46.105.48.117:8081/nexus/content/repositories/releases/</url>
+            <releases>
+		    	<enabled>true</enabled>
+		 	</releases>
+		 	<snapshots>
+		    	<enabled>false</enabled>
+		 	</snapshots>
+        </repository>  
+        
+        <repository>
+            <id>actemium_nexus_snapshot</id>
+            <name> Nexus Snapshot Repository</name>
+            <url>http://46.105.48.117:8081/nexus/content/repositories/snapshots/</url>
+            <releases>
+		    	<enabled>false</enabled>
+		 	</releases>
+		 	<snapshots>
+		    	<enabled>true</enabled>
+		    	<updatePolicy>always</updatePolicy>
+		    	<checksumPolicy>warn</checksumPolicy>
+		 	</snapshots>
+       </repository>
+
+
+
+
+2- Usage de la librairie
+-----------------------------------------------------------------------------------------------
+
+Tous les objets doivent passer par l'instance singleton du GlobalObjectManager (GOM).
+
+Le GOM doit être instancié avant le premier usage de la manière suivante :
+
+	String login = "APP_CLIENT";
+	String pwd = "APP_PASSWORD";
+	String baseUrl = "http://ip:port/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/";
+	GlobalObjectManager.init(login, pwd, baseUrl);
+
+Après cette phase d'initialisation, le GOM est disponible sur le simple appel suivant :
+
+	GlobalObjectManager gom = GlobalObjectManager.getInstance();
+
+
+
+Les méthodes publiques sont : 
+
+- public void setHasChanged(Object objet) : permet de spécifier si on a modifié un objet (sera ajouté à la liste des objets à sauvegarder)
+
+- public void saveAll() : sauvegarde ou met à jour dans le gisement tous les objets qui ont été créés ou modifiés 
+
+
+-
     /**
 	 * Creates the object.
 	 *
@@ -15,32 +96,20 @@ les méthodes publiques sont :
 	 * @param date the date
 	 * @return the u
 	 */
-	public <U> U createObject(final Class<U> clazz, final Date date) throws InstantiationException, IllegalAccessException{
-	    final U obj = this.factory.newObject(clazz, date);
-	    this.putCache(obj);
-	    return obj;
-	}
-
+	public <U> U createObject(final Class<U> clazz, final Date date) 
+	   
+	   
+	   
 	/**
-	 * Gets the all object by type.
+	 * Retourne tous les objets présent dans le gisement pour le type U .
 	 *
 	 * @param <U> the generic type
 	 * @param clazz the clazz
 	 * @return the all object by type
 	 */
-	public <U> List<U> getAllObject(final Class<U> clazz) throws ParseException, IllegalArgumentException, IllegalAccessException, RestException, IOException, SAXException, ChampNotFund, ClassNotFoundException {
-	    if(gestionCache.estDejaCharge(clazz)) {
-	        return gestionCache.getClasse(clazz);
-	    }
-	    final List<U> listeObj = new ArrayList<U>();
-	    final boolean estRecupereViaWebServiceDirectement = !this.nonRecuperableViaWebService.contains(clazz) && this.persistanceManager.getAllObject(clazz, this, listeObj);
-	    if(estRecupereViaWebServiceDirectement) {
-	    	gestionCache.setClasseDejaChargee(clazz);
-	    } else {
-	        this.nonRecuperableViaWebService.add(clazz);
-	    }
-	    return listeObj;
-	}
+	public <U> List<U> getAllObject(final Class<U> clazz)
+	
+	
 
 	/**
 	 * Recupere un objet en fonction de son type et de son id. Le crée s'il n'existe pas.
@@ -50,67 +119,29 @@ les méthodes publiques sont :
 	 * @param id the id
 	 * @return the object by type and id
 	 */
-	public <U> U getObjectByTypeAndId(final Class<U> clazz, final String id) throws ParseException, InstantiationException, IllegalAccessException, RestException, IOException, SAXException, IllegalArgumentException, ChampNotFund, ClassNotFoundException{
-	    if(id == null || clazz == null) return null;
-		U obj = gestionCache.getObjectCharge(clazz, id); //on regarde en cache
-	    if(obj == null)
-	    	gestionCache.metEnCacheObjectCharge(gestionCache.getObject(clazz, id)); //s'il existe mais non chargé, il est mis dans le cache des objets chargés pour éviter qu'un autre thread le charge également.
-	    	obj = persistanceManager.getObjectById(clazz, id, this); //on regarde dans le gisement
-	    if (obj == null) {
-	        obj = this.factory.newObjectById(clazz, id);//s'il n'existe pas, c'est qu'il faut le créer
-	        this.putCache(obj);
-	    }
-	    gestionCache.metEnCacheObjectCharge(obj);
-	    return obj;
-	}
+	public <U> U getObjectByTypeAndId(final Class<U> clazz, final String id) 
 
-	@SuppressWarnings("unchecked")
-	public <U> U getObjectEnProfondeurByTypeAndId(final Class<U> clazz, final String id) throws ParseException, InstantiationException, IllegalAccessException, RestException, IOException, SAXException, IllegalArgumentException, ChampNotFund, ClassNotFoundException, InterruptedException{
-	    Object obj = getObjectByTypeAndId(clazz, id);    	
-	    return (U) obj;
-	}
 
 	/**
-	 * Removes the.
+	 * Recupere un objet de type U et tout ses fils jusqu'aux feuilles
 	 *
 	 * @param <U> the generic type
-	 * @param l the l
+	 * @param clazz the clazz
+	 * @param id the id
+	 * @return the object by type and id
 	 */
-	public <U> void remove(final U l) {
-	    this.gestionCache.remove(l);
-	    this.factory.noMoreNew(l);
-	    this.setIdObjHasChangedIndicator.remove(l);
-	}
+	public <U> U getObjectEnProfondeur(final Class<U> clazz, final String id)
+	    
 
-	public Reponse getReponse(Requete request, boolean enProfondeur) throws InterruptedException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, ClassNotFoundException, IOException, RestException, NotImplementedSerializeException, SAXException{
-		Reponse reponse = persistanceManager.getReponse(request, this);
-		if(enProfondeur){
-			getObjetEnProfondeur(request);
-		}
-		return reponse;
-	}
-
+	
+	
 	/**
-	 * Méthode pour récupérer un objet depuis le cache du global object manager.
-	 * @param id
-	 * @param clazz
-	 * @return
-	 * @see giraudsa.marshall.deserialisation.EntityManager#findObject(java.lang.String, java.lang.Class)
+	 * Poste l'objet Requete au serveur et récupere l'objet Reponse
+	 *
+	 * @param Requete
+	 * @param enProfondeur true si l'on veut récuperer toute l'arborescence de la réponse
 	 */
-	@Override public <U> U findObject(final String id, final Class<U> clazz) {
-	    return this.gestionCache.getObject(clazz, id);
-	}
+	public Reponse getReponse(Requete request, boolean enProfondeur)
 
-	/**
-     * Gets the objet to save.
-     *
-     * @param <U> the generic type
-     * @return the objet to save
-     */
-    private <U> U getObjetToSave() {
-        U ret = factory.getObjetInNewObject();
-        if (ret == null) {
-            ret = this.getObectHasChanged();
-        }
-        return ret;
-    }
+
+	

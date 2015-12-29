@@ -25,6 +25,19 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   
+   <distributionManagement>
+		     <repository>
+		     <id>actemium_nexus_release</id>
+		     <name>Internal Releases</name>
+		     <url>http://46.105.48.117:8081/nexus/content/repositories/releases/</url>
+		  </repository>
+		  <snapshotRepository>
+		     <id>actemium_nexus_snapshot</id>
+		     <name>Internal Releases</name>
+		     <url>http://46.105.48.117:8081/nexus/content/repositories/snapshots/</url>
+		  </snapshotRepository>         
+ 	</distributionManagement>
+  
   <repositories>
 	     <repository>
         	<id>actemium_nexus_release</id>

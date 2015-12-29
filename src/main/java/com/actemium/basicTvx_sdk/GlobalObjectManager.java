@@ -180,6 +180,15 @@ public class GlobalObjectManager implements EntityManager {
 		}
 	}
 
+	
+	/**
+	 * Recupere un objet de type U et tout ses fils jusqu'aux feuilles
+	 *
+	 * @param <U> the generic type
+	 * @param clazz the clazz
+	 * @param id the id
+	 * @return the object by type and id
+	 */
 	@SuppressWarnings("unchecked")
 	public <U> U getObjectEnProfondeur(final Class<U> clazz, final String id) throws ParseException, InstantiationException, IllegalAccessException, RestException, IOException, SAXException, IllegalArgumentException, ChampNotFund, ClassNotFoundException, InterruptedException{
 	    Object obj = getObject(clazz, id);
@@ -206,6 +215,13 @@ public class GlobalObjectManager implements EntityManager {
 	    this.setIdObjHasChangedIndicator.remove(l);
 	}
 
+	
+	/**
+	 * Poste l'objet Requete au serveur et récupere l'objet Reponse
+	 *
+	 * @param Requete
+	 * @param enProfondeur true si l'on veut récuperer toute l'arborescence de la réponse
+	 */
 	public Reponse getReponse(Requete request, boolean enProfondeur) throws InterruptedException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, ClassNotFoundException, IOException, RestException, NotImplementedSerializeException, SAXException{
 		Reponse reponse = persistanceManager.getReponse(request, this);
 		if(enProfondeur){
