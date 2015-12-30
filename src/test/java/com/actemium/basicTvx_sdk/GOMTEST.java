@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.http.ParseException;
 import org.xml.sax.SAXException;
@@ -15,6 +16,7 @@ import giraudsa.marshall.deserialisation.text.json.JsonUnmarshaller;
 import giraudsa.marshall.exception.ChampNotFund;
 import giraudsa.marshall.exception.JsonHandlerException;
 import giraudsa.marshall.exception.NotImplementedSerializeException;
+import giraudsa.marshall.serialisation.text.json.JsonMarshaller;
 
 public class GOMTEST {
 
@@ -26,6 +28,7 @@ public class GOMTEST {
 		String baseUrl = "http://212.83.130.104:8080/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/";
 		GlobalObjectManager.init(login, pwd, baseUrl);
 		GlobalObjectManager gom = GlobalObjectManager.getInstance();
+		gom.setDureeCache(15, TimeUnit.HOURS);
 
 		try {
 			long deb = System.currentTimeMillis();
@@ -38,6 +41,7 @@ public class GOMTEST {
 			}
 			long fin = System.currentTimeMillis();
 			System.out.println(fin - deb);
+			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.http.ParseException;
 import org.slf4j.Logger;
@@ -49,7 +50,7 @@ public class GlobalObjectManager implements EntityManager {
     /** The persistance manager. */
     private final PersistanceManagerAbstrait persistanceManager;
     
-    private ExecutorService executor = Executors.newFixedThreadPool(20);
+    private ExecutorService executor = Executors.newFixedThreadPool(10);
     private Set<Object> objetEnChargement = Collections.synchronizedSet(new HashSet<>());
     boolean estDisponible() {
 		return objetEnChargement.isEmpty();
@@ -160,14 +161,16 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param clazz the clazz
 	 * @param id the id
 	 * @return the object by type and id
+	 * @throws InterruptedException 
 	 */
-	public <U> U getObject(final Class<U> clazz, final String id) throws ParseException, InstantiationException, IllegalAccessException, RestException, IOException, SAXException, IllegalArgumentException, ChampNotFund, ClassNotFoundException{
+	public <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur) throws ParseException, InstantiationException, IllegalAccessException, RestException, IOException, SAXException, IllegalArgumentException, ChampNotFund, ClassNotFoundException, InterruptedException{
 	    if(id == null || clazz == null) return null;
 		U obj = gestionCache.getObject(clazz, id); //on regarde en cache
 	    if(obj == null){
 	    	obj = this.factory.newObjectById(clazz, id, gestionCache);
 	    }
 	    nourritObjet(obj);
+	    if(enProfondeur) getObjetEnProfondeur(obj);
 	    return obj;
 	}
 	
@@ -180,39 +183,28 @@ public class GlobalObjectManager implements EntityManager {
 		}
 	}
 
-	
-	/**
-	 * Recupere un objet de type U et tout ses fils jusqu'aux feuilles
-	 *
-	 * @param <U> the generic type
-	 * @param clazz the clazz
-	 * @param id the id
-	 * @return the object by type and id
-	 */
-	@SuppressWarnings("unchecked")
-	public <U> U getObjectEnProfondeur(final Class<U> clazz, final String id) throws ParseException, InstantiationException, IllegalAccessException, RestException, IOException, SAXException, IllegalArgumentException, ChampNotFund, ClassNotFoundException, InterruptedException{
-	    Object obj = getObject(clazz, id);
-	    getObjetEnProfondeur(obj);
-	    return (U) obj;
-	}
 
 	private void getObjetEnProfondeur(Object obj) throws InterruptedException {
-		prendEnChargePourChargementEnProfondeur(obj);
+		gestionCache.addAChargerEnProfondeur(obj, this);
 	    while(!estDisponible()){
 	    	Thread.sleep(100);
 	    }
 	}
 
 	/**
-	 * Removes the.
+	 * Purge le Cache pour éviter les fuites mémoires lorsqu'on a fini un traitement.
 	 *
 	 * @param <U> the generic type
 	 * @param l the l
 	 */
-	public <U> void remove(final U l) {
-	    this.gestionCache.remove(l);
-	    this.factory.noMoreNew(l);
-	    this.setIdObjHasChangedIndicator.remove(l);
+	public void purgeCache() {
+	    this.gestionCache.purge();
+	    this.factory.purge();
+	    this.setIdObjHasChangedIndicator.clear();
+	}
+	
+	public void setDureeCache(long duree, TimeUnit unite){
+		gestionCache.setDureeCache(unite.toMillis(duree));
 	}
 
 	

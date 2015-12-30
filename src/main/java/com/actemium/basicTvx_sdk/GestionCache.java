@@ -7,11 +7,20 @@ import java.util.Map;
 import com.actemium.basicTvx_sdk.util.BiHashMap;
 
 public class GestionCache {
+	private final static long tempsDeCacheMinimum = 1000 * 60; //une minute 
 	private long tempsDeCache = 1000 * 60 * 60; //une heure 
 	private BiHashMap<Class<?>, String, Object> classAndIdToObject = new BiHashMap<Class<?>, String, Object>();
 	private final Map<Object, Stockage> dejaCharge = new HashMap<>();
 	private Map<Class<?>, Stockage> dicoClasseDejaChargee = new HashMap<Class<?>, Stockage>();
 	
+	synchronized boolean setDureeCache(long nouveauTempsDeCache) {
+		if (nouveauTempsDeCache < tempsDeCacheMinimum){
+			tempsDeCache = tempsDeCacheMinimum;
+			return false;
+		}
+		tempsDeCache = nouveauTempsDeCache;
+		return true;
+	}
 	
 	synchronized boolean estChargeEnProfondeur(Object obj){
 		Stockage s = dejaCharge.get(obj);
@@ -65,13 +74,10 @@ public class GestionCache {
 		return dejaCharge.get(o).id;
 	}
 
-	synchronized void remove(Object obj) {
-		if (obj == null) return;
-		Stockage s = dejaCharge.get(obj);
-		String id = s.id;
-		Class<?> clazz = obj.getClass();
-		classAndIdToObject.removeObj(clazz, id);
-		dejaCharge.remove(obj);
+	synchronized void purge() {
+		classAndIdToObject.clear();
+		dejaCharge.clear();
+		dicoClasseDejaChargee.clear();
 	}
 		
 	private boolean prisEnChargePourChargementEnProfondeur(Object obj){

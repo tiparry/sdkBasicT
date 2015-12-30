@@ -68,4 +68,8 @@ public class ObjectFactory {
 			return null;
 		return (U) mapNewObject.entrySet().iterator().next().getValue();
 	}
+
+	void purge() {
+		mapNewObject.clear();
+	}
 }
