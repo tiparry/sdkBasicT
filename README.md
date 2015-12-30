@@ -171,11 +171,11 @@ Voila la liste des autres méthodes publiques disponible dans le GOM :
 
 
 	
-	3- Configuration des logs
-	-------------------------
+3- Configuration des logs
+-------------------------------------------------------------------------------------------------
 	
-	Il est possible d'obtenir des logs internes à l'usage de la librairies (basé sur log4j).
-	Ajouter pour cela les categories suivantes à votre fichier log4j.xml
+Il est possible d'obtenir des logs internes à l'usage de la librairies (basé sur log4j).
+Ajouter pour cela les categories suivantes à votre fichier log4j.xml
 	
 	<!-- Les logs du SDK BT -->
 	 <category name="com.actemium">
