@@ -85,9 +85,9 @@ public class GlobalObjectManager implements EntityManager {
 
 
     /**
-	 * Sets the checks for changed.
+	 * Indique au GOM qu'un objet a ete modifie. L'appel a saveAll provoquera alors l'update de cet objet dans le gisement
 	 *
-	 * @param objet the new checks for changed
+	 * @param objet l'objet modifie
 	 */
 	public void setHasChanged(final Object objet){
 	    this.setIdObjHasChangedIndicator.put(objet, true);
@@ -108,7 +108,7 @@ public class GlobalObjectManager implements EntityManager {
     }
 
     /**
-     * Sauvegarde les objets passés en paramètre.
+     * Sauvegarde ou update dans le gisement les objets nouveaux ou modifies.
      *
      * @param <U> the generic type
      */
@@ -160,6 +160,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param <U> the generic type
 	 * @param clazz the clazz
 	 * @param id the id
+	 * @param enProfondeur boolean permettant de provoquer une recuperation de la grappe d'objet en profondeur
 	 * @return the object by type and id
 	 * @throws InterruptedException 
 	 */
@@ -192,10 +193,8 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 	/**
-	 * Purge le Cache pour éviter les fuites mémoires lorsqu'on a fini un traitement.
+	 * Purge le Cache du GOM pour éviter les fuites mémoires lorsqu'on a fini un traitement.
 	 *
-	 * @param <U> the generic type
-	 * @param l the l
 	 */
 	public void purgeCache() {
 	    this.gestionCache.purge();

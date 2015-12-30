@@ -1,4 +1,4 @@
-1- Dependance maven
+1- Librairies à utiliser - Dependance maven
 -------------------------------------------------------------------------------------------------
 
 L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes dans votre projet:
@@ -65,6 +65,9 @@ Il faudra au préalable ajouter les repository maven suivants dans votre projet 
 2- Usage de la librairie
 -----------------------------------------------------------------------------------------------
 
+	2.1- Initialisation du GOM
+	---------------------------
+
 Tous les objets doivent passer par l'instance singleton du GlobalObjectManager (GOM).
 
 Le GOM doit être instancié avant le premier usage de la manière suivante :
@@ -77,17 +80,48 @@ Le GOM doit être instancié avant le premier usage de la manière suivante :
 Après cette phase d'initialisation, le GOM est disponible sur le simple appel suivant :
 
 	GlobalObjectManager gom = GlobalObjectManager.getInstance();
+	
+	
+	2.2 - Gestion du cache
+	----------------------
+	
+	La durée de cache par défaut des objets dans le GOM est de 1h. Il est possible de modifier cette valeur en appelant :
+	gom.setDureeCache(15, TimeUnit.HOURS); // durée du cache à 15h
+	La valeur du cache minimum est de 1 minute. 
+	
+	Afin d'éviter au GOM d'occuper toujours plus de mémoire au fil du temps si la JVM n'est jamais redémarrée, il est nécessaire d'invoquer la méthode suivante
+	en fin de traitement pour nettoyer le cache. 
+	
+	/**
+	 * Purge le Cache du GOM pour éviter les fuites mémoires lorsqu'on a fini un traitement.
+	 *
+	 */
+	public void purgeCache()
 
 
+	
+	2.2 - Autres méthodes publiques du GOM
+	--------------------------------------
 
-Les méthodes publiques sont : 
+Voila la liste des autres méthodes publiques disponible dans le GOM : 
 
-- public void setHasChanged(Object objet) : permet de spécifier si on a modifié un objet (sera ajouté à la liste des objets à sauvegarder)
+	/**
+	 * Indique au GOM qu'un objet a ete modifie. L'appel a saveAll provoquera alors l'update de cet objet dans le gisement
+	 *
+	 * @param objet l'objet modifie
+	 */
+	public void setHasChanged(final Object objet)
 
-- public void saveAll() : sauvegarde ou met à jour dans le gisement tous les objets qui ont été créés ou modifiés 
 
+ 	/**
+     * Sauvegarde ou update dans le gisement les objets nouveaux ou modifies.
+     *
+     * @param <U> the generic type
+     */
+    public <U> void saveAll()
+    
+     
 
--
     /**
 	 * Creates the object.
 	 *
@@ -117,31 +151,46 @@ Les méthodes publiques sont :
 	 * @param <U> the generic type
 	 * @param clazz the clazz
 	 * @param id the id
+	 * @param enProfondeur boolean permettant de provoquer une recuperation de la grappe d'objet en profondeur
 	 * @return the object by type and id
+	 * @throws InterruptedException 
 	 */
-	public <U> U getObjectByTypeAndId(final Class<U> clazz, final String id) 
+	public <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur)
 
 
-	/**
-	 * Recupere un objet de type U et tout ses fils jusqu'aux feuilles
-	 *
-	 * @param <U> the generic type
-	 * @param clazz the clazz
-	 * @param id the id
-	 * @return the object by type and id
-	 */
-	public <U> U getObjectEnProfondeur(final Class<U> clazz, final String id)
-	    
-
+	 
 	
 	
 	/**
 	 * Poste l'objet Requete au serveur et récupere l'objet Reponse
 	 *
 	 * @param Requete
-	 * @param enProfondeur true si l'on veut récuperer toute l'arborescence de la réponse
+	 * @param enProfondeur true si l'on veut récuperer toute la grappe de la réponse
 	 */
 	public Reponse getReponse(Requete request, boolean enProfondeur)
 
 
+	
+	3- Configuration des logs
+	-------------------------
+	
+	Il est possible d'obtenir des logs internes à l'usage de la librairies (basé sur log4j).
+	Ajouter pour cela les categories suivantes à votre fichier log4j.xml
+	
+	<!-- Les logs du SDK BT -->
+	 <category name="com.actemium">
+    	<priority value="debug"/>
+   	</category>
+   	
+     <!-- Les logs du client apache -->
+     <category name="org.apache">
+    	<priority value="debug"/>
+   	</category>
+   	
+    <!-- Les logs du Serialiseur/Deserialiseur -->
+    <category name="giraudsa">
+    	<priority value="debug"/>
+	</category>
+	
+	
 	
