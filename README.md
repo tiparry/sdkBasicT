@@ -105,12 +105,6 @@ Après cette phase d'initialisation, le GOM est disponible sur le simple appel s
 
 Voila la liste des autres méthodes publiques disponible dans le GOM : 
 
-	/**
-	 * Indique au GOM qu'un objet a ete modifie. L'appel a saveAll provoquera alors l'update de cet objet dans le gisement
-	 *
-	 * @param objet l'objet modifie
-	 */
-	public void setHasChanged(final Object objet)
 
 
  	/**
@@ -130,7 +124,7 @@ Voila la liste des autres méthodes publiques disponible dans le GOM :
 	 * @param date the date
 	 * @return the u
 	 */
-	public <U> U createObject(final Class<U> clazz, final Date date) 
+	 public <U> U createObject(final Class<U> clazz, final Date date) 
 	   
 	   
 	   
@@ -158,7 +152,29 @@ Voila la liste des autres méthodes publiques disponible dans le GOM :
 	public <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur)
 
 
+	/**
+	 * supprime un objet du cache
+	 * @param obj
+	 */
+	 public void remove(Object obj)
 	 
+	 
+	 /**
+     * Verifie si un objet est nouveau (c'est à dire s'il a été fabriqué localement).
+     *
+     * @param <U> the generic type
+     * @param obj the obj
+     * @return true, if is new
+     */
+     public <U> boolean isNew(final U obj)
+     
+     /**
+     * verifie si un objet a été modifié depuis son chargement du gisement
+     *
+     * @param objet the objet
+     * @return the boolean
+     */
+     public boolean hasChanged(final Object objet){
 	
 	
 	/**

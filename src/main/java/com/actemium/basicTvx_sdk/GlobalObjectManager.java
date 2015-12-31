@@ -58,7 +58,7 @@ public class GlobalObjectManager implements EntityManager {
     
 
     /**
-     * Checks for changed.
+     * verifie si un objet a été modifié depuis son chargement du gisement
      *
      * @param objet the objet
      * @return the boolean
@@ -187,6 +187,10 @@ public class GlobalObjectManager implements EntityManager {
 	    this.gestionCache.purge();
 	}
 	
+	/**
+	 * supprime un objet du cache
+	 * @param obj
+	 */
 	public void remove(Object obj){
 		gestionCache.remove(obj);
 	}
@@ -298,13 +302,13 @@ public class GlobalObjectManager implements EntityManager {
     
     
     /**
-     * Checks if is new.
+     * Verifie si un objet est nouveau (c'est à dire s'il a été fabriqué localement).
      *
      * @param <U> the generic type
      * @param obj the obj
      * @return true, if is new
      */
-    private <U> boolean isNew(final U obj) {
+    public <U> boolean isNew(final U obj) {
         return gestionCache.isNew(obj);
     }
 
