@@ -1,15 +1,11 @@
 package com.actemium.basicTvx_sdk;
 
 import java.util.Date;
-import java.util.IdentityHashMap;
-import java.util.Map;
 import java.util.UUID;
 import com.rff.basictravaux.model.bdd.ObjetPersistant;
 
 public class ObjectFactory {
 
-	private Map<Object, Boolean> mapNewObject = new IdentityHashMap<Object, Boolean>();
-	
 	private <U> void setId(U ret, UUID id) {
 		if(ret instanceof ObjetPersistant)
 			((ObjetPersistant) ret).setId(id);
@@ -39,7 +35,7 @@ public class ObjectFactory {
 	<U> U newObjectById(Class<U> clazz, String id, GestionCache cache) throws InstantiationException, IllegalAccessException {
 		U ret = clazz.newInstance();
 		setId(ret, UUID.fromString(id));
-		cache.metEnCache(id, ret);
+		cache.metEnCache(id, ret, true);
 		return ret;
 	}
 
@@ -49,27 +45,7 @@ public class ObjectFactory {
 		UUID id = newUuid();
 		setId(ret, id);
 		setDateCration(ret, date);
-		mapNewObject.put(ret, true);
-		cache.metEnCache(id.toString(), ret);
+		cache.metEnCache(id.toString(), ret, true);
 		return ret;
-	}
-
-	<U> boolean isNew(U obj){
-		return mapNewObject.containsKey(obj);
-	}
-	
-	<U> void noMoreNew(U obj){
-		mapNewObject.remove(obj);
-	}
-
-	@SuppressWarnings("unchecked")
-	<U> U getObjetInNewObject() {
-		if (mapNewObject.isEmpty())
-			return null;
-		return (U) mapNewObject.entrySet().iterator().next().getValue();
-	}
-
-	void purge() {
-		mapNewObject.clear();
 	}
 }

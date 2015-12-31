@@ -1,10 +1,19 @@
 package com.actemium.basicTvx_sdk;
 
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.UUID;
+
 import com.actemium.basicTvx_sdk.util.BiHashMap;
+import giraudsa.marshall.exception.NotImplementedSerializeException;
+import giraudsa.marshall.serialisation.text.json.JsonMarshaller;
 
 public class GestionCache {
 	private final static long tempsDeCacheMinimum = 1000 * 60; //une minute 
@@ -54,12 +63,17 @@ public class GestionCache {
 		}
 	}
 	
-	synchronized void metEnCache(String id, Object obj){
+	synchronized void metEnCache(String id, Object obj, boolean estNouveau){
 		if (obj == null || id == null || id.length() == 0) return;
 		Class<?> clazz = obj.getClass();
 		classAndIdToObject.put(clazz, id, obj);
 		if(!dejaCharge.containsKey(obj)){
+			Stockage s = new Stockage(obj, id);
+			s.isNew = estNouveau;
 			dejaCharge.put(obj, new Stockage(obj, id));
+		}else{
+			Stockage s = dejaCharge.get(obj);
+			s.isNew = estNouveau;
 		}
 	}
 
@@ -79,7 +93,40 @@ public class GestionCache {
 		dejaCharge.clear();
 		dicoClasseDejaChargee.clear();
 	}
-		
+	
+	synchronized boolean aChangeDepuisChargement(Object obj){
+		Stockage s = dejaCharge.get(obj);
+		return s.aChangeDepuisChargement();
+	}
+	
+	synchronized Set<Object> objetsModifiesDepuisChargementOuNouveau(){
+		Set<Object> objetsModifies = new LinkedHashSet<>();
+		for(Entry<Object, Stockage> entry : dejaCharge.entrySet()){
+			Object o = entry.getKey();
+			Stockage s = entry.getValue();
+			if(s.estCharge() && s.aChangeDepuisChargement() || s.isNew){
+				objetsModifies.add(o);
+			}
+		}
+		return objetsModifies;
+	}
+	synchronized void setEstEnregistreDansGisement(Object obj){
+		setEstCharge(obj);
+	}
+	synchronized boolean isNew(Object obj) {
+		Stockage s = dejaCharge.get(obj);
+		return s.isNew;
+	}
+
+	synchronized void remove(Object obj) {
+		if(obj == null) return;
+		Stockage s = dejaCharge.get(obj);
+		Class<?> clazz = obj.getClass();
+		String id = s.id;
+		classAndIdToObject.removeObj(clazz, id);
+		dejaCharge.remove(obj);
+	}
+	
 	private boolean prisEnChargePourChargementEnProfondeur(Object obj){
 		Stockage s = dejaCharge.get(obj);
 		return s.prisEnChargePourChargementEnProfondeur();
@@ -88,21 +135,29 @@ public class GestionCache {
 		Stockage s = dejaCharge.get(obj);
 		s.setPrisEnChargePourChargementEnProfondeur();
 	}
+	
 	public synchronized boolean  estDejaCharge(Class<?> clazz) {
-		return dicoClasseDejaChargee.containsKey(clazz) && (dicoClasseDejaChargee.get(clazz).getObject() != null);
+		return dicoClasseDejaChargee.containsKey(clazz) && !(dicoClasseDejaChargee.get(clazz).isObsolete());
 	}
-	public synchronized void setClasseDejaChargee(Class<?> clazz){
+	synchronized void setClasseDejaChargee(Class<?> clazz){
 		dicoClasseDejaChargee.put(clazz, new Stockage(clazz, clazz.getName()));
 	}
-	public synchronized <U> List<U> getClasse(Class<U> clazz){
+	@SuppressWarnings("unchecked")
+	synchronized <U> List<U> getClasse(Class<U> clazz){
 		List<U> ret = new ArrayList<U>();
-		//TODO
+		for(Entry<Object, Stockage> entry : dejaCharge.entrySet()){
+			Object o = entry.getKey();
+			if (clazz.isInstance(o))
+				ret.add((U) o);
+		}
 		return ret;
 	}
 	
 	private class Stockage{
 		private Object obj;
 		private String id;
+		private String hash;
+		private boolean isNew = false;
 		private boolean estChargeEnProfondeur = false;
 		private boolean estCharge = false;
 		private long dateChargement = 0;
@@ -111,9 +166,6 @@ public class GestionCache {
 		private Stockage(Object obj, String id){
 			this.obj = obj;
 			this.id = id;
-		}
-		private Object getObject(){
-			return obj;
 		}
 		private boolean estChargeEnProfondeur(){
 			return isObsolete() ? false : estChargeEnProfondeur ;
@@ -143,9 +195,28 @@ public class GestionCache {
 			dateChargement = System.currentTimeMillis();
 			prisEnChargePourChargement = false;
 			estCharge = true;
+			hash = calculHash();
 		}
 		private boolean isObsolete(){
+			if(isNew) return false;
 			return System.currentTimeMillis() - dateChargement > tempsDeCache;
+		}
+		
+		private String calculHash() {
+			String ret;
+			try {
+				ret = JsonMarshaller.ToJson(obj);
+			} catch (IllegalArgumentException | IllegalAccessException | InstantiationException | InvocationTargetException | NoSuchMethodException | SecurityException | IOException | NotImplementedSerializeException e) {
+				ret = UUID.randomUUID().toString(); //on n'arrive pas a creer un id, donc il sera sauvegardé automatiquement
+			}
+			return ret;
+		}
+		
+		private boolean aChangeDepuisChargement(){
+			if(estCharge()){
+				return hash.equals(calculHash());
+			}
+			return true;
 		}
 	}
 }

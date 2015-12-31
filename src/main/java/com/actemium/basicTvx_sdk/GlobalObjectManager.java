@@ -12,9 +12,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -56,8 +54,6 @@ public class GlobalObjectManager implements EntityManager {
 		return objetEnChargement.isEmpty();
 	}
 
-    private final Map<Object, Boolean> setIdObjHasChangedIndicator = new IdentityHashMap<Object, Boolean>();
-
     private static GlobalObjectManager instance = null;
     
 
@@ -67,8 +63,8 @@ public class GlobalObjectManager implements EntityManager {
      * @param objet the objet
      * @return the boolean
      */
-    private Boolean hasChanged(final Object objet){
-        return this.setIdObjHasChangedIndicator.containsKey(objet);
+    public boolean hasChanged(final Object objet){
+        return gestionCache.aChangeDepuisChargement(objet);
     }
 
     /**
@@ -80,19 +76,6 @@ public class GlobalObjectManager implements EntityManager {
         this.gestionCache = new GestionCache();
     }
     
-   
-
-
-
-    /**
-	 * Indique au GOM qu'un objet a ete modifie. L'appel a saveAll provoquera alors l'update de cet objet dans le gisement
-	 *
-	 * @param objet l'objet modifie
-	 */
-	public void setHasChanged(final Object objet){
-	    this.setIdObjHasChangedIndicator.put(objet, true);
-	}
-
 	/**
      * Gets the single instance of GlobalObjectManager.
      *
@@ -113,10 +96,11 @@ public class GlobalObjectManager implements EntityManager {
      * @param <U> the generic type
      */
     public <U> void saveAll() throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, IOException, RestException, NotImplementedSerializeException {
-        U obj = this.getObjetToSave();
+        Set<Object> objetsASauvegarder = gestionCache.objetsModifiesDepuisChargementOuNouveau();
+    	U obj = this.getObjetToSave(objetsASauvegarder);
         while(obj != null){
-            this.save(obj);
-            obj = this.getObjetToSave();
+            this.save(obj, objetsASauvegarder);
+            obj = this.getObjetToSave(objetsASauvegarder);
         }
     }
 
@@ -150,6 +134,9 @@ public class GlobalObjectManager implements EntityManager {
 	    	gestionCache.setClasseDejaChargee(clazz);
 	    } else {
 	        this.nonRecuperableViaWebService.add(clazz);
+	    }
+	    for(Object o : listeObj){
+	    	gestionCache.setEstCharge(o);//on dit au cache que c'est chargé...
 	    }
 	    return listeObj;
 	}
@@ -198,8 +185,10 @@ public class GlobalObjectManager implements EntityManager {
 	 */
 	public void purgeCache() {
 	    this.gestionCache.purge();
-	    this.factory.purge();
-	    this.setIdObjHasChangedIndicator.clear();
+	}
+	
+	public void remove(Object obj){
+		gestionCache.remove(obj);
 	}
 	
 	public void setDureeCache(long duree, TimeUnit unite){
@@ -223,31 +212,19 @@ public class GlobalObjectManager implements EntityManager {
 
 	/**
      * Gets the objet to save.
+	 * @param objetsASauvegarder 
      *
      * @param <U> the generic type
      * @return the objet to save
      */
-    private <U> U getObjetToSave() {
-        U ret = factory.getObjetInNewObject();
-        if (ret == null) {
-            ret = this.getObectHasChanged();
-        }
-        return ret;
+    @SuppressWarnings("unchecked")
+	private <U> U getObjetToSave(Set<Object> objetsASauvegarder) {
+        if(objetsASauvegarder.iterator().hasNext())
+        	return (U) objetsASauvegarder.iterator().next();
+        return null;
     }
 
-    /**
-     * Gets the obect has changed.
-     *
-     * @param <U> the generic type
-     * @return the obect has changed
-     */
-    @SuppressWarnings("unchecked")
-	private <U> U getObectHasChanged() {
-        if (this.setIdObjHasChangedIndicator.isEmpty()) {
-            return null;
-        }
-        return (U) setIdObjHasChangedIndicator.entrySet().iterator().next().getKey();       
-    }
+   
 
     /**
      * Save.
@@ -256,8 +233,8 @@ public class GlobalObjectManager implements EntityManager {
      * @param value the value
      * @return the int
      */
-    private <U> int save(final U value) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, IOException, RestException, NotImplementedSerializeException {
-        return this.save(value, this.hasChanged(value));
+    private <U> void save(final U value, Set<Object> objetsASauvegarder) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, IOException, RestException, NotImplementedSerializeException {
+        this.save(value, this.hasChanged(value), objetsASauvegarder);
     }
 
     /**
@@ -268,15 +245,13 @@ public class GlobalObjectManager implements EntityManager {
      * @param hasChanged the has changed
      * @return the int
      */
-    private <U> int save(final U l, final boolean hasChanged) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, IOException, RestException, NotImplementedSerializeException {
+    private <U> void save(final U l, final boolean hasChanged, Set<Object> objetsASauvegarder) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, IOException, RestException, NotImplementedSerializeException {
         if(this.isNew(l) || hasChanged){
-            this.factory.noMoreNew(ArianeHelper.getId(l));
-            this.setIdObjHasChangedIndicator.remove(l);
-            final int s = this.saveReferences(l, TypeRelation.COMPOSITION);
+            gestionCache.setEstEnregistreDansGisement(l);
+            objetsASauvegarder.remove(l);
+            this.saveReferences(l, TypeRelation.COMPOSITION, objetsASauvegarder);
             this.persistanceManager.save(l);
-            return s+1;
         }
-        return 0;
     }
 
     /**
@@ -287,8 +262,7 @@ public class GlobalObjectManager implements EntityManager {
      * @param relation the relation
      * @return the int
      */
-    private <U> int saveReferences(final U l, final TypeRelation relation) throws IllegalArgumentException, IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException, SecurityException, IOException, RestException, NotImplementedSerializeException {
-        int i = 0;
+    private <U> void saveReferences(final U l, final TypeRelation relation, Set<Object> objetsASauvegarder) throws IllegalArgumentException, IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException, SecurityException, IOException, RestException, NotImplementedSerializeException {
         if(relation == TypeRelation.COMPOSITION){
             final List<Champ> champs = TypeExtension.getSerializableFields(l.getClass());
             for(final Champ champ : champs){
@@ -298,22 +272,21 @@ public class GlobalObjectManager implements EntityManager {
                         final Iterable<?> collection = (Iterable<?>) champ.get(l);
                         if(collection != null){
                             for(final Object objet : collection) {
-                                i += this.saveReferences(objet, champ.relation);
+                                this.saveReferences(objet, champ.relation, objetsASauvegarder);
                             }
                         }
                     }else if (type.getPackage() == null || ! type.getPackage().getName().startsWith("System")) {//object
                         final Object toSave = champ.get(l);
                         if(toSave != null) {
-                            i += this.saveReferences(champ.get(l), champ.relation);
+                            this.saveReferences(champ.get(l), champ.relation, objetsASauvegarder);
                         }
                     }
 
                 }
             }
         }else{
-            i = this.save(l, this.hasChanged(l));
+            this.save(l, this.hasChanged(l), objetsASauvegarder);
         }
-        return i;
     }
 
     private void chargeObjectEnProfondeur(Object objetATraiter) throws ParseException, InstantiationException, IllegalAccessException, IllegalArgumentException, ClassNotFoundException, RestException, IOException, SAXException, ChampNotFund, InterruptedException{
@@ -332,7 +305,7 @@ public class GlobalObjectManager implements EntityManager {
      * @return true, if is new
      */
     private <U> boolean isNew(final U obj) {
-        return this.factory.isNew(obj);
+        return gestionCache.isNew(obj);
     }
 
 
@@ -354,7 +327,7 @@ public class GlobalObjectManager implements EntityManager {
      * @see giraudsa.marshall.deserialisation.EntityManager#metEnCache(java.lang.String, java.lang.Object)
      */
     @Override public void metEnCache(final String id, final Object obj) {
-   		gestionCache.metEnCache(id, obj);
+   		gestionCache.metEnCache(id, obj, false);
     }
     
     void addAChargerEnProfondeur(Object o) {
