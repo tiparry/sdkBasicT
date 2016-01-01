@@ -117,6 +117,10 @@ public class GestionCache {
 		Stockage s = dejaCharge.get(obj);
 		return s.isNew;
 	}
+	synchronized void setNotNew(Object obj) {
+		Stockage s = dejaCharge.get(obj);
+		s.isNew = false;
+	}
 
 	synchronized void remove(Object obj) {
 		if(obj == null) return;
@@ -136,7 +140,7 @@ public class GestionCache {
 		s.setPrisEnChargePourChargementEnProfondeur();
 	}
 	
-	public synchronized boolean  estDejaCharge(Class<?> clazz) {
+	synchronized boolean  estDejaCharge(Class<?> clazz) {
 		return dicoClasseDejaChargee.containsKey(clazz) && !(dicoClasseDejaChargee.get(clazz).isObsolete());
 	}
 	synchronized void setClasseDejaChargee(Class<?> clazz){

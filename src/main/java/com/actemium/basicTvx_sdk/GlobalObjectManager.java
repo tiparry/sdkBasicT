@@ -321,7 +321,10 @@ public class GlobalObjectManager implements EntityManager {
 	 * @see giraudsa.marshall.deserialisation.EntityManager#findObject(java.lang.String, java.lang.Class)
 	 */
 	@Override public <U> U findObject(final String id, final Class<U> clazz) {
-	    return this.gestionCache.getObject(clazz, id);
+	    U obj = this.gestionCache.getObject(clazz, id);
+	    if(obj != null)
+	    	this.gestionCache.setNotNew(obj);
+	    return obj;
 	}
 
 	/**
