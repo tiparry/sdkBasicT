@@ -163,7 +163,7 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	
 	private <U> U hackCorte(Class<U> clazz, String id, EntityManager entityManager) throws ParseException, RestException, IOException {
 		if(gaiaUrl != null && RessourceAbstraite.class.isAssignableFrom(clazz)){
-			return extractIdReseau(clazz, id, ressourceAbstraiteGaia, entityManager);
+			return extractIdReseau(clazz, id, gaiaUrl, entityManager);
 		}
 		return null;
 	}
