@@ -83,7 +83,7 @@ Après cette phase d'initialisation, le GOM est disponible sur le simple appel s
 	
 On peut demander au GOM de nourrir automatiquement les id Reseau lorsqu'on fait un appel en profondeur d'un objet en faisant des requetes au gisement GAIA. Il faut configurer le serveur de gisement Gaia.
 	
-	gom.nourrirIdReseau("https://int-ws-gaia.rff.ferrenew", "BASIC2T_2014", "!h=e3MpWmp");
+	gom.nourrirIdReseau("https://int-ws-gaia.rff.ferre", "BASIC2T_2014", "!h=e3MpWmp");
 	
 	2.2 - Gestion du cache
 	----------------------
