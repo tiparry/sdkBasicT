@@ -46,11 +46,13 @@ public class RestClient {
 	
 	
 	
+	
 	public RestClient(String login, String pwd) {
 		CredentialsProvider provider = new BasicCredentialsProvider();
 		UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(login,pwd);
 		provider.setCredentials(AuthScope.ANY, credentials);
 		this.credentials = credentials;
+		
 		
 		 // Create an HttpClient with the ThreadSafeClientConnManager.
         // This connection manager must be used if more than one thread will
@@ -70,14 +72,16 @@ public class RestClient {
 		
 	}
 	
+	public Reader getReader(String url) throws ParseException, RestException, IOException{
+		return getReader(url, credentials);
+	}
 
-
-	public Reader getReader(String url) throws RestException, ParseException, IOException{
+	public Reader getReader(String url, UsernamePasswordCredentials cred) throws RestException, ParseException, IOException{
 		LOGGER.debug("Appel gisement GET " + url);
 		if(bouchon) return new StringReader("[]");
 		HttpGet request = new HttpGet(url);
 		try {
-			request.addHeader(new BasicScheme().authenticate(credentials, request, null));
+			request.addHeader(new BasicScheme().authenticate(cred, request, null));
 		} catch (AuthenticationException e) {
 			//n'est jamais atteind avec un BasicScheme.
 			//http://stackoverflow.com/questions/2014700/preemptive-basic-authentication-with-apache-httpclient-4
@@ -269,5 +273,9 @@ public class RestClient {
 		client.close();
 		
 	}
+
+
+
+
 	
 }

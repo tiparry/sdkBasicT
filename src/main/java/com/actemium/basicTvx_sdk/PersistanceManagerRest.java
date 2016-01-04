@@ -9,10 +9,15 @@ import giraudsa.marshall.serialisation.text.json.JsonMarshaller;
 import java.io.IOException;
 import java.io.Reader;
 import java.lang.reflect.InvocationTargetException;
-import java.net.URLEncoder;
 import java.util.List;
+import java.util.UUID;
+
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
 
 import org.apache.http.ParseException;
+import org.apache.http.auth.UsernamePasswordCredentials;
 
 import com.actemium.basicTvx_sdk.restclient.RestClient;
 import com.actemium.basicTvx_sdk.restclient.RestException;
@@ -20,9 +25,14 @@ import com.rff.basictravaux.model.AnnuaireWS;
 import com.rff.basictravaux.model.webservice.reponse.Reponse;
 import com.rff.basictravaux.model.webservice.requete.Requete;
 
+import ariane.modele.base.ObjetPersistant;
+import ariane.modele.ressource.RessourceAbstraite;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xml.sax.Attributes;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
+import org.xml.sax.ext.DefaultHandler2;
 
 public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	private static final Logger LOGGER = LoggerFactory.getLogger(PersistanceManagerRest.class);
@@ -31,17 +41,16 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	private String gisementTravauxBaseUrl;
 
 	private AnnuaireWS annuaire;
-	
+	private boolean remplirIdReseau;
 
-	PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl) {
-		
+	PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl, boolean remplirIdReseau) {
 		super();
 		restClient = new RestClient(httpLogin, httpPwd);
 		gisementTravauxBaseUrl = gisementBaseUrl;
 		annuaire = AnnuaireWS.getInstance();
+		this.remplirIdReseau = remplirIdReseau;
 	}
 
-	
 
 	@Override
 	 <U> void save(U obj) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, IOException,
@@ -73,17 +82,9 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 
 	@Override
 	<U> U getObjectById(Class<U> clazz, String id, EntityManager entityManager) throws ParseException, RestException, IOException, SAXException, ClassNotFoundException {
-		return getObject(clazz, id, annuaire.getUrlExtension(clazz), entityManager);
-	}
-
-	@Override
-	<U> U getObjectByIdExterne(Class<U> clazz, String id, EntityManager entityManager) throws ParseException, RestException, IOException, SAXException, ClassNotFoundException {
-		return getObject(clazz, URLEncoder.encode(id, "UTF-8"), annuaire.getByIdExterneUrlExtension(clazz), entityManager);
-	}
-
-	private <U> U getObject(Class<U> clazz, String id, String urn, EntityManager entityManager) throws RestException, IOException, SAXException, ClassNotFoundException {
+		String urn = annuaire.getUrlExtension(clazz);
 		if (urn == null) {
-			return null;
+			return hackCorte(clazz, id, entityManager);
 		}
 		String url = gisementTravauxBaseUrl + String.format(urn, id);
 		Reader br = restClient.getReader(url);
@@ -96,6 +97,7 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 		
 		return obj;
 	}
+
 
 	@Override
 	<U> boolean getAllObject(Class<U> clazz, EntityManager entityManager, List<U> listeARemplir) throws ParseException, RestException, IOException, SAXException, ClassNotFoundException {
@@ -146,6 +148,101 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	private String ToJson(Object obj) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, IOException,
 			NotImplementedSerializeException {
 		return JsonMarshaller.ToJson(obj);
+	}
+	
+	
+	////////////////Hack pour CORTE qui veut les idReseau dans les objets Ariane
+	
+	private UsernamePasswordCredentials credentialsGaia= new UsernamePasswordCredentials("BASIC2T_2014","!h=e3MpWmp");
+	private String ressourceAbstraiteGaia = "/referentiel/infrastructure/gaia/v2/RA/{id}/xml";
+	
+	private <U> U hackCorte(Class<U> clazz, String id, EntityManager entityManager) throws ParseException, RestException, IOException {
+		if(remplirIdReseau && RessourceAbstraite.class.isAssignableFrom(clazz)){
+			return extractIdReseau(clazz, id, ressourceAbstraiteGaia, entityManager);
+		}
+		return null;
+	}
+	
+	private <U> U extractIdReseau(Class<U> clazz, String id, String urn, EntityManager entityManager) throws ParseException, RestException, IOException {
+		U ret;
+		synchronized (entityManager) {
+			ret = entityManager.findObject(id, clazz);
+			if(ret == null){
+				try {
+					ret = clazz.newInstance();
+					((ObjetPersistant)ret).setId(UUID.fromString(id));
+					entityManager.metEnCache(id, ret);
+				} catch (InstantiationException | IllegalAccessException e) {
+					LOGGER.debug(e.getMessage());
+				}
+			}
+		}
+		String url = String.format(urn, id);
+		try(Reader br = restClient.getReader(url, credentialsGaia)){
+			((RessourceAbstraite)ret).setIdReseau(getIdReseau(br));
+		}//le reader est bien fermé à la fin.
+		return ret;
+	}
+
+
+
+	private Long getIdReseau(Reader br){
+		if (br == null) return null;
+		try{
+			SAXParserFactory factory = SAXParserFactory.newInstance();
+			SAXParser saxParser = factory.newSAXParser();
+			RessourceAbstraiteArianeHandler handler = new RessourceAbstraiteArianeHandler();
+			saxParser.parse(new InputSource(br), handler);
+			return handler.getIdExterne();
+		}catch(ParserConfigurationException | SAXException | IOException e){
+			LOGGER.debug(e.getMessage());
+		}
+		return null;
+	}
+	
+	
+	class RessourceAbstraiteArianeHandler extends DefaultHandler2 {
+		
+		private static final String ID_EXTERNE_TAG = "idReseau";
+		
+
+		private int niveau = 0;
+		private boolean isIdExterne=false;
+
+		private String idExterne = null;
+		
+		public Long getIdExterne(){
+			if(idExterne == null) return null;
+			return Long.valueOf(idExterne);
+		}
+		
+		@Override 
+		public void endElement(String uri, String localName, String qName) throws SAXException {
+			--niveau;
+		};
+		
+		
+		@Override
+		public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+			++niveau;
+			if (niveau == 3 && idExterne == null && qName.equals(ID_EXTERNE_TAG)){
+				isIdExterne = true;
+			}
+		}
+		
+		@Override
+		public void characters(char[] ch, int start, int length) throws SAXException {
+			String value = new String(ch, start, length).trim();
+	        if(value.length() == 0) return; // ignore white space
+	        if (isIdExterne){
+	        	idExterne = value;
+	        	isIdExterne=false;
+	        }
+		}
+		
+		public RessourceAbstraiteArianeHandler() {
+		}
+
 	}
 
 }

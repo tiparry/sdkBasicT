@@ -69,10 +69,11 @@ public class GlobalObjectManager implements EntityManager {
 
     /**
      * Instantiates a new global object manager.
+     * @param remplirIdReseau 
      */
-    private GlobalObjectManager(String httpLogin, String httpPwd, String gisementBaseUrl){
+    private GlobalObjectManager(String httpLogin, String httpPwd, String gisementBaseUrl, boolean remplirIdReseau){
         this.factory = new ObjectFactory();
-        this.persistanceManager = new PersistanceManagerRest(httpLogin,  httpPwd, gisementBaseUrl);
+        this.persistanceManager = new PersistanceManagerRest(httpLogin,  httpPwd, gisementBaseUrl, remplirIdReseau);
         this.gestionCache = new GestionCache();
     }
     
@@ -86,8 +87,8 @@ public class GlobalObjectManager implements EntityManager {
     }
     
     
-    public static void init(String httpLogin, String httpPwd, String gisementBaseUrl){
-    	instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl);
+    public static void init(String httpLogin, String httpPwd, String gisementBaseUrl, boolean remplirIdReseau){
+    	instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl, remplirIdReseau);
     }
 
     /**

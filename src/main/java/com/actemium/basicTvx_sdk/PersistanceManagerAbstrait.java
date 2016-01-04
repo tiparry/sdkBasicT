@@ -21,10 +21,6 @@ public abstract class PersistanceManagerAbstrait {
 
 	abstract <U> U getObjectById(Class<U> clazz, String id, EntityManager entityManager) throws ParseException, RestException, IOException, SAXException, ClassNotFoundException;
 
-	abstract <U> U getObjectByIdExterne(Class<U> clazz, String id, EntityManager entityManager)
-			throws ParseException, RestException, IOException, SAXException, ClassNotFoundException;
-
-
 	abstract <U> boolean getAllObject(Class<U> clazz, EntityManager entityManager, List<U> listARemplir) 
 			throws ParseException, RestException, IOException, SAXException, ClassNotFoundException;
 	
