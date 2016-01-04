@@ -41,14 +41,12 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	private String gisementTravauxBaseUrl;
 
 	private AnnuaireWS annuaire;
-	private boolean remplirIdReseau;
 
-	PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl, boolean remplirIdReseau) {
+	PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl) {
 		super();
 		restClient = new RestClient(httpLogin, httpPwd);
 		gisementTravauxBaseUrl = gisementBaseUrl;
 		annuaire = AnnuaireWS.getInstance();
-		this.remplirIdReseau = remplirIdReseau;
 	}
 
 
@@ -153,11 +151,18 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	
 	////////////////Hack pour CORTE qui veut les idReseau dans les objets Ariane
 	
-	private UsernamePasswordCredentials credentialsGaia= new UsernamePasswordCredentials("BASIC2T_2014","!h=e3MpWmp");
-	private String ressourceAbstraiteGaia = "/referentiel/infrastructure/gaia/v2/RA/{id}/xml";
+	private String gaiaUrl = null;
+	private UsernamePasswordCredentials credentialsGaia;
+	private static final String ressourceAbstraiteGaia = "/referentiel/infrastructure/gaia/v2/RA/{id}/xml";
+	
+	public void setConfigAriane(String host, String username, String password){
+		 UsernamePasswordCredentials credentialsGaia = new UsernamePasswordCredentials(username, password);
+		gaiaUrl = host + ressourceAbstraiteGaia;
+		this.credentialsGaia = credentialsGaia;
+	}
 	
 	private <U> U hackCorte(Class<U> clazz, String id, EntityManager entityManager) throws ParseException, RestException, IOException {
-		if(remplirIdReseau && RessourceAbstraite.class.isAssignableFrom(clazz)){
+		if(gaiaUrl != null && RessourceAbstraite.class.isAssignableFrom(clazz)){
 			return extractIdReseau(clazz, id, ressourceAbstraiteGaia, entityManager);
 		}
 		return null;
