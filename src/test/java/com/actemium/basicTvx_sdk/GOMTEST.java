@@ -26,7 +26,7 @@ public class GOMTEST {
 		String login = "APP_CLIENT";
 		String pwd = "APP_PASSWORD";
 		String baseUrl = "http://212.83.130.104:8080/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/";
-		GlobalObjectManager.init(login, pwd, baseUrl);
+		GlobalObjectManager.init(login, pwd, baseUrl, false);
 		GlobalObjectManager gom = GlobalObjectManager.getInstance();
 		gom.setDureeCache(15, TimeUnit.HOURS);
 

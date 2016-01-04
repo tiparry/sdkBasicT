@@ -178,9 +178,11 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 			}
 		}
 		String url = String.format(urn, id);
-		try(Reader br = restClient.getReader(url, credentialsGaia)){
+		Reader br = restClient.getReader(url, credentialsGaia);
+		if(br != null){
 			((RessourceAbstraite)ret).setIdReseau(getIdReseau(br));
-		}//le reader est bien fermé à la fin.
+			br.close();
+		}
 		return ret;
 	}
 
