@@ -33,26 +33,32 @@ public class GestionCache {
 	
 	synchronized boolean estChargeEnProfondeur(Object obj){
 		Stockage s = dejaCharge.get(obj);
+		if(s == null) return true;
 		return s.estChargeEnProfondeur() ;
 	}
 	synchronized boolean estCharge(Object obj){
 		Stockage s = dejaCharge.get(obj);
+		if (s == null) return true;
 		return s.estCharge();
 	}
 	synchronized boolean enChargement(Object obj){
 		Stockage s = dejaCharge.get(obj);
+		if (s == null) return true; 
 		return s.prisEnChargePourChargement();
 	}
 	synchronized void setChargeEnProfondeur(Object obj){
 		Stockage s = dejaCharge.get(obj);
+		if (s == null) return;
 		s.setChargeEnProfondeur();
 	}
 	synchronized void setEstCharge(Object obj){
 		Stockage s = dejaCharge.get(obj);
+		if(s == null) return;
 		s.setEstCharge();
 	}
 	synchronized boolean setPrisEnChargePourChargement(Object obj){
 		Stockage s = dejaCharge.get(obj);
+		if(s == null) return false;
 		return s.setPrisEnChargePourChargement();
 	}
 	
@@ -85,7 +91,9 @@ public class GestionCache {
 	
 	synchronized <U> String getId(Object o){
 		if(o == null) return null;
-		return dejaCharge.get(o).id;
+		Stockage s = dejaCharge.get(o);
+		if(s == null) return null;
+		return s.id;
 	}
 
 	synchronized void purge() {
@@ -121,6 +129,7 @@ public class GestionCache {
 	}
 	synchronized void setNotNew(Object obj) {
 		Stockage s = dejaCharge.get(obj);
+		if(s == null) return;
 		s.isNew = false;
 	}
 
@@ -135,10 +144,12 @@ public class GestionCache {
 	
 	private boolean prisEnChargePourChargementEnProfondeur(Object obj){
 		Stockage s = dejaCharge.get(obj);
+		if(s == null) return true;
 		return s.prisEnChargePourChargementEnProfondeur();
 	}
 	private void setPrisEnChargePourChargementEnProfondeur(Object obj){
 		Stockage s = dejaCharge.get(obj);
+		if (s == null) return;
 		s.setPrisEnChargePourChargementEnProfondeur();
 	}
 	

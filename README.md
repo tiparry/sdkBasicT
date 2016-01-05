@@ -104,11 +104,11 @@ Afin d'éviter au GOM d'occuper toujours plus de mémoire au fil du temps si la 
 	
 il est aussi possible de supprimer un objet du cache unitairement si par exemple il est créé en local et qu'on veut finalement ne pas le garder
 
-	/**
+	 /**
 	 * supprime un objet du cache
 	 * @param obj
 	 */
-	 public void remove(Object obj)
+	public void remove(Object obj)
 
  
 	

@@ -82,7 +82,7 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	<U> U getObjectById(Class<U> clazz, String id, EntityManager entityManager) throws ParseException, RestException, IOException, SAXException, ClassNotFoundException {
 		String urn = annuaire.getUrlExtension(clazz);
 		if (urn == null) {
-			return hackCorte(clazz, id, entityManager);
+			return chargeIdReseau(clazz, id, entityManager);
 		}
 		String url = gisementTravauxBaseUrl + String.format(urn, id);
 		Reader br = restClient.getReader(url);
@@ -161,7 +161,7 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 		this.credentialsGaia = credentialsGaia;
 	}
 	
-	private <U> U hackCorte(Class<U> clazz, String id, EntityManager entityManager) throws ParseException, RestException, IOException {
+	private <U> U chargeIdReseau(Class<U> clazz, String id, EntityManager entityManager) throws ParseException, RestException, IOException {
 		if(gaiaUrl != null && RessourceAbstraite.class.isAssignableFrom(clazz)){
 			return extractIdReseau(clazz, id, gaiaUrl, entityManager);
 		}
@@ -170,6 +170,9 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	
 	private <U> U extractIdReseau(Class<U> clazz, String id, String urn, EntityManager entityManager) throws ParseException, RestException, IOException {
 		U ret;
+		String url = urn.replace("{id}", id);
+		Reader br = restClient.getReader(url, credentialsGaia);
+		if(br == null) return null;
 		synchronized (entityManager) {
 			ret = entityManager.findObject(id, clazz);
 			if(ret == null){
@@ -182,12 +185,8 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 				}
 			}
 		}
-		String url = urn.replace("{id}", id);
-		Reader br = restClient.getReader(url, credentialsGaia);
-		if(br != null){
-			((RessourceAbstraite)ret).setIdReseau(getIdReseau(br));
-			br.close();
-		}
+		((RessourceAbstraite)ret).setIdReseau(getIdReseau(br));
+		br.close();
 		return ret;
 	}
 
