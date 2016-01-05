@@ -96,6 +96,7 @@ public class GestionCache {
 	
 	synchronized boolean aChangeDepuisChargement(Object obj){
 		Stockage s = dejaCharge.get(obj);
+		if(s == null) return false;
 		return s.aChangeDepuisChargement();
 	}
 	
@@ -115,6 +116,7 @@ public class GestionCache {
 	}
 	synchronized boolean isNew(Object obj) {
 		Stockage s = dejaCharge.get(obj);
+		if (s == null) return false;
 		return s.isNew;
 	}
 	synchronized void setNotNew(Object obj) {
