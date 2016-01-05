@@ -88,20 +88,29 @@ On peut demander au GOM de nourrir automatiquement les id Reseau lorsqu'on fait 
 	2.2 - Gestion du cache
 	----------------------
 	
-	La durée de cache par défaut des objets dans le GOM est de 1h. Il est possible de modifier cette valeur en appelant :
+La durée de cache par défaut des objets dans le GOM est de 1h. Il est possible de modifier cette valeur en appelant :
+
 	gom.setDureeCache(15, TimeUnit.HOURS); // durée du cache à 15h
-	La valeur du cache minimum est de 1 minute. 
 	
-	Afin d'éviter au GOM d'occuper toujours plus de mémoire au fil du temps si la JVM n'est jamais redémarrée, il est nécessaire d'invoquer la méthode suivante
-	en fin de traitement pour nettoyer le cache. 
+La valeur du cache minimum est de 1 minute. 
+	
+Afin d'éviter au GOM d'occuper toujours plus de mémoire au fil du temps si la JVM n'est jamais redémarrée, il est nécessaire d'invoquer la méthode suivante en fin de traitement pour nettoyer le cache. 
 	
 	/**
 	 * Purge le Cache du GOM pour éviter les fuites mémoires lorsqu'on a fini un traitement.
 	 *
 	 */
 	public void purgeCache()
+	
+il est aussi possible de supprimer un objet du cache unitairement si par exemple il est créé en local et qu'on veut finalement ne pas le garder
 
+	/**
+	 * supprime un objet du cache
+	 * @param obj
+	 */
+	 public void remove(Object obj)
 
+ 
 	
 	2.2 - Autres méthodes publiques du GOM
 	--------------------------------------
@@ -154,12 +163,6 @@ Voila la liste des autres méthodes publiques disponible dans le GOM :
 	 */
 	public <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur)
 
-
-	/**
-	 * supprime un objet du cache
-	 * @param obj
-	 */
-	 public void remove(Object obj)
 	 
 	 
 	 /**
