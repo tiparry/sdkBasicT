@@ -182,7 +182,7 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 				}
 			}
 		}
-		String url = String.format(urn, id);
+		String url = urn.replace("{id}", id);
 		Reader br = restClient.getReader(url, credentialsGaia);
 		if(br != null){
 			((RessourceAbstraite)ret).setIdReseau(getIdReseau(br));

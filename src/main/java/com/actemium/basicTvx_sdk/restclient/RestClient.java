@@ -1,11 +1,19 @@
 package com.actemium.basicTvx_sdk.restclient;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.SSLContext;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
@@ -21,12 +29,21 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.utils.HttpClientUtils;
+import org.apache.http.config.Registry;
+import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.conn.socket.PlainConnectionSocketFactory;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
+import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.ssl.SSLContexts;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +61,27 @@ public class RestClient {
 	private UsernamePasswordCredentials credentials;
 	
 	
-	
+	public static void main(String[] args) {
+		RestClient restClient = new RestClient("", "");
+		try {
+			Reader reader = restClient.getReader("https://git.xn--saa-0ma.com/");
+			 int data = reader.read();
+			    while(data != -1){
+			        char dataChar = (char) data;
+			        System.out.print(dataChar);
+			        data = reader.read();
+			    }
+		} catch (ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (RestException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 	
 	
 	public RestClient(String login, String pwd) {
@@ -54,20 +91,62 @@ public class RestClient {
 		this.credentials = credentials;
 		
 		
-		 // Create an HttpClient with the ThreadSafeClientConnManager.
-        // This connection manager must be used if more than one thread will
-        // be using the HttpClient.
-        PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
-        cm.setMaxTotal(HTTP_CLIENT_MAX_POOL_SIZE);
-        cm.setDefaultMaxPerRoute(HTTP_CLIENT_MAX_POOL_PER_ROOT);
-        //cm.setDefaultSocketConfig( SocketConfig.custom().setSoKeepAlive( true ).setSoReuseAddress( true ).setSoTimeout( 3000 ).build() 
-        //cm.setValidateAfterInactivity(1); // essai pour resoudre java.net.SocketException: Software caused connection abort: recv failed
+		
+     
+        
+        
+     // Trust own CA and all self-signed certs
+        SSLContext sslcontext;
+		try {
+			SSLContext sslContext = SSLContexts.custom()
+			        .loadTrustMaterial(null, new TrustStrategy() {
+
+			            @Override
+			            public boolean isTrusted(final X509Certificate[] chain,  String authType) throws CertificateException {
+			                return true;
+			            }
+
+						
+			        })
+			        .build();
+			
+			 // Allow TLSv1 protocol only
+	        SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(
+	        		sslContext,
+	                new String[] { "TLSv1" },
+	                null,
+	                new NoopHostnameVerifier());
+			
+	        Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
+	                .register("http", PlainConnectionSocketFactory.getSocketFactory())
+	                .register("https", sslsf)
+	                .build();
+	        
+	        // Create an HttpClient with the ThreadSafeClientConnManager.
+	        // This connection manager must be used if more than one thread will
+	        // be using the HttpClient.
+	        PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+	        cm.setMaxTotal(HTTP_CLIENT_MAX_POOL_SIZE);
+	        cm.setDefaultMaxPerRoute(HTTP_CLIENT_MAX_POOL_PER_ROOT);
+	        //cm.setDefaultSocketConfig( SocketConfig.custom().setSoKeepAlive( true ).setSoReuseAddress( true ).setSoTimeout( 3000 ).build() 
+	        //cm.setValidateAfterInactivity(1); // essai pour resoudre java.net.SocketException: Software caused connection abort: recv failed
+	        
 		
 		client = HttpClientBuilder.create()
 				.setDefaultCredentialsProvider(provider)
+				//.setSslcontext(sslContext)
+				//.setSSLSocketFactory(sslsf)
 				.setConnectionManager(cm)
 				.evictExpiredConnections()
 				.evictIdleConnections(5L,TimeUnit.SECONDS).build();
+		
+		} catch (KeyManagementException e) {
+			LOGGER.error("KeyManagementException", e);
+		} catch (NoSuchAlgorithmException e) {
+			LOGGER.error("NoSuchAlgorithmException", e);
+		} catch (KeyStoreException e) {
+			LOGGER.error("KeyStoreException", e);
+		}
 		
 		
 	}
