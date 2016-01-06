@@ -76,7 +76,7 @@ public class GestionCache {
 		if(!dejaCharge.containsKey(obj)){
 			Stockage s = new Stockage(obj, id);
 			s.isNew = estNouveau;
-			dejaCharge.put(obj, new Stockage(obj, id));
+			dejaCharge.put(obj, s);
 		}else{
 			Stockage s = dejaCharge.get(obj);
 			s.isNew = estNouveau;
@@ -222,7 +222,7 @@ public class GestionCache {
 		private String calculHash() {
 			String ret;
 			try {
-				ret = JsonMarshaller.ToJson(obj);
+				ret = JsonMarshaller.toJson(obj);
 			} catch (IllegalArgumentException | IllegalAccessException | InstantiationException | InvocationTargetException | NoSuchMethodException | SecurityException | IOException | NotImplementedSerializeException e) {
 				ret = UUID.randomUUID().toString(); //on n'arrive pas a creer un id, donc il sera sauvegardé automatiquement
 			}
@@ -231,7 +231,7 @@ public class GestionCache {
 		
 		private boolean aChangeDepuisChargement(){
 			if(estCharge()){
-				return hash.equals(calculHash());
+				return !hash.equals(calculHash());
 			}
 			return true;
 		}

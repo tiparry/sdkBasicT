@@ -145,7 +145,7 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 
 	private String ToJson(Object obj) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, IOException,
 			NotImplementedSerializeException {
-		return JsonMarshaller.ToJson(obj);
+		return JsonMarshaller.toJson(obj);
 	}
 	
 	
