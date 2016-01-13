@@ -20,24 +20,24 @@ public class ArianeHelper {
 	}
 	
 	@SuppressWarnings("rawtypes")
-	 static void addSousObject(Object obj, GlobalObjectManager gom) throws IllegalArgumentException, IllegalAccessException {
+	 static void addSousObject(Object obj, GlobalObjectManager gom, CacheChargementEnProfondeur cacheChargementEnProfondeur) throws IllegalArgumentException, IllegalAccessException {
 		List<Champ> champs = TypeExtension.getSerializableFields(obj.getClass());
 		for(Champ champ : champs){
 			Object value = champ.get(obj);
-			if(!champ.isSimple && value != null){
+			if(!champ.isSimple() && value != null){
 				Class<?> type = value.getClass();
 				if(Collection.class.isAssignableFrom(type)){
 					for(Object o : (Collection)value){
-						gom.addAChargerEnProfondeur(o);
+						gom.prendEnChargePourChargementEnProfondeur(o, cacheChargementEnProfondeur);
 					}
 				}else if(Map.class.isAssignableFrom(type)){
 					Map<?,?> map = (Map<?,?>)value;
 					for(Entry<?,?> entry : map.entrySet()){
-						gom.addAChargerEnProfondeur(entry.getKey());
-						gom.addAChargerEnProfondeur(entry.getValue());
+						gom.prendEnChargePourChargementEnProfondeur(entry.getKey(), cacheChargementEnProfondeur);
+						gom.prendEnChargePourChargementEnProfondeur(entry.getValue(), cacheChargementEnProfondeur);
 					}
 				}else{ //objet
-					gom.addAChargerEnProfondeur(value);
+					gom.prendEnChargePourChargementEnProfondeur(value, cacheChargementEnProfondeur);
 				}
 			}
 		}

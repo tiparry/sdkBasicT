@@ -2,13 +2,12 @@ package com.actemium.basicTvx_sdk;
 
 import giraudsa.marshall.deserialisation.EntityManager;
 import giraudsa.marshall.deserialisation.text.json.JsonUnmarshaller;
-import giraudsa.marshall.exception.JsonHandlerException;
-import giraudsa.marshall.exception.NotImplementedSerializeException;
+import giraudsa.marshall.exception.MarshallExeption;
+import giraudsa.marshall.exception.UnmarshallExeption;
 import giraudsa.marshall.serialisation.text.json.JsonMarshaller;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,6 +17,7 @@ import javax.xml.parsers.SAXParserFactory;
 
 import org.apache.http.ParseException;
 import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.ClientProtocolException;
 
 import com.actemium.basicTvx_sdk.restclient.RestClient;
 import com.actemium.basicTvx_sdk.restclient.RestException;
@@ -51,8 +51,7 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 
 
 	@Override
-	 <U> void save(U obj) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, IOException,
-			RestException, NotImplementedSerializeException {
+	 <U> void save(U obj) throws MarshallExeption, ClientProtocolException, IOException, RestException {
 		String dataToSend = ToJson(obj);
 		String constante = annuaire.putUrlExtension(obj.getClass());
 		if (constante == null) {
@@ -62,7 +61,7 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	}
 	
 	@Override
-	Reponse getReponse(Requete requete, EntityManager entityManager) throws IOException, RestException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, NotImplementedSerializeException, ClassNotFoundException, SAXException {
+	Reponse getReponse(Requete requete, EntityManager entityManager) throws MarshallExeption, IOException, RestException {
 		String urn = annuaire.getRequestUrl(requete.getClass());
 		if (urn == null) {
 			return null;
@@ -118,33 +117,16 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 
 	}
 
-	private <U> U fromJson(Reader br, EntityManager entityManager) throws ClassNotFoundException, IOException, SAXException {
+	private <U> U fromJson(Reader br, EntityManager entityManager){
 		try {
 			return JsonUnmarshaller.fromJson(br, entityManager);
-		} catch (InstantiationException e) {
+		} catch (UnmarshallExeption e) {
 			LOGGER.error("", e);
-		} catch (IllegalAccessException e) {
-			LOGGER.error("", e);
-		} catch (IllegalArgumentException e) {
-			LOGGER.error("", e);
-		} catch (InvocationTargetException e) {
-			LOGGER.error("", e);
-		} catch (NoSuchMethodException e) {
-			LOGGER.error("", e);
-		} catch (SecurityException e) {
-			LOGGER.error("", e);
-		} catch (NotImplementedSerializeException e) {
-			LOGGER.error("", e);
-		} catch (JsonHandlerException e) {
-			LOGGER.error("", e);
-		} catch (java.text.ParseException e) {
-			LOGGER.error("", e);
-		}
+		} 
 		return null;
 	}
 
-	private String ToJson(Object obj) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, IOException,
-			NotImplementedSerializeException {
+	private String ToJson(Object obj) throws MarshallExeption  {
 		return JsonMarshaller.toJson(obj);
 	}
 	

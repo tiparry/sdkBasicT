@@ -1,7 +1,5 @@
 package com.actemium.basicTvx_sdk;
 
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -12,7 +10,8 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.actemium.basicTvx_sdk.util.BiHashMap;
-import giraudsa.marshall.exception.NotImplementedSerializeException;
+
+import giraudsa.marshall.exception.MarshallExeption;
 import giraudsa.marshall.serialisation.text.json.JsonMarshaller;
 
 public class GestionCache {
@@ -30,12 +29,6 @@ public class GestionCache {
 		tempsDeCache = nouveauTempsDeCache;
 		return true;
 	}
-	
-	synchronized boolean estChargeEnProfondeur(Object obj){
-		Stockage s = dejaCharge.get(obj);
-		if(s == null) return true;
-		return s.estChargeEnProfondeur() ;
-	}
 	synchronized boolean estCharge(Object obj){
 		Stockage s = dejaCharge.get(obj);
 		if (s == null) return true;
@@ -46,11 +39,7 @@ public class GestionCache {
 		if (s == null) return true; 
 		return s.prisEnChargePourChargement();
 	}
-	synchronized void setChargeEnProfondeur(Object obj){
-		Stockage s = dejaCharge.get(obj);
-		if (s == null) return;
-		s.setChargeEnProfondeur();
-	}
+
 	synchronized void setEstCharge(Object obj){
 		Stockage s = dejaCharge.get(obj);
 		if(s == null) return;
@@ -62,12 +51,6 @@ public class GestionCache {
 		return s.setPrisEnChargePourChargement();
 	}
 	
-	synchronized void addAChargerEnProfondeur(Object o, GlobalObjectManager gom){
-		if(!estChargeEnProfondeur(o) && !prisEnChargePourChargementEnProfondeur(o)){
-			setPrisEnChargePourChargementEnProfondeur(o);
-			gom.prendEnChargePourChargementEnProfondeur(o);
-		}
-	}
 	
 	synchronized void metEnCache(String id, Object obj, boolean estNouveau){
 		if (obj == null || id == null || id.length() == 0) return;
@@ -142,17 +125,6 @@ public class GestionCache {
 		dejaCharge.remove(obj);
 	}
 	
-	private boolean prisEnChargePourChargementEnProfondeur(Object obj){
-		Stockage s = dejaCharge.get(obj);
-		if(s == null) return true;
-		return s.prisEnChargePourChargementEnProfondeur();
-	}
-	private void setPrisEnChargePourChargementEnProfondeur(Object obj){
-		Stockage s = dejaCharge.get(obj);
-		if (s == null) return;
-		s.setPrisEnChargePourChargementEnProfondeur();
-	}
-	
 	synchronized boolean  estDejaCharge(Class<?> clazz) {
 		return dicoClasseDejaChargee.containsKey(clazz) && !(dicoClasseDejaChargee.get(clazz).isObsolete());
 	}
@@ -175,17 +147,12 @@ public class GestionCache {
 		private String id;
 		private String hash;
 		private boolean isNew = false;
-		private boolean estChargeEnProfondeur = false;
 		private boolean estCharge = false;
 		private long dateChargement = 0;
 		private boolean prisEnChargePourChargement = false;
-		private boolean prisEnChargePourChargementEnProfondeur = false;
 		private Stockage(Object obj, String id){
 			this.obj = obj;
 			this.id = id;
-		}
-		private boolean estChargeEnProfondeur(){
-			return isObsolete() ? false : estChargeEnProfondeur ;
 		}
 		private boolean estCharge(){
 			return isObsolete()? false: estCharge;
@@ -193,17 +160,7 @@ public class GestionCache {
 		private boolean prisEnChargePourChargement(){
 			return prisEnChargePourChargement;
 		}
-		private boolean prisEnChargePourChargementEnProfondeur(){
-			return prisEnChargePourChargementEnProfondeur;
-		}
-		private void setChargeEnProfondeur(){
-			this.estChargeEnProfondeur = true;
-			this.prisEnChargePourChargementEnProfondeur = false;
-			this.prisEnChargePourChargement = false;
-		}
-		private void setPrisEnChargePourChargementEnProfondeur(){
-			this.prisEnChargePourChargementEnProfondeur = true;
-		}
+		
 		private boolean setPrisEnChargePourChargement(){
 			if(this.prisEnChargePourChargement) return false;
 			return this.prisEnChargePourChargement = true;
@@ -223,7 +180,7 @@ public class GestionCache {
 			String ret;
 			try {
 				ret = JsonMarshaller.toJson(obj);
-			} catch (IllegalArgumentException | IllegalAccessException | InstantiationException | InvocationTargetException | NoSuchMethodException | SecurityException | IOException | NotImplementedSerializeException e) {
+			} catch (MarshallExeption e) {
 				ret = UUID.randomUUID().toString(); //on n'arrive pas a creer un id, donc il sera sauvegardé automatiquement
 			}
 			return ret;
