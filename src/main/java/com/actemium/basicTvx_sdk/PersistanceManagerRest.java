@@ -5,6 +5,7 @@ import giraudsa.marshall.deserialisation.text.json.JsonUnmarshaller;
 import giraudsa.marshall.exception.MarshallExeption;
 import giraudsa.marshall.exception.UnmarshallExeption;
 import giraudsa.marshall.serialisation.text.json.JsonMarshaller;
+import utils.ConfigurationMarshalling;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -47,6 +48,7 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 		restClient = new RestClient(httpLogin, httpPwd);
 		gisementTravauxBaseUrl = gisementBaseUrl;
 		annuaire = AnnuaireWS.getInstance();
+		ConfigurationMarshalling.setIdUniversel();
 	}
 
 
