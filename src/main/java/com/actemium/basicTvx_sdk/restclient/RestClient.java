@@ -61,7 +61,8 @@ public class RestClient {
 	private UsernamePasswordCredentials credentials;
 	
 	
-	public static void main(String[] args) {
+	/* test only 
+	 public static void main(String[] args) {
 		RestClient restClient = new RestClient("", "");
 		try {
 			Reader reader = restClient.getReader("https://git.xn--saa-0ma.com/");
@@ -81,7 +82,7 @@ public class RestClient {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	}
+	}*/
 	
 	
 	public RestClient(String login, String pwd) {
@@ -105,8 +106,6 @@ public class RestClient {
 			            public boolean isTrusted(final X509Certificate[] chain,  String authType) throws CertificateException {
 			                return true;
 			            }
-
-						
 			        })
 			        .build();
 			
