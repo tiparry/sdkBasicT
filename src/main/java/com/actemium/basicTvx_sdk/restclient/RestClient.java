@@ -27,6 +27,7 @@ import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.utils.HttpClientUtils;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
@@ -61,9 +62,10 @@ public class RestClient {
 	
 	/* test only 
 	 public static void main(String[] args) {
-		RestClient restClient = new RestClient("", "");
+		RestClient restClient = new RestClient("APP_CLIENT", "APP_PASSWORD");
 		try {
-			Reader reader = restClient.getReader("https://git.xn--saa-0ma.com/");
+			//Reader reader = restClient.getReader("http://212.83.130.104:8080/ImportBasicTravaux/resources/index.html");
+			Reader reader = restClient.getReader("https://git.xn--saa-0ma.com/users/sign_in");
 			 int data = reader.read();
 			    while(data != -1){
 			        char dataChar = (char) data;
@@ -71,28 +73,21 @@ public class RestClient {
 			        data = reader.read();
 			    }
 		} catch (ParseException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (RestException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}*/
 	
 	
 	public RestClient(String login, String pwd) {
-		CredentialsProvider provider = new BasicCredentialsProvider();
+		//CredentialsProvider provider = new BasicCredentialsProvider();
 		UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(login,pwd);
-		provider.setCredentials(AuthScope.ANY, credentials);
+		//provider.setCredentials(AuthScope.ANY, credentials);
 		this.credentials = credentials;
-		
-		
-		
-     
-        
+		    
         
      // Trust own CA and all self-signed certs
         SSLContext sslcontext;
@@ -130,7 +125,7 @@ public class RestClient {
 	        
 		
 		client = HttpClientBuilder.create()
-				.setDefaultCredentialsProvider(provider)
+				//.setDefaultCredentialsProvider(provider)
 				//.setSslcontext(sslContext)
 				//.setSSLSocketFactory(sslsf)
 				.setConnectionManager(cm)
@@ -149,19 +144,15 @@ public class RestClient {
 	}
 	
 	public Reader getReader(String url) throws ParseException, RestException, IOException{
-		return getReader(url, credentials);
+		return getReader(url, this.credentials);
 	}
+	
 
 	public Reader getReader(String url, UsernamePasswordCredentials cred) throws RestException, ParseException, IOException{
 		LOGGER.debug("Appel gisement GET " + url);
 		if(bouchon) return new StringReader("[]");
 		HttpGet request = new HttpGet(url);
-		try {
-			request.addHeader(new BasicScheme().authenticate(cred, request, null));
-		} catch (AuthenticationException e) {
-			//n'est jamais atteind avec un BasicScheme.
-			//http://stackoverflow.com/questions/2014700/preemptive-basic-authentication-with-apache-httpclient-4
-		}
+		addBasicAuthHeader(request, cred);
 		CloseableHttpResponse response = client.execute(request);
 		try{
 			int statusCode = response.getStatusLine().getStatusCode();
@@ -189,21 +180,7 @@ public class RestClient {
 	}
 	
 	
-	private void consumeAndClose(CloseableHttpResponse response) throws IOException{
-		// In order to ensure correct deallocation of system resources
-		// the user MUST call CloseableHttpResponse#close() from a finally clause.
-		// Please note that if response content is not fully consumed the underlying
-		// connection cannot be safely re-used and will be shut down and discarded
-		// by the connection manager. 
-		try {
-		    HttpEntity entity = response.getEntity();
-		    // do something useful with the response body
-		    // and ensure it is fully consumed
-		    EntityUtils.consume(entity);
-		} finally {
-		    response.close();
-		}
-	}
+
 	
 	public Reader postReader(String url, String message) throws IOException, RestException {
 		LOGGER.debug("Appel gisement POST " + url);
@@ -212,6 +189,7 @@ public class RestClient {
 		HttpPost post = new HttpPost(url);
 		 
 		// add header
+		addBasicAuthHeader(post, this.credentials);
 		//post.setHeader("User-Agent", USER_AGENT);
 		post.addHeader("Content-Type", "application/json");
 		//List<NameValuePair> urlParameters = new ArrayList<NameValuePair>();
@@ -254,6 +232,7 @@ public class RestClient {
 		// add header
 		//post.setHeader("User-Agent", USER_AGENT);
 		post.addHeader("Content-Type", "application/json");
+		addBasicAuthHeader(post, this.credentials);
 		//List<NameValuePair> urlParameters = new ArrayList<NameValuePair>();
 		//urlParameters.add(new BasicNameValuePair("name", "value"));		
 		StringEntity entity = new StringEntity(content, "UTF-8");
@@ -290,6 +269,7 @@ public class RestClient {
 		if(bouchon) return "";
 		HttpPut put = new HttpPut(url);
 		put.addHeader("Content-Type", "application/xml");
+		addBasicAuthHeader(put, this.credentials);
 		
 		StringEntity entity = new StringEntity(content, "UTF-8");
 		entity.setContentEncoding("UTF-8");
@@ -320,7 +300,8 @@ public class RestClient {
 	
 	public String delete(String url) throws RestException, ParseException, IOException{
 		if(bouchon) return "";
-		HttpDelete del = new HttpDelete(url);	 
+		HttpDelete del = new HttpDelete(url);	
+		addBasicAuthHeader(del, this.credentials);
 		CloseableHttpResponse  response = client.execute(del);
 		try{
 			int statusCode = response.getStatusLine().getStatusCode();
@@ -351,7 +332,32 @@ public class RestClient {
 	}
 
 
-
+	private void consumeAndClose(CloseableHttpResponse response) throws IOException{
+		// In order to ensure correct deallocation of system resources
+		// the user MUST call CloseableHttpResponse#close() from a finally clause.
+		// Please note that if response content is not fully consumed the underlying
+		// connection cannot be safely re-used and will be shut down and discarded
+		// by the connection manager. 
+		try {
+		    HttpEntity entity = response.getEntity();
+		    // do something useful with the response body
+		    // and ensure it is fully consumed
+		    EntityUtils.consume(entity);
+		} finally {
+		    response.close();
+		}
+	}
+	
+	private void addBasicAuthHeader(HttpRequestBase request, UsernamePasswordCredentials cred){
+		if (cred.getUserName()!=null && cred.getPassword()!=null){
+			try {
+				request.addHeader(new BasicScheme().authenticate(cred, request, null));
+			} catch (AuthenticationException e) {
+				//n'est jamais atteind avec un BasicScheme.
+				//http://stackoverflow.com/questions/2014700/preemptive-basic-authentication-with-apache-httpclient-4
+			}
+		}
+	}
 
 	
 }
