@@ -251,7 +251,7 @@ public class GlobalObjectManager implements EntityManager {
 	public Reponse getReponse(Requete request, boolean enProfondeur) throws MarshallExeption, InterruptedException, IOException, RestException {
 		Reponse reponse = persistanceManager.getReponse(request, this);
 		if(enProfondeur){
-			getObjetEnProfondeur(request);
+			getObjetEnProfondeur(reponse);
 		}
 		return reponse;
 	}
