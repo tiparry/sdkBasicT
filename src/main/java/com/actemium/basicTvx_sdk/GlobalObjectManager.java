@@ -27,6 +27,7 @@ import utils.champ.Champ;
 import com.actemium.basicTvx_sdk.exception.GetAllObjectException;
 import com.actemium.basicTvx_sdk.exception.GetObjectException;
 import com.actemium.basicTvx_sdk.exception.SaveAllException;
+import com.actemium.basicTvx_sdk.exception.SaveException;
 import com.actemium.basicTvx_sdk.restclient.RestException;
 import com.rff.basictravaux.model.webservice.reponse.Reponse;
 import com.rff.basictravaux.model.webservice.requete.Requete;
@@ -101,14 +102,25 @@ public class GlobalObjectManager implements EntityManager {
     public <U> void saveAll() throws SaveAllException {
     	try{
 		    Set<Object> objetsASauvegarder = gestionCache.objetsModifiesDepuisChargementOuNouveau();
-			U obj = this.getObjetToSave(objetsASauvegarder);
-		    while(obj != null){
-		        this.save(obj, objetsASauvegarder);
-		        obj = this.getObjetToSave(objetsASauvegarder);
-		    }
+		    save(objetsASauvegarder);
     	}catch(MarshallExeption | IllegalAccessException | IOException | RestException e){
     		LOGGER.error("impossible de sauvegarder", e);
     		throw new SaveAllException(e);
+    	}
+    }
+    /**
+     * Sauvegarde de l'objet avec sa grappe d'objet
+     * @param objet
+     * @throws SaveException
+     */
+    public <U> void save(U objet) throws SaveException{
+    	try{
+    		Set<Object> objetsASauvegarder = new HashSet<>();
+    		objetsASauvegarder.add(objet);
+    		save(objetsASauvegarder);
+    	}catch(MarshallExeption | IllegalAccessException | IOException | RestException e){
+    		LOGGER.error("impossible de sauvegarder", e);
+    		throw new SaveException(e);
     	}
     }
 
@@ -258,22 +270,25 @@ public class GlobalObjectManager implements EntityManager {
         return null;
     }
 
+    
    
 
     /**
      * Save.
      *
-     * @param <U> the generic type
      * @param value the value
-     * @return the int
      * @throws MarshallExeption 
      * @throws IllegalAccessException 
      * @throws RestException 
      * @throws IOException 
      * @throws ClientProtocolException 
      */
-    private <U> void save(final U value, Set<Object> objetsASauvegarder) throws IllegalAccessException, MarshallExeption, ClientProtocolException, IOException, RestException{
-        this.save(value, this.hasChanged(value), objetsASauvegarder);
+    private void save(Set<Object> objetsASauvegarder) throws IllegalAccessException, MarshallExeption, ClientProtocolException, IOException, RestException{
+    	Object obj = getObjetToSave(objetsASauvegarder);
+    	while(obj != null){
+			this.save(obj, this.hasChanged(obj), objetsASauvegarder);
+			obj = this.getObjetToSave(objetsASauvegarder);
+		}
     }
 
     /**
