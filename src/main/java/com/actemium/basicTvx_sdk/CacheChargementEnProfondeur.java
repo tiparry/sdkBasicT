@@ -1,22 +1,22 @@
 package com.actemium.basicTvx_sdk;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.IdentityHashMap;
+import java.util.Map;
 
 public class CacheChargementEnProfondeur {
-	private Set<Object> dejaFait = new HashSet<>();
-	private Set<Object> pasEncoreFait = new HashSet<>();
+	private Map<Object,Boolean> dejaFait = new IdentityHashMap<>();
+	private Map<Object,Boolean> pasEncoreFait = new IdentityHashMap<>();
 	
 	synchronized void add(Object o){
-		pasEncoreFait.add(o);
+		pasEncoreFait.put(o, true);
 	}
 	
 	synchronized boolean dejaVu(Object o){
-		return dejaFait.contains(o) || pasEncoreFait.contains(o);
+		return dejaFait.containsKey(o) || pasEncoreFait.containsKey(o);
 	}
 	
 	synchronized void estTraite(Object o){
-		dejaFait.add(o);
+		dejaFait.put(o, true);
 		pasEncoreFait.remove(o);
 	}
 
