@@ -1,4 +1,4 @@
-1- Librairies à utiliser - Dependance maven
+﻿1- Librairies à utiliser - Dependance maven
 -------------------------------------------------------------------------------------------------
 
 L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes dans votre projet:
@@ -119,7 +119,7 @@ Voila la liste des autres méthodes publiques disponible dans le GOM :
 
 
 
- 	/**
+     /**
      * Sauvegarde ou update dans le gisement les objets nouveaux ou modifies.
      *
      * @param <U> the generic type
@@ -127,6 +127,12 @@ Voila la liste des autres méthodes publiques disponible dans le GOM :
     public <U> void saveAll()
     
      
+     /**
+     * Sauvegarde de l'objet avec sa grappe d'objet
+     * @param objet
+     */
+    public <U> void save(U objet) 
+
 
     /**
 	 * Creates the object.
