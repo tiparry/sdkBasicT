@@ -404,6 +404,12 @@ public class GlobalObjectManager implements EntityManager {
     	//new TacheChargementProfondeur(o).run();//monothread
 	}
     
+    @Override
+    protected void finalize() throws Throwable {
+    	super.finalize();
+    	executor.shutdown();
+    }
+    
     class TacheChargementProfondeur implements Runnable {
     	
     	private final Object objetATraiter;
