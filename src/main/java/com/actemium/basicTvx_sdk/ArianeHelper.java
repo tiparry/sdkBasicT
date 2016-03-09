@@ -28,13 +28,18 @@ public class ArianeHelper {
 				Class<?> type = value.getClass();
 				if(Collection.class.isAssignableFrom(type)){
 					for(Object o : (Collection)value){
-						gom.prendEnChargePourChargementEnProfondeur(o, cacheChargementEnProfondeur);
+						if(o != null && !TypeExtension.isSimple(o.getClass()))
+							gom.prendEnChargePourChargementEnProfondeur(o, cacheChargementEnProfondeur);
 					}
 				}else if(Map.class.isAssignableFrom(type)){
 					Map<?,?> map = (Map<?,?>)value;
 					for(Entry<?,?> entry : map.entrySet()){
-						gom.prendEnChargePourChargementEnProfondeur(entry.getKey(), cacheChargementEnProfondeur);
-						gom.prendEnChargePourChargementEnProfondeur(entry.getValue(), cacheChargementEnProfondeur);
+						Object k = entry.getKey();
+						Object v = entry.getValue();
+						if(k != null && !TypeExtension.isSimple(k.getClass()))
+							gom.prendEnChargePourChargementEnProfondeur(entry.getKey(), cacheChargementEnProfondeur);
+						if(v != null && !TypeExtension.isSimple(v.getClass()))						
+							gom.prendEnChargePourChargementEnProfondeur(entry.getValue(), cacheChargementEnProfondeur);
 					}
 				}else{ //objet
 					gom.prendEnChargePourChargementEnProfondeur(value, cacheChargementEnProfondeur);
