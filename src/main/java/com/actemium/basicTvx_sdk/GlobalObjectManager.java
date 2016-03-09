@@ -425,10 +425,10 @@ public class GlobalObjectManager implements EntityManager {
         public void run() {
             try {
 				chargeObjectEnProfondeur(objetATraiter, cacheChargementEnProfondeur);
-				cacheChargementEnProfondeur.estTraite(objetATraiter);
 			} catch (ParseException | InstantiationException | IllegalAccessException | IllegalArgumentException | ClassNotFoundException | RestException | IOException | SAXException | ChampNotFund | InterruptedException e) {
 				LOGGER.error("",e);
 			}
+            cacheChargementEnProfondeur.estTraite(objetATraiter);
         }   
     }
 }
