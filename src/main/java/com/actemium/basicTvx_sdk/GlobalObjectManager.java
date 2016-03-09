@@ -426,6 +426,7 @@ public class GlobalObjectManager implements EntityManager {
             try {
 				chargeObjectEnProfondeur(objetATraiter, cacheChargementEnProfondeur);
 			} catch (ParseException | InstantiationException | IllegalAccessException | IllegalArgumentException | ClassNotFoundException | RestException | IOException | SAXException | ChampNotFund | InterruptedException e) {
+				gestionCache.setEstCharge(objetATraiter);
 				LOGGER.error("",e);
 			}
             cacheChargementEnProfondeur.estTraite(objetATraiter);
