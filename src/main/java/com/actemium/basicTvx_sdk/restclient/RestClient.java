@@ -1,11 +1,15 @@
 package com.actemium.basicTvx_sdk.restclient;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
+import java.net.URISyntaxException;
 import java.security.KeyManagementException;
+import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
@@ -13,6 +17,7 @@ import java.security.cert.X509Certificate;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
@@ -35,6 +40,7 @@ import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.auth.BasicScheme;
@@ -62,7 +68,7 @@ public class RestClient {
 	
 	/* test only 
 	 public static void main(String[] args) {
-		RestClient restClient = new RestClient("APP_CLIENT", "APP_PASSWORD");
+		RestClient restClient = new RestClient("APP_CLIENT", "APP_PASSWORD", true);
 		try {
 			//Reader reader = restClient.getReader("http://212.83.130.104:8080/ImportBasicTravaux/resources/index.html");
 			Reader reader = restClient.getReader("https://git.xn--saa-0ma.com/users/sign_in");
@@ -79,7 +85,98 @@ public class RestClient {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-	}*/
+	}
+	*/
+	private SSLContext getSSLContext() throws KeyStoreException, 
+    NoSuchAlgorithmException, CertificateException, IOException, KeyManagementException, URISyntaxException {
+        KeyStore trustStore  = KeyStore.getInstance("jks");
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+
+        if (classLoader == null) {
+            classLoader = Class.class.getClassLoader();
+        }
+        
+        InputStream instream = classLoader.getResourceAsStream("myTrustStore");
+        try {
+            trustStore.load(instream, "basictravaux".toCharArray());
+        } finally {
+            instream.close();
+        }
+        
+       
+        
+        SSLContext context =  SSLContexts.custom()
+                .loadTrustMaterial(trustStore, new TrustSelfSignedStrategy())
+                .build();
+        return context;
+    }
+	
+	
+	/* Constructeur temporaire -- en cours de dev-- pour forcer les controles SSL sur les certificats 
+	 * a partir de certificat charges dans le trustore dans getSSLContext
+	 * Je n'ai pas encore trouve le bon code pour accepter a la fois les certif autosignes et uniquement les
+	 * certifs du trustore. On peut jouer sur la TrustStrategie et sur le hostnameverifier du SSLConnectionSocketFactory
+	 * 
+	 */
+	private RestClient(String login, String pwd, boolean test) {
+		//CredentialsProvider provider = new BasicCredentialsProvider();
+		UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(login,pwd);
+		//provider.setCredentials(AuthScope.ANY, credentials);
+		this.credentials = credentials;
+		    
+        
+     // Trust own CA and all self-signed certs
+        SSLContext sslContext;
+		try {
+			sslContext = getSSLContext();
+			
+			 // Allow TLSv1 protocol only
+	        SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(
+	        		sslContext,
+	                new String[] { "TLSv1" },
+	                null,
+	                //new NoopHostnameVerifier());
+	                SSLConnectionSocketFactory.getDefaultHostnameVerifier());
+			
+	        Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
+	                .register("http", PlainConnectionSocketFactory.getSocketFactory())
+	                .register("https", sslsf)
+	                .build();
+	        
+	        // Create an HttpClient with the ThreadSafeClientConnManager.
+	        // This connection manager must be used if more than one thread will
+	        // be using the HttpClient.
+	        PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+	        cm.setMaxTotal(HTTP_CLIENT_MAX_POOL_SIZE);
+	        cm.setDefaultMaxPerRoute(HTTP_CLIENT_MAX_POOL_PER_ROOT);
+	        //cm.setDefaultSocketConfig( SocketConfig.custom().setSoKeepAlive( true ).setSoReuseAddress( true ).setSoTimeout( 3000 ).build() 
+	        //cm.setValidateAfterInactivity(1); // essai pour resoudre java.net.SocketException: Software caused connection abort: recv failed
+	        
+		
+		client = HttpClientBuilder.create()
+				//.setDefaultCredentialsProvider(provider)
+				//.setSslcontext(sslContext)
+				//.setSSLSocketFactory(sslsf)
+				.setConnectionManager(cm)
+				.evictExpiredConnections()
+				.evictIdleConnections(5L,TimeUnit.SECONDS).build();
+		
+		} catch (KeyManagementException e) {
+			LOGGER.error("KeyManagementException", e);
+		} catch (NoSuchAlgorithmException e) {
+			LOGGER.error("NoSuchAlgorithmException", e);
+		} catch (KeyStoreException e) {
+			LOGGER.error("KeyStoreException", e);
+		} catch (CertificateException e) {
+			LOGGER.error("CertificateException", e);
+		} catch (IOException e) {
+			LOGGER.error("IOException", e);
+		} catch (URISyntaxException e) {
+			LOGGER.error("URISyntaxException", e);
+		}
+		
+		
+	}
 	
 	
 	public RestClient(String login, String pwd) {
