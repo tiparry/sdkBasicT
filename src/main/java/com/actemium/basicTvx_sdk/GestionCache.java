@@ -2,6 +2,7 @@ package com.actemium.basicTvx_sdk;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +19,7 @@ public class GestionCache {
 	private final static long tempsDeCacheMinimum = 1000 * 60; //une minute 
 	private long tempsDeCache = 1000 * 60 * 60; //une heure 
 	private BiHashMap<Class<?>, String, Object> classAndIdToObject = new BiHashMap<Class<?>, String, Object>();
-	private final Map<Object, Stockage> dejaCharge = new HashMap<>();
+	private final Map<Object, Stockage> dejaCharge = new IdentityHashMap<>();
 	private Map<Class<?>, Stockage> dicoClasseDejaChargee = new HashMap<Class<?>, Stockage>();
 	
 	synchronized boolean setDureeCache(long nouveauTempsDeCache) {
@@ -104,6 +105,7 @@ public class GestionCache {
 	}
 	synchronized void setEstEnregistreDansGisement(Object obj){
 		setEstCharge(obj);
+		setNotNew(obj);
 	}
 	synchronized boolean isNew(Object obj) {
 		Stockage s = dejaCharge.get(obj);

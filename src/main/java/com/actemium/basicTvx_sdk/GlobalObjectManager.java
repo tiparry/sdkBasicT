@@ -7,6 +7,7 @@ import giraudsa.marshall.exception.MarshallExeption;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -26,6 +27,7 @@ import utils.champ.Champ;
 
 import com.actemium.basicTvx_sdk.exception.GetAllObjectException;
 import com.actemium.basicTvx_sdk.exception.GetObjectException;
+import com.actemium.basicTvx_sdk.exception.GetObjetEnProfondeurException;
 import com.actemium.basicTvx_sdk.exception.SaveAllException;
 import com.actemium.basicTvx_sdk.exception.SaveException;
 import com.actemium.basicTvx_sdk.restclient.RestException;
@@ -178,8 +180,9 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param enProfondeur boolean permettant de provoquer une recuperation de la grappe d'objet en profondeur
 	 * @return the object by type and id
 	 * @throws GetObjectException 
+	 * @throws GetObjetEnProfondeurException 
 	 */
-	public <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur) throws GetObjectException{
+	public <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur) throws GetObjectException, GetObjetEnProfondeurException{
 	    try{
 			if(id == null || clazz == null) return null;
 			U obj = gestionCache.getObject(clazz, id); //on regarde en cache
@@ -209,12 +212,17 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 
-	private void getObjetEnProfondeur(Object obj) throws InterruptedException {
+	private void getObjetEnProfondeur(Object obj) throws GetObjetEnProfondeurException {
 		CacheChargementEnProfondeur cacheChargementEnProfondeur = new CacheChargementEnProfondeur();
 		prendEnChargePourChargementEnProfondeur(obj, cacheChargementEnProfondeur);
 	    while(!cacheChargementEnProfondeur.estFini()){
-	    	Thread.sleep(100);
+	    	try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				throw new GetObjetEnProfondeurException(Collections.singletonList((Exception)e));
+			}
 	    }
+	    cacheChargementEnProfondeur.toutSestBienPasse();
 	}
 
 	/**
@@ -243,13 +251,20 @@ public class GlobalObjectManager implements EntityManager {
 	 *
 	 * @param Requete
 	 * @param enProfondeur true si l'on veut récuperer toute l'arborescence de la réponse
+	 * @throws GetObjetEnProfondeurException 
+	 * @throws GetObjectException 
 	 * @throws MarshallExeption 
 	 * @throws InterruptedException 
 	 * @throws RestException 
 	 * @throws IOException 
 	 */
-	public Reponse getReponse(Requete request, boolean enProfondeur) throws MarshallExeption, InterruptedException, IOException, RestException {
-		Reponse reponse = persistanceManager.getReponse(request, this);
+	public Reponse getReponse(Requete request, boolean enProfondeur) throws GetObjetEnProfondeurException, GetObjectException  {
+		Reponse reponse;
+		try {
+			reponse = persistanceManager.getReponse(request, this);
+		} catch (MarshallExeption | IOException | RestException e) {
+			throw new GetObjectException(e);
+		}
 		if(enProfondeur){
 			getObjetEnProfondeur(reponse);
 		}
@@ -317,8 +332,8 @@ public class GlobalObjectManager implements EntityManager {
      * Sauvegarde les objets en tenant compte des relations de composition...
      *
      * @param <U> the generic type
-     * @param l the l
-     * @param relation the relation
+     * @param l l'objet à sauvegarder
+     * @param relation le type de relation (composition, agregation, association)
      * @return the int
      * @throws IllegalAccessException 
      * @throws MarshallExeption 
@@ -425,11 +440,17 @@ public class GlobalObjectManager implements EntityManager {
         public void run() {
             try {
 				chargeObjectEnProfondeur(objetATraiter, cacheChargementEnProfondeur);
+				cacheChargementEnProfondeur.estTraite(objetATraiter);
 			} catch (ParseException | InstantiationException | IllegalAccessException | IllegalArgumentException | ClassNotFoundException | RestException | IOException | SAXException | ChampNotFund | InterruptedException e) {
-				gestionCache.setEstCharge(objetATraiter);
+				if(cacheChargementEnProfondeur.nombreEssais(objetATraiter) < 2){
+					prendEnChargePourChargementEnProfondeur(objetATraiter, cacheChargementEnProfondeur);
+				}else{
+					cacheChargementEnProfondeur.estTraite(objetATraiter);
+					gestionCache.setEstCharge(objetATraiter);//pour arreter d'essayer de le recharger
+					cacheChargementEnProfondeur.ajouteException(e);
+				}
 				LOGGER.error("",e);
 			}
-            cacheChargementEnProfondeur.estTraite(objetATraiter);
         }   
     }
 }
