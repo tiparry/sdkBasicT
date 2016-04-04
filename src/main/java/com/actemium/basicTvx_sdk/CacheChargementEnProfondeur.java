@@ -5,12 +5,13 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.actemium.basicTvx_sdk.exception.GetObjectException;
 import com.actemium.basicTvx_sdk.exception.GetObjetEnProfondeurException;
 
 public class CacheChargementEnProfondeur {
 	private Map<Object,Boolean> dejaFait = new IdentityHashMap<>();
 	private Map<Object,Integer> pasEncoreFait = new IdentityHashMap<>();
-	private List<Exception> exceptions = new ArrayList<>();
+	private List<GetObjectException> exceptions = new ArrayList<>();
 	
 	synchronized void add(Object o){
 		int nombreEssais = pasEncoreFait.containsKey(o)? pasEncoreFait.get(o) + 1 : 0;
@@ -34,12 +35,12 @@ public class CacheChargementEnProfondeur {
 		return pasEncoreFait.containsKey(o)? pasEncoreFait.get(o) : 0;
 	}
 	
-	synchronized void ajouteException(Exception ex){
+	synchronized void ajouteException(GetObjectException ex){
 		exceptions.add(ex);
 	}
 	
-	synchronized void toutSestBienPasse() throws GetObjetEnProfondeurException{
+	synchronized void toutSestBienPasse(Object obj) throws GetObjetEnProfondeurException{
 		if(!exceptions.isEmpty())
-			throw new GetObjetEnProfondeurException(exceptions);
+			throw new GetObjetEnProfondeurException(obj, exceptions);
 	}
 }

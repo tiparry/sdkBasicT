@@ -10,13 +10,15 @@ public class GetObjectException extends Exception {
 	 */
 	private static final long serialVersionUID = 8766623874379130509L;
 	private Exception e;
-	public GetObjectException(Exception e) {
+	private String idObjet;
+	private Class<?> type;
+	public GetObjectException(String idObjet, Class<?> type, Exception e) {
 		this.e = e;
 	}
 	
 	@Override
 	public String getMessage() {
-		return e.getMessage();
+		return "problème sur l'objet de type " + type.getName() + " d'id " + idObjet + " " + e.getMessage();
 	}
 
 	@Override
@@ -68,4 +70,13 @@ public class GetObjectException extends Exception {
 	public String toString() {
 		return e.toString();
 	}
+
+	public String getIdObjet() {
+		return idObjet;
+	}
+	
+	public Class<?> getType() {
+		return type;
+	}
+
 }

@@ -194,7 +194,7 @@ public class GlobalObjectManager implements EntityManager {
 		    return obj;
 	    }catch(InstantiationException | IllegalAccessException | ParseException | ClassNotFoundException | RestException | IOException | SAXException | InterruptedException e){
 	    	LOGGER.error("impossible de récupérer l'objet", e);
-    		throw new GetObjectException(e);
+    		throw new GetObjectException(id, clazz, e);
 	    }
 	}
 	
@@ -219,10 +219,10 @@ public class GlobalObjectManager implements EntityManager {
 	    	try {
 				Thread.sleep(100);
 			} catch (InterruptedException e) {
-				throw new GetObjetEnProfondeurException(Collections.singletonList((Exception)e));
+				throw new GetObjetEnProfondeurException(obj, e);
 			}
 	    }
-	    cacheChargementEnProfondeur.toutSestBienPasse();
+	    cacheChargementEnProfondeur.toutSestBienPasse(obj);
 	}
 
 	/**
@@ -263,7 +263,7 @@ public class GlobalObjectManager implements EntityManager {
 		try {
 			reponse = persistanceManager.getReponse(request, this);
 		} catch (MarshallExeption | IOException | RestException e) {
-			throw new GetObjectException(e);
+			throw new GetObjectException("objet sans id", request.getClass(), e);
 		}
 		if(enProfondeur){
 			getObjetEnProfondeur(reponse);
@@ -447,7 +447,7 @@ public class GlobalObjectManager implements EntityManager {
 				}else{
 					cacheChargementEnProfondeur.estTraite(objetATraiter);
 					gestionCache.setEstCharge(objetATraiter);//pour arreter d'essayer de le recharger
-					cacheChargementEnProfondeur.ajouteException(e);
+					cacheChargementEnProfondeur.ajouteException(new GetObjectException(gestionCache.getId(objetATraiter), objetATraiter.getClass(), e));
 				}
 				LOGGER.error("",e);
 			}
