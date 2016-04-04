@@ -165,11 +165,28 @@ Voila la liste des autres méthodes publiques disponible dans le GOM :
 	 * @param id the id
 	 * @param enProfondeur boolean permettant de provoquer une recuperation de la grappe d'objet en profondeur
 	 * @return the object by type and id
-	 * @throws InterruptedException 
+	 * @throws InterruptedException
 	 */
 	public <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur)
 
 	 
+Dans le cas d'un usage en profondeur, voila comment gérer finement les Exceptions eventuelles remontées par cette méthode:
+		
+		MonObjet monObjet;
+		try {
+			monObjet = (MonObjet)getObject(MonObjet.class, uuid, true);
+		} catch (GetObjetEnProfondeurException e) {
+			for(GetObjectException ex : e.getCauses()){
+				LOGGER.error(ex.getMessage(), ex);
+			}
+			if(e.getInterruptedException() != null)
+				LOGGER.error(e.getInterruptedException().getMessage(), e.getInterruptedException());
+			monObjet= (MonObjet) e.getObjetRacine();
+		}
+
+
+
+
 	 
 	 /**
      * Verifie si un objet est nouveau (c'est à dire s'il a été fabriqué localement).
@@ -196,6 +213,21 @@ Voila la liste des autres méthodes publiques disponible dans le GOM :
 	 * @param enProfondeur true si l'on veut récuperer toute la grappe de la réponse
 	 */
 	public Reponse getReponse(Requete request, boolean enProfondeur)
+
+
+Dans le cas d'un usage en profondeur, voila comment gérer finement les Exceptions eventuelles remontées par cette méthode:
+		
+		MaReponse reponse;
+		try {
+			reponse = (MaReponse)getReponse(requete, true);
+		} catch (GetObjetEnProfondeurException e) {
+			for(GetObjectException ex : e.getCauses()){
+				LOGGER.error(ex.getMessage(), ex);
+			}
+			if(e.getInterruptedException() != null)
+				LOGGER.error(e.getInterruptedException().getMessage(), e.getInterruptedException());
+			reponse = (MaReponse) e.getObjetRacine();
+		}
 
 
 	
