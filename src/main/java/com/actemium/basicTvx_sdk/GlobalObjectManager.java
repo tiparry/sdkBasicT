@@ -325,6 +325,8 @@ public class GlobalObjectManager implements EntityManager {
             objetsASauvegarder.remove(l);
             this.saveReferences(l, TypeRelation.COMPOSITION, objetsASauvegarder);
             this.persistanceManager.save(l);
+        } else {
+        	objetsASauvegarder.remove(l);
         }
     }
 
