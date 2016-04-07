@@ -116,6 +116,8 @@ public class GlobalObjectManager implements EntityManager {
      * @throws SaveException
      */
     public <U> void save(U objet) throws SaveException{
+    	if (objet == null) return;
+    	if (!isNew(objet) && !hasChanged(objet)) return;
     	try{
     		Set<Object> objetsASauvegarder = new HashSet<>();
     		objetsASauvegarder.add(objet);
@@ -325,9 +327,7 @@ public class GlobalObjectManager implements EntityManager {
             objetsASauvegarder.remove(l);
             this.saveReferences(l, TypeRelation.COMPOSITION, objetsASauvegarder);
             this.persistanceManager.save(l);
-        } else {
-        	objetsASauvegarder.remove(l);
-        }
+        } 
     }
 
     /**
