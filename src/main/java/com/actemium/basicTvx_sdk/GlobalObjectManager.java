@@ -416,12 +416,17 @@ public class GlobalObjectManager implements EntityManager {
     }
     
     void prendEnChargePourChargementEnProfondeur(Object o, CacheChargementEnProfondeur cacheChargementEnProfondeur) {
-    	if(!cacheChargementEnProfondeur.dejaVu(o)){
-    		cacheChargementEnProfondeur.add(o);
+    	if(createNewTacheChargementProfondeur(o, cacheChargementEnProfondeur)){
     		executor.submit(new TacheChargementProfondeur(o, cacheChargementEnProfondeur));//multithread
     	}
     	//new TacheChargementProfondeur(o).run();//monothread
 	}
+    
+    private synchronized boolean createNewTacheChargementProfondeur(Object o, CacheChargementEnProfondeur cacheChargementEnProfondeur){
+    	if (!cacheChargementEnProfondeur.dejaVu(o))
+    		cacheChargementEnProfondeur.add(o);
+    	return !cacheChargementEnProfondeur.dejaVu(o);
+    }
     
     @Override
     protected void finalize() throws Throwable {
