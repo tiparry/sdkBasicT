@@ -126,9 +126,7 @@ public class RestClient {
 
 
 	public RestClient(String login, String pwd) {
-		//CredentialsProvider provider = new BasicCredentialsProvider();
 		UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(login,pwd);
-		//provider.setCredentials(AuthScope.ANY, credentials);
 		this.credentials = credentials;
 		    
 	    
@@ -238,8 +236,8 @@ public class RestClient {
 				return null;
 			}
 		} catch (IOException e) {
-			LOGGER.error("probleme de connexion get", e);
-			throw new RestException(statusCode,"probleme de connexion get", e);
+			LOGGER.error("probleme de connexion getReader " + url, e);
+			throw new RestException(statusCode,"probleme de connexion getReader " + url, e);
 		}
 	}
 	
@@ -274,8 +272,8 @@ public class RestClient {
 				return null;
 			}
 		} catch (IOException e) {
-			LOGGER.error("probleme de connexion postReader", e);
-			throw new RestException(statusCode,"probleme de connexion postReader", e);
+			LOGGER.error("probleme de connexion postReader "  + url + System.lineSeparator() + message , e);
+			throw new RestException(statusCode,"probleme de connexion postReader " + url + System.lineSeparator() + message, e);
 		}
 	}
 	
