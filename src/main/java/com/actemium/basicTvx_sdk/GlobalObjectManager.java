@@ -109,7 +109,7 @@ public class GlobalObjectManager implements EntityManager {
 		    save(objetsASauvegarder);
     	}catch(MarshallExeption | IllegalAccessException | IOException | RestException e){
     		LOGGER.error("impossible de sauvegarder", e);
-    		throw new SaveAllException(e);
+    		throw new SaveAllException("impossible de sauvegarder", e);
     	}
     }
     /**

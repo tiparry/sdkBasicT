@@ -227,7 +227,7 @@ public class RestClient {
 			CloseableHttpResponse response = client.execute(request);
 			statusCode = response.getStatusLine().getStatusCode();
 			if (statusCode < 200 || statusCode >= 300) {
-				consumeAndClose(response, statusCode);
+				consumeAndClose(response, statusCode, url, null);
 			}
 
 			HttpEntity entity = response.getEntity();
@@ -264,8 +264,7 @@ public class RestClient {
 		    CloseableHttpResponse response = client.execute(post);
 			statusCode = response.getStatusLine().getStatusCode();
 			if (statusCode < 200 || statusCode >= 300) {
-				consumeAndClose(response, statusCode);
-				throw new RestException(statusCode);
+				consumeAndClose(response, statusCode, message, url);
 			}
 			HttpEntity entityReponse = response.getEntity();
 			if (entityReponse != null) {
@@ -307,12 +306,13 @@ public class RestClient {
 	        	message = "pas de message";
 	        }
 	        if (statusCode < 200 || statusCode >= 300 || res == null) {
-	            throw new RestException(statusCode, message);
+	        	throw new RestException(statusCode, "retour serveur : " + message +
+	            		System.lineSeparator() + "Probleme de connexion post " + content + " sur "  + url);
 	        }
 	        return message;
 		} catch (IOException e) {
 			LOGGER.error("probleme de connexion post", e);
-			throw new RestException(statusCode, "probleme de connexion post", e);
+			throw new RestException(statusCode, "probleme de connexion post " + content + " sur "  + url, e);
 		} finally {
 			HttpClientUtils.closeQuietly(response);
 	    }
@@ -347,11 +347,12 @@ public class RestClient {
 		      message = "";
 		    }
 		    if (statusCode < 200 || statusCode >= 300 || res == null)
-	            throw new RestException(statusCode, message);
+	            throw new RestException(statusCode, "retour serveur : " + message +
+	            		System.lineSeparator() + "Probleme de connexion put " + content + " sur "  + url);
 	        return message;
 	    } catch (IOException e) {
 	    	LOGGER.error("probleme de connexion put", e);
-			throw new RestException(statusCode, "probleme de connexion put", e);
+			throw new RestException(statusCode, "probleme de connexion put " + content + " sur "  + url, e);
 		} finally {
 	    	HttpClientUtils.closeQuietly(response);
 	    }
@@ -398,7 +399,7 @@ public class RestClient {
 	}
 
 
-	private void consumeAndClose(CloseableHttpResponse response, int statusCode) throws RestException{
+	private void consumeAndClose(CloseableHttpResponse response, int statusCode, String data, String url) throws RestException{
 		// In order to ensure correct deallocation of system resources
 		// the user MUST call CloseableHttpResponse#close() from a finally clause.
 		// Please note that if response content is not fully consumed the underlying
@@ -410,11 +411,13 @@ public class RestClient {
 		    // do something useful with the response body
 		    // and ensure it is fully consumed²
 		    message = EntityUtils.toString(entity);
-		    throw new RestException(statusCode, message);
+		    throw new RestException(statusCode, "retour serveur : " + message +
+            		System.lineSeparator() + "Probleme de connexion " + (data == null ? "getReader" : "postReader " + data) + " sur "  + url);
 		} catch (IOException e) {
-			LOGGER.error("impossible de consommer le CloseableHttpResponse");
 			message = "impossible de consommer le CloseableHttpResponse";
-			throw new RestException(statusCode, message, e);
+			LOGGER.error(message, e);			
+			throw new RestException(statusCode, "retour serveur : " + message +
+            		System.lineSeparator() + "Probleme de connexion " + (data == null ? "getReader" : "postReader " + data) + " sur "  + url, e);
 		} finally {
 			HttpClientUtils.closeQuietly(response);
 		}
