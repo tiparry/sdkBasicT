@@ -4,6 +4,7 @@ import giraudsa.marshall.annotations.TypeRelation;
 import giraudsa.marshall.deserialisation.EntityManager;
 import giraudsa.marshall.exception.ChampNotFund;
 import giraudsa.marshall.exception.MarshallExeption;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -12,8 +13,13 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -54,7 +60,7 @@ public class GlobalObjectManager implements EntityManager {
     /** The persistance manager. */
     private final PersistanceManagerAbstrait persistanceManager;
     
-    private ExecutorService executor = Executors.newFixedThreadPool(10);
+ 
 
     private static GlobalObjectManager instance = null;
     
@@ -196,38 +202,196 @@ public class GlobalObjectManager implements EntityManager {
 		    nourritObjet(obj);
 		    if(enProfondeur) getObjetEnProfondeur(obj);
 		    return obj;
-	    }catch(ParseException | RestException | IOException | SAXException | InterruptedException | ParserConfigurationException | ReflectiveOperationException e){
+	    }catch(InstantiationException | IllegalAccessException | ParseException | ClassNotFoundException | RestException | IOException | SAXException | InterruptedException  e){
 	    	LOGGER.error("impossible de récupérer l'objet", e);
     		throw new GetObjectException(id, clazz, e);
 	    }
 	}
 	
-	private <U> void nourritObjet(U obj) throws ParseException, RestException, IOException, SAXException, InterruptedException, ParserConfigurationException, ReflectiveOperationException{
-		if(!gestionCache.estCharge(obj) && !gestionCache.enChargement(obj) && gestionCache.setPrisEnChargePourChargement(obj)){
+
+		private void getObjetEnProfondeur(Object obj) throws GetObjetEnProfondeurException{
+			ManagerChargementEnProfondeur managerChargementEnProfondeur = new ManagerChargementEnProfondeur();
+			prendEnChargePourChargementEnProfondeur(obj, managerChargementEnProfondeur, false);
+			while(!managerChargementEnProfondeur.isAllCompleted()){
+				try {
+					Future<Object> future;
+					future = managerChargementEnProfondeur.waitForATaskToComplete();
+					try{
+						Object objetCharge = future.get();
+						gestionCache.setEstCharge(objetCharge);
+					}
+					catch( ExecutionException e){ 
+						gererExecutionExceptionEnProfondeur(obj, managerChargementEnProfondeur, future, e);
+					}
+					catch (InterruptedException e) {
+						throw new GetObjetEnProfondeurException(obj, e); //TODO que faire ?
+					}
+					finally{
+						managerChargementEnProfondeur.oneTaskCompleted();
+					}
+				}
+				catch (InterruptedException e) { //TODO que faire ?
+					throw new GetObjetEnProfondeurException(obj, e);
+				}
+		    }
+			managerChargementEnProfondeur.chargementTermine();
+		}
+		
+		//methode pour verifier de maniere thread safe si l'objet est deja chargé ou en cours. sinon, lance le chargement 
+		// parametre passés sous forme de liste pour qu'on puisse les creer et que la methode parente puisse les recuperer
+		private synchronized boolean isChargeouEnChargement(Object obj, List<String> id, List<Class<?>>clazz, List<ExecutorService> executor,  List<Future<Object>> future){
+			if(!gestionCache.estCharge(obj) && gestionCache.getChargement(obj)==null){
+				id.add(gestionCache.getId(obj));
+				clazz.add(obj.getClass());
+				executor.add(Executors.newSingleThreadExecutor()); //ici (pas dans getObject) car prend du temps : inutile de le faire si deja chargé
+				future.add(executor.get(0).submit(new TacheWebServiceGetObjet(obj,clazz.get(0), id.get(0), this)));
+				gestionCache.setChargement(obj, future.get(0));
+				return true;
+			}
+			return false;
+		}
+		
+	private <U> void nourritObjet(U obj) throws ParseException, ClassNotFoundException, RestException, IOException, SAXException, InterruptedException{
+		List<Class<?>> clazz = new ArrayList<Class<?>>();
+		List<String> id = new ArrayList<String>();
+		List<ExecutorService> executor = new ArrayList<ExecutorService>();
+		List<Future<Object>> future = new ArrayList<Future<Object>>();
+		if (isChargeouEnChargement(obj, id, clazz, executor, future)){
+			try {
+				gestionCache.setEstCharge(future.get(0).get());
+			} catch (ExecutionException e1) {
+				if (isNetworkException(e1)){
+					future.add(executor.get(0).submit(new TacheWebServiceGetObjet(obj,clazz.get(0), id.get(0), this)));
+					try {
+						gestionCache.setEstCharge(future.get(0).get());
+					} catch (ExecutionException e2) {
+						rethrowExecutionExceptionForTacheWebService(e2);
+					} catch (CancellationException e) {
+						//TODO que faire : a priori faire en sorte que cette exception n'arrive pas 
+					} catch( InterruptedException e){
+						//on fait rien à part reseter le flag de la thread qui s'et interrompue;
+						Thread.currentThread().interrupt();
+					}
+				}
+				else {
+					rethrowExecutionExceptionForTacheWebService(e1);
+				}
+			}catch(CancellationException e) {
+				//TODO que faire ?
+			} catch( InterruptedException e){
+				//on fait rien ;
+				Thread.currentThread().interrupt();
+			 }
+			//si un autre client essaye d'avoir l'objet pendant qu'il est en chargement. que faire si le chargement se passe pas bien ?
+		}else if(gestionCache.getChargement(obj)!=null){
+			try {gestionCache.getChargement(obj).get();
+			}
+			catch(CancellationException e) {
+				//TODO ?
+			} catch (ExecutionException e) {
+				rethrowExecutionExceptionForTacheWebService(e);
+				e.printStackTrace();
+			} catch( InterruptedException e){
+				//on fait rien à part reseter le flag de la thread qui s'et interrompue;
+				Thread.currentThread().interrupt();
+			 }
+		}
+	}
+	
+	//TODO faire propre, a terminer ?
+	private <U> void nourritObjetEnProfondeur(U obj) throws ParseException, ClassNotFoundException, RestException, IOException, SAXException, InterruptedException{
+		if(!gestionCache.estCharge(obj) && gestionCache.getChargement(obj)==null ){ //TODO faut il que obj soit present dans gestionCache dejaCharge
 			String id = gestionCache.getId(obj);
 			Class<?> clazz = obj.getClass();
-			persistanceManager.getObjectById(clazz, id, this);
-			gestionCache.setEstCharge(obj);
-		}else if(gestionCache.enChargement(obj)){
-			while(gestionCache.enChargement(obj)){
-				Thread.sleep(100);
+			persistanceManager.getObjectById(clazz, id, this); 
+		}else if(gestionCache.getChargement(obj) != null){
+			try {
+				gestionCache.getChargement(obj).get();
+			}
+			catch (CancellationException | InterruptedException e ){ 
+				;
+			}
+			catch (ExecutionException e) { 
+				if (e.getCause() instanceof RestException | e.getCause() instanceof IOException){
+									}
 			}
 		}
 	}
 
-
-	private void getObjetEnProfondeur(Object obj) throws GetObjetEnProfondeurException {
-		CacheChargementEnProfondeur cacheChargementEnProfondeur = new CacheChargementEnProfondeur();
-		prendEnChargePourChargementEnProfondeur(obj, cacheChargementEnProfondeur);
-	    while(!cacheChargementEnProfondeur.estFini()){
-	    	try {
-				Thread.sleep(100);
-			} catch (InterruptedException e) {
-				throw new GetObjetEnProfondeurException(obj, e);
-			}
-	    }
-	    cacheChargementEnProfondeur.toutSestBienPasse(obj);
+	private void chargeObjectEnProfondeur(Object objetATraiter, ManagerChargementEnProfondeur managerChargementEnProfondeur) throws ParseException, ClassNotFoundException,
+	RestException, IOException, SAXException, InterruptedException, IllegalArgumentException, IllegalAccessException {
+		nourritObjetEnProfondeur(objetATraiter);
+		ArianeHelper.addSousObject(objetATraiter, this, managerChargementEnProfondeur);
 	}
+
+
+	boolean prendEnChargePourChargementEnProfondeur(Object o, ManagerChargementEnProfondeur managerChargementEnProfondeur, boolean retry) {
+		if(createNewTacheChargementProfondeur(o, managerChargementEnProfondeur, retry)){
+			managerChargementEnProfondeur.submit(o,new TacheChargementProfondeur(o, managerChargementEnProfondeur));
+			return true;
+		}
+		return false;
+	}
+
+	
+	
+	private synchronized boolean createNewTacheChargementProfondeur(Object o, ManagerChargementEnProfondeur managerChargementEnProfondeur, boolean retry){
+		if (managerChargementEnProfondeur.isChargementTermine())
+			return false;
+		if(retry)
+			return retryChargementEnProfondeur(o, managerChargementEnProfondeur);
+		if (!managerChargementEnProfondeur.dejaVu(o) ){
+			managerChargementEnProfondeur.add(o);
+			return true;
+		}
+		return false;
+	}
+
+
+	private boolean retryChargementEnProfondeur(Object o, ManagerChargementEnProfondeur managerChargementEnProfondeur) {
+		if(managerChargementEnProfondeur.nombreEssais(o) < 3){ //3 : le mettre parametrtable ?
+			managerChargementEnProfondeur.add(o);
+			return true;
+    	}
+    	return false;
+    }
+
+	
+	private void gererExecutionExceptionEnProfondeur(Object obj, ManagerChargementEnProfondeur managerChargementEnProfondeur, Future<Object> future,ExecutionException e) throws GetObjetEnProfondeurException{
+		boolean retry = false;
+		Object objectToRecharge = managerChargementEnProfondeur.retrieveObjectFromFutur(future);
+		if (isNetworkException(e)){
+			retry = prendEnChargePourChargementEnProfondeur(objectToRecharge, managerChargementEnProfondeur, true);
+		}
+		if(!retry) {
+			Throwable t = e.getCause();
+			GetObjectException g = new GetObjectException(gestionCache.getId(objectToRecharge), objectToRecharge.getClass(), e);
+			List<GetObjectException> liste =  new ArrayList<GetObjectException>();
+			liste.add(g);
+			throw new GetObjetEnProfondeurException(obj, liste);
+		}	
+	}
+
+	private boolean isNetworkException(ExecutionException e){
+		if(e.getCause() instanceof RestException | e.getCause() instanceof IOException)
+			return true;
+		return false;
+	}
+	
+	private void rethrowExecutionExceptionForTacheWebService(ExecutionException e) throws  ParseException, ClassNotFoundException, RestException, IOException, SAXException {
+		Throwable t = e.getCause();
+		if (t instanceof ParseException)
+			throw (ParseException)t;
+		else if (t instanceof ClassNotFoundException)
+			throw (ClassNotFoundException)t;
+		else if (t instanceof RestException)
+			throw (RestException)t;
+		else if (t instanceof IOException)
+			throw (IOException)t;
+		else if (t instanceof SAXException)
+			throw (SAXException)t;
+	}
+	
 
 	/**
 	 * Purge le Cache du GOM pour éviter les fuites mémoires lorsqu'on a fini un traitement.
@@ -288,8 +452,6 @@ public class GlobalObjectManager implements EntityManager {
         	return (U) objetsASauvegarder.iterator().next();
         return null;
     }
-
-    
    
 
     /**
@@ -372,10 +534,7 @@ public class GlobalObjectManager implements EntityManager {
         }
     }
 
-    private void chargeObjectEnProfondeur(Object objetATraiter, CacheChargementEnProfondeur cacheChargementEnProfondeur) throws ParseException, IllegalArgumentException, RestException, IOException, SAXException, ChampNotFund, InterruptedException, ParserConfigurationException, ReflectiveOperationException{
-    	nourritObjet(objetATraiter);
-    	ArianeHelper.addSousObject(objetATraiter, this, cacheChargementEnProfondeur);
-    }
+  
     
     
     
@@ -414,52 +573,49 @@ public class GlobalObjectManager implements EntityManager {
     @Override public void metEnCache(final String id, final Object obj) {
    		gestionCache.metEnCache(id, obj, false);
     }
-    
-    void prendEnChargePourChargementEnProfondeur(Object o, CacheChargementEnProfondeur cacheChargementEnProfondeur) {
-    	if(createNewTacheChargementProfondeur(o, cacheChargementEnProfondeur)){
-    		executor.submit(new TacheChargementProfondeur(o, cacheChargementEnProfondeur));//multithread
-    	}
-    	//new TacheChargementProfondeur(o).run();//monothread
-	}
-    
-    private synchronized boolean createNewTacheChargementProfondeur(Object o, CacheChargementEnProfondeur cacheChargementEnProfondeur){
-    	if (!cacheChargementEnProfondeur.dejaVu(o))
-    		cacheChargementEnProfondeur.add(o);
-    	return !cacheChargementEnProfondeur.dejaVu(o);
-    }
-    
+
     @Override
     protected void finalize() throws Throwable {
     	super.finalize();
-    	executor.shutdown();
     }
-    
-    class TacheChargementProfondeur implements Runnable {
-    	
-    	private final Object objetATraiter;
-    	private final CacheChargementEnProfondeur cacheChargementEnProfondeur;
-    	
-		public TacheChargementProfondeur(Object objetATraiter, CacheChargementEnProfondeur cacheChargementEnProfondeur) {
-			super();
-			this.objetATraiter = objetATraiter;
-			this.cacheChargementEnProfondeur = cacheChargementEnProfondeur;
-		}
 
-		@Override
-        public void run() {
-            try {
-				chargeObjectEnProfondeur(objetATraiter, cacheChargementEnProfondeur);
-				cacheChargementEnProfondeur.estTraite(objetATraiter);
-			} catch (ParseException | IllegalArgumentException | RestException | IOException | SAXException | ChampNotFund | InterruptedException | ParserConfigurationException | ReflectiveOperationException e) {
-				if(cacheChargementEnProfondeur.nombreEssais(objetATraiter) < 2){
-					prendEnChargePourChargementEnProfondeur(objetATraiter, cacheChargementEnProfondeur);
-				}else{
-					cacheChargementEnProfondeur.estTraite(objetATraiter);
-					gestionCache.setEstCharge(objetATraiter);//pour arreter d'essayer de le recharger
-					cacheChargementEnProfondeur.ajouteException(new GetObjectException(gestionCache.getId(objetATraiter), objetATraiter.getClass(), e));
-				}
-				LOGGER.error("",e);
-			}
-        }   
+    class TacheChargementProfondeur implements Callable<Object> {
+
+    	private final Object objetATraiter;
+    	private final ManagerChargementEnProfondeur managerChargementEnProfondeur;
+
+    	public TacheChargementProfondeur(Object objetATraiter, ManagerChargementEnProfondeur managerChargementEnProfondeur) {
+    		super();
+    		this.objetATraiter = objetATraiter;
+    		this.managerChargementEnProfondeur = managerChargementEnProfondeur;
+    	}
+
+    	@Override
+    	public Object call() throws ParseException, InstantiationException, IllegalAccessException, IllegalArgumentException, ClassNotFoundException, RestException, IOException, SAXException, ChampNotFund, InterruptedException {
+    		chargeObjectEnProfondeur(objetATraiter, managerChargementEnProfondeur);
+    		return objetATraiter;
+    	}   
+    }
+
+    class TacheWebServiceGetObjet implements Callable<Object> {
+
+    	private final Object objetATraiter;
+    	private Class<?> clazz;
+    	private String id;
+    	private GlobalObjectManager gom;
+
+    	public TacheWebServiceGetObjet(Object objetATraiter, Class<?> clazz , String id, GlobalObjectManager gom) {
+    		super();
+    		this.objetATraiter = objetATraiter;
+    		this.clazz=clazz;
+    		this.id=id;
+    		this.gom=gom;
+    	}
+
+    	@Override
+    	public Object call() throws ParseException, RestException, IOException, SAXException, ClassNotFoundException {
+    		persistanceManager.getObjectById(clazz, id, gom);
+    		return objetATraiter;
+    	}   
     }
 }

@@ -20,7 +20,7 @@ public class ArianeHelper {
 	}
 	
 	@SuppressWarnings("rawtypes")
-	 static void addSousObject(Object obj, GlobalObjectManager gom, CacheChargementEnProfondeur cacheChargementEnProfondeur) throws IllegalArgumentException, IllegalAccessException {
+	 static void addSousObject(Object obj, GlobalObjectManager gom, ManagerChargementEnProfondeur managerChargementEnProfondeur) throws IllegalArgumentException, IllegalAccessException {
 		List<Champ> champs = TypeExtension.getSerializableFields(obj.getClass());
 		for(Champ champ : champs){
 			Object value = champ.get(obj);
@@ -29,7 +29,7 @@ public class ArianeHelper {
 				if(Collection.class.isAssignableFrom(type)){
 					for(Object o : (Collection)value){
 						if(o != null && !TypeExtension.isSimple(o.getClass()))
-							gom.prendEnChargePourChargementEnProfondeur(o, cacheChargementEnProfondeur);
+							gom.prendEnChargePourChargementEnProfondeur(o, managerChargementEnProfondeur,false);
 					}
 				}else if(Map.class.isAssignableFrom(type)){
 					Map<?,?> map = (Map<?,?>)value;
@@ -37,12 +37,12 @@ public class ArianeHelper {
 						Object k = entry.getKey();
 						Object v = entry.getValue();
 						if(k != null && !TypeExtension.isSimple(k.getClass()))
-							gom.prendEnChargePourChargementEnProfondeur(entry.getKey(), cacheChargementEnProfondeur);
+							gom.prendEnChargePourChargementEnProfondeur(entry.getKey(), managerChargementEnProfondeur,false);
 						if(v != null && !TypeExtension.isSimple(v.getClass()))						
-							gom.prendEnChargePourChargementEnProfondeur(entry.getValue(), cacheChargementEnProfondeur);
+							gom.prendEnChargePourChargementEnProfondeur(entry.getValue(), managerChargementEnProfondeur,false);
 					}
 				}else{ //objet
-					gom.prendEnChargePourChargementEnProfondeur(value, cacheChargementEnProfondeur);
+					gom.prendEnChargePourChargementEnProfondeur(value, managerChargementEnProfondeur,false);
 				}
 			}
 		}

@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Future;
 
 import com.actemium.basicTvx_sdk.util.BiHashMap;
 
@@ -35,10 +36,11 @@ public class GestionCache {
 		if (s == null) return true;
 		return s.estCharge();
 	}
-	synchronized boolean enChargement(Object obj){
+	synchronized boolean setChargement(Object obj, Future<Object> future){
 		Stockage s = dejaCharge.get(obj);
-		if (s == null) return true; 
-		return s.prisEnChargePourChargement();
+		if (s == null) return false; 
+		s.setChargement(future);
+		return true;
 	}
 
 	synchronized void setEstCharge(Object obj){
@@ -46,12 +48,12 @@ public class GestionCache {
 		if(s == null) return;
 		s.setEstCharge();
 	}
-	synchronized boolean setPrisEnChargePourChargement(Object obj){
-		Stockage s = dejaCharge.get(obj);
-		if(s == null) return false;
-		return s.setPrisEnChargePourChargement();
-	}
 	
+	synchronized Future<Object> getChargement(Object obj){
+		Stockage s = dejaCharge.get(obj);
+		if(s == null) return null;
+		return s.getChargement();
+	}
 	
 	synchronized void metEnCache(String id, Object obj, boolean estNouveau){
 		if (obj == null || id == null || id.length() == 0) return;
@@ -152,6 +154,8 @@ public class GestionCache {
 		private boolean estCharge = false;
 		private long dateChargement = 0;
 		private boolean prisEnChargePourChargement = false;
+		private Future<Object> future = null;
+		
 		private Stockage(Object obj, String id){
 			this.obj = obj;
 			this.id = id;
@@ -159,17 +163,22 @@ public class GestionCache {
 		private boolean estCharge(){
 			return isObsolete()? false: estCharge;
 		}
-		private boolean prisEnChargePourChargement(){
-			return prisEnChargePourChargement;
+		private void setChargement(Future<Object> future){
+			this.future=future;
 		}
-		
 		private boolean setPrisEnChargePourChargement(){
 			if(this.prisEnChargePourChargement) return false;
 			return this.prisEnChargePourChargement = true;
 		}
+		private Future<Object> getChargement(){
+			if (future == null)
+				return null;
+			else return future;
+		}
 		private void setEstCharge(){
 			dateChargement = System.currentTimeMillis();
 			prisEnChargePourChargement = false;
+			future = null;
 			estCharge = true;
 			hash = calculHash();
 		}
