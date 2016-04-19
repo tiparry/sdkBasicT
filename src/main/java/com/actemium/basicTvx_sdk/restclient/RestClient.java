@@ -1,7 +1,6 @@
 package com.actemium.basicTvx_sdk.restclient;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -17,16 +16,9 @@ import java.security.cert.X509Certificate;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
-
 import org.apache.http.HttpEntity;
-import org.apache.http.HttpStatus;
-import org.apache.http.ParseException;
-import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.AuthenticationException;
 import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
@@ -44,7 +36,6 @@ import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.auth.BasicScheme;
-import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
@@ -57,59 +48,14 @@ import org.slf4j.LoggerFactory;
 
 public class RestClient {
 	private static final Logger LOGGER = LoggerFactory.getLogger(RestClient.class);
-	
+	private static final String CONTENT_TYPE = "Content-Type";
+	private static final String UTF8 = "UTF-8";
 	private static final int HTTP_CLIENT_MAX_POOL_SIZE = 25;
 	private static final int HTTP_CLIENT_MAX_POOL_PER_ROOT = 25;
 	private static boolean bouchon = false;
 	
 	private CloseableHttpClient client;
 	private UsernamePasswordCredentials credentials;
-	
-	
-	/* test only 
-	 public static void main(String[] args) {
-		RestClient restClient = new RestClient("APP_CLIENT", "APP_PASSWORD", true);
-		try {
-			//Reader reader = restClient.getReader("http://212.83.130.104:8080/ImportBasicTravaux/resources/index.html");
-			Reader reader = restClient.getReader("https://git.xn--saa-0ma.com/users/sign_in");
-			 int data = reader.read();
-			    while(data != -1){
-			        char dataChar = (char) data;
-			        System.out.print(dataChar);
-			        data = reader.read();
-			    }
-		} catch (ParseException e) {
-			e.printStackTrace();
-		} catch (RestException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	*/
-	private SSLContext getSSLContext() throws KeyStoreException, 
-    NoSuchAlgorithmException, CertificateException, IOException, KeyManagementException, URISyntaxException {
-        KeyStore trustStore  = KeyStore.getInstance("jks");
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-
-        if (classLoader == null) {
-            classLoader = Class.class.getClassLoader();
-        }
-        
-        InputStream instream = classLoader.getResourceAsStream("myTrustStore");
-        try {
-            trustStore.load(instream, "basictravaux".toCharArray());
-        } finally {
-            instream.close();
-        }
-        
-       
-        
-        SSLContext context =  SSLContexts.custom()
-                .loadTrustMaterial(trustStore, new TrustSelfSignedStrategy())
-                .build();
-        return context;
-    }
 	
 	
 	/* Constructeur temporaire -- en cours de dev-- pour forcer les controles SSL sur les certificats 
@@ -124,9 +70,9 @@ public class RestClient {
 		//provider.setCredentials(AuthScope.ANY, credentials);
 		this.credentials = credentials;
 		    
-        
-     // Trust own CA and all self-signed certs
-        SSLContext sslContext;
+	    
+	 // Trust own CA and all self-signed certs
+	    SSLContext sslContext;
 		try {
 			sslContext = getSSLContext();
 			
@@ -177,21 +123,21 @@ public class RestClient {
 		
 		
 	}
-	
-	
+
+
 	public RestClient(String login, String pwd) {
 		//CredentialsProvider provider = new BasicCredentialsProvider();
 		UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(login,pwd);
 		//provider.setCredentials(AuthScope.ANY, credentials);
 		this.credentials = credentials;
 		    
-        
-     // Trust own CA and all self-signed certs
-        SSLContext sslcontext;
+	    
+	 // Trust own CA and all self-signed certs
+	    SSLContext sslcontext;
 		try {
 			SSLContext sslContext = SSLContexts.custom()
 			        .loadTrustMaterial(null, new TrustStrategy() {
-
+	
 			            @Override
 			            public boolean isTrusted(final X509Certificate[] chain,  String authType) throws CertificateException {
 			                return true;
@@ -239,185 +185,208 @@ public class RestClient {
 		
 		
 	}
+
+
+	private SSLContext getSSLContext() throws KeyStoreException, 
+    NoSuchAlgorithmException, CertificateException, IOException, KeyManagementException, URISyntaxException {
+        KeyStore trustStore  = KeyStore.getInstance("jks");
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+
+        if (classLoader == null) {
+            classLoader = Class.class.getClassLoader();
+        }
+        
+        InputStream instream = classLoader.getResourceAsStream("myTrustStore");
+        try {
+            trustStore.load(instream, "basictravaux".toCharArray());
+        } finally {
+            instream.close();
+        }
+        
+       
+        
+        SSLContext context =  SSLContexts.custom()
+                .loadTrustMaterial(trustStore, new TrustSelfSignedStrategy())
+                .build();
+        return context;
+    }
 	
-	public Reader getReader(String url) throws ParseException, RestException, IOException{
+	
+	public Reader getReader(String url) throws RestException{
 		return getReader(url, this.credentials);
 	}
 	
-
-	public Reader getReader(String url, UsernamePasswordCredentials cred) throws RestException, ParseException, IOException{
+	public Reader getReader(String url, UsernamePasswordCredentials cred) throws RestException{
 		LOGGER.debug("Appel gisement GET " + url);
-		if(bouchon) return new StringReader("[]");
+		if(bouchon)
+			return new StringReader("[]");
 		HttpGet request = new HttpGet(url);
 		addBasicAuthHeader(request, cred);
-		CloseableHttpResponse response = client.execute(request);
+		int statusCode = 0;
 		try{
-			int statusCode = response.getStatusLine().getStatusCode();
-			if (statusCode==HttpStatus.SC_NOT_FOUND){
-				consumeAndClose(response);
-				return null;
-			}
+			CloseableHttpResponse response = client.execute(request);
+			statusCode = response.getStatusLine().getStatusCode();
 			if (statusCode < 200 || statusCode >= 300) {
-				consumeAndClose(response);
-				throw new RestException(statusCode);
+				consumeAndClose(response, statusCode);
 			}
 
 			HttpEntity entity = response.getEntity();
 			if (entity != null) {
-				BufferedReader br = new BufferedReader(new InputStreamReader(entity.getContent()));
-				return br;
+				return new BufferedReader(new InputStreamReader(entity.getContent()));
 			} else {
 				HttpClientUtils.closeQuietly(response);
 				return null;
 			}
-		} finally {
-			//response.close();
+		} catch (IOException e) {
+			LOGGER.error("probleme de connexion get", e);
+			throw new RestException(statusCode,"probleme de connexion get", e);
 		}
-
 	}
 	
 	
-
+	public Reader postReader(String url, String message) throws RestException{
+		return postReader(url, message, Serialisation.XML);
+	}
 	
-	public Reader postReader(String url, String message) throws IOException, RestException {
+	public Reader postReader(String url, String message, Serialisation serialisation) throws RestException {
 		LOGGER.debug("Appel gisement POST " + url);
 		
-		if(bouchon) return null;
+		if(bouchon) 
+			return null;
 		HttpPost post = new HttpPost(url);
-		 
-		// add header
 		addBasicAuthHeader(post, this.credentials);
-		//post.setHeader("User-Agent", USER_AGENT);
-		post.addHeader("Content-Type", "application/json");
-		//List<NameValuePair> urlParameters = new ArrayList<NameValuePair>();
-		//urlParameters.add(new BasicNameValuePair("name", "value"));		
-		StringEntity entity = new StringEntity(message, "UTF-8");
-		entity.setContentEncoding("UTF-8");
+		post.addHeader(CONTENT_TYPE, serialisation.getContentType());
+		StringEntity entity = new StringEntity(message, UTF8);
+		entity.setContentEncoding(UTF8);
 	    post.setEntity(entity);
-		
-	    CloseableHttpResponse response = client.execute(post);
+	    int statusCode = 0;
 		try{
-			int statusCode = response.getStatusLine().getStatusCode();
-			if (statusCode==HttpStatus.SC_NOT_FOUND){
-				consumeAndClose(response);
-				return null;
-			}
+		    CloseableHttpResponse response = client.execute(post);
+			statusCode = response.getStatusLine().getStatusCode();
 			if (statusCode < 200 || statusCode >= 300) {
-				consumeAndClose(response);
+				consumeAndClose(response, statusCode);
 				throw new RestException(statusCode);
 			}
-
 			HttpEntity entityReponse = response.getEntity();
 			if (entityReponse != null) {
-				BufferedReader br = new BufferedReader(new InputStreamReader(entityReponse.getContent()));
-				return br;
+				return new BufferedReader(new InputStreamReader(entityReponse.getContent()));
 			} else {
 				HttpClientUtils.closeQuietly(response);
 				return null;
 			}
-		} finally {
-			//response.close();
+		} catch (IOException e) {
+			LOGGER.error("probleme de connexion postReader", e);
+			throw new RestException(statusCode,"probleme de connexion postReader", e);
 		}
 	}
 	
-
-	public String post(String url, String content) throws RestException, ParseException, IOException{
+	public String post(String url, String message) throws RestException{
+		return post(url, message, Serialisation.XML);
+	}
+	public String post(String url, String content, Serialisation serialisation) throws RestException{
 		LOGGER.debug("Appel gisement POST " + url);
-		if(bouchon) return "";
+		if(bouchon)
+			return "";
 		HttpPost post = new HttpPost(url);
-		 
-		// add header
-		//post.setHeader("User-Agent", USER_AGENT);
-		post.addHeader("Content-Type", "application/json");
-		addBasicAuthHeader(post, this.credentials);
-		//List<NameValuePair> urlParameters = new ArrayList<NameValuePair>();
-		//urlParameters.add(new BasicNameValuePair("name", "value"));		
-		StringEntity entity = new StringEntity(content, "UTF-8");
-		entity.setContentEncoding("UTF-8");
+		post.addHeader(CONTENT_TYPE, serialisation.getContentType());
+		addBasicAuthHeader(post, this.credentials);	
+		StringEntity entity = new StringEntity(content, UTF8);
+		entity.setContentEncoding(UTF8);
 	    post.setEntity(entity);
-		
-	 
-		CloseableHttpResponse  response = client.execute(post);
+	    int statusCode = 0;
+	    CloseableHttpResponse  response = null;
 		try{
-			int statusCode = response.getStatusLine().getStatusCode();
-			if (statusCode==HttpStatus.SC_NOT_FOUND){
-				return "";
-			}
-			 if (statusCode < 200 || statusCode >= 300) {
-		            throw new RestException(statusCode);
-		     }
+			response = client.execute(post);
+			statusCode = response.getStatusLine().getStatusCode();
 	
 	        HttpEntity res = response.getEntity();
-	
+	        String message = null;
 	        if (res != null) {
-	            return EntityUtils.toString(res);
+	            message = EntityUtils.toString(res);
 	        } else {
-	        	 return "";
+	        	message = "pas de message";
 	        }
+	        if (statusCode < 200 || statusCode >= 300 || res == null) {
+	            throw new RestException(statusCode, message);
+	        }
+	        return message;
+		} catch (IOException e) {
+			LOGGER.error("probleme de connexion post", e);
+			throw new RestException(statusCode, "probleme de connexion post", e);
 		} finally {
-	    	response.close();
+			HttpClientUtils.closeQuietly(response);
 	    }
 		
 	}
 	
+	public String put(String url, String message) throws RestException{
+		return put(url, message, Serialisation.XML);
+	}
 	
-	public String put(String url, String content) throws ClientProtocolException, IOException, RestException{
+	public String put(String url, String content, Serialisation serialisation) throws RestException{
 		LOGGER.debug("Appel gisement PUT " + url);
-		if(bouchon) return "";
+		if(bouchon) 
+			return "";
 		HttpPut put = new HttpPut(url);
-		put.addHeader("Content-Type", "application/xml");
+		put.addHeader(CONTENT_TYPE, serialisation.getContentType());
 		addBasicAuthHeader(put, this.credentials);
 		
-		StringEntity entity = new StringEntity(content, "UTF-8");
-		entity.setContentEncoding("UTF-8");
+		StringEntity entity = new StringEntity(content, UTF8);
+		entity.setContentEncoding(UTF8);
 	    put.setEntity(entity);
-		
-	    CloseableHttpResponse response = client.execute(put);
+	    int statusCode = 0;
+	    CloseableHttpResponse response = null;
 	    try{
-			int statusCode = response.getStatusLine().getStatusCode();
-			if (statusCode==HttpStatus.SC_NOT_FOUND){
-				return "";
-			}
-			if (statusCode < 200 || statusCode >= 300) {
-		            throw new RestException(statusCode);
-		    }
-	
-		    HttpEntity res = response.getEntity();
+	    	response = client.execute(put);
+			statusCode = response.getStatusLine().getStatusCode();
+			HttpEntity res = response.getEntity();
+			String message = null;
 		    if (res != null) {
-		       return EntityUtils.toString(res);
+		       message = EntityUtils.toString(res);
 		    } else {
-		      return "";
+		      message = "";
 		    }
-	    } finally {
-	    	response.close();
+		    if (statusCode < 200 || statusCode >= 300 || res == null)
+	            throw new RestException(statusCode, message);
+	        return message;
+	    } catch (IOException e) {
+	    	LOGGER.error("probleme de connexion put", e);
+			throw new RestException(statusCode, "probleme de connexion put", e);
+		} finally {
+	    	HttpClientUtils.closeQuietly(response);
 	    }
 	}
 	
 	
 	
-	public String delete(String url) throws RestException, ParseException, IOException{
-		if(bouchon) return "";
+	public String delete(String url) throws RestException{
+		if(bouchon) 
+			return "";
 		HttpDelete del = new HttpDelete(url);	
 		addBasicAuthHeader(del, this.credentials);
-		CloseableHttpResponse  response = client.execute(del);
+		CloseableHttpResponse  response = null;
+		int statusCode = 0;
 		try{
-			int statusCode = response.getStatusLine().getStatusCode();
-			if (statusCode==HttpStatus.SC_NOT_FOUND){
-				return "";
-			}
-			 if (statusCode < 200 || statusCode >= 300) {
-		            throw new RestException(statusCode);
-		     }
+			response = client.execute(del);
+			statusCode = response.getStatusLine().getStatusCode();
+			
+			 
 	
 	        HttpEntity entity = response.getEntity();
-	
+	        String message = null;
 	        if (entity != null) {
-	            return EntityUtils.toString(entity);
+	            message = EntityUtils.toString(entity);
 	        } else {
-	        	 return "";
+	        	 message = "";
 	        }
+	        if (statusCode < 200 || statusCode >= 300 || entity == null)
+	            throw new RestException(statusCode, message);
+	        return message;
+		} catch (IOException e) {
+			LOGGER.error("probleme de connexion delete", e);
+			throw new RestException(statusCode, "probleme de connexion delete", e);
 		} finally {
-	    	response.close();
+	    	HttpClientUtils.closeQuietly(response);
 	    }
 	}
 
@@ -429,19 +398,25 @@ public class RestClient {
 	}
 
 
-	private void consumeAndClose(CloseableHttpResponse response) throws IOException{
+	private void consumeAndClose(CloseableHttpResponse response, int statusCode) throws RestException{
 		// In order to ensure correct deallocation of system resources
 		// the user MUST call CloseableHttpResponse#close() from a finally clause.
 		// Please note that if response content is not fully consumed the underlying
 		// connection cannot be safely re-used and will be shut down and discarded
 		// by the connection manager. 
+		String message = null;
 		try {
 		    HttpEntity entity = response.getEntity();
 		    // do something useful with the response body
-		    // and ensure it is fully consumed
-		    EntityUtils.consume(entity);
+		    // and ensure it is fully consumed²
+		    message = EntityUtils.toString(entity);
+		    throw new RestException(statusCode, message);
+		} catch (IOException e) {
+			LOGGER.error("impossible de consommer le CloseableHttpResponse");
+			message = "impossible de consommer le CloseableHttpResponse";
+			throw new RestException(statusCode, message, e);
 		} finally {
-		    response.close();
+			HttpClientUtils.closeQuietly(response);
 		}
 	}
 	

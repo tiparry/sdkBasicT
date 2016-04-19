@@ -16,6 +16,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import javax.xml.parsers.ParserConfigurationException;
+
 import org.apache.http.ParseException;
 import org.apache.http.client.ClientProtocolException;
 import org.slf4j.Logger;
@@ -194,13 +196,13 @@ public class GlobalObjectManager implements EntityManager {
 		    nourritObjet(obj);
 		    if(enProfondeur) getObjetEnProfondeur(obj);
 		    return obj;
-	    }catch(InstantiationException | IllegalAccessException | ParseException | ClassNotFoundException | RestException | IOException | SAXException | InterruptedException e){
+	    }catch(ParseException | RestException | IOException | SAXException | InterruptedException | ParserConfigurationException | ReflectiveOperationException e){
 	    	LOGGER.error("impossible de récupérer l'objet", e);
     		throw new GetObjectException(id, clazz, e);
 	    }
 	}
 	
-	private <U> void nourritObjet(U obj) throws ParseException, ClassNotFoundException, RestException, IOException, SAXException, InterruptedException{
+	private <U> void nourritObjet(U obj) throws ParseException, RestException, IOException, SAXException, InterruptedException, ParserConfigurationException, ReflectiveOperationException{
 		if(!gestionCache.estCharge(obj) && !gestionCache.enChargement(obj) && gestionCache.setPrisEnChargePourChargement(obj)){
 			String id = gestionCache.getId(obj);
 			Class<?> clazz = obj.getClass();
@@ -370,7 +372,7 @@ public class GlobalObjectManager implements EntityManager {
         }
     }
 
-    private void chargeObjectEnProfondeur(Object objetATraiter, CacheChargementEnProfondeur cacheChargementEnProfondeur) throws ParseException, InstantiationException, IllegalAccessException, IllegalArgumentException, ClassNotFoundException, RestException, IOException, SAXException, ChampNotFund, InterruptedException{
+    private void chargeObjectEnProfondeur(Object objetATraiter, CacheChargementEnProfondeur cacheChargementEnProfondeur) throws ParseException, IllegalArgumentException, RestException, IOException, SAXException, ChampNotFund, InterruptedException, ParserConfigurationException, ReflectiveOperationException{
     	nourritObjet(objetATraiter);
     	ArianeHelper.addSousObject(objetATraiter, this, cacheChargementEnProfondeur);
     }
@@ -443,7 +445,7 @@ public class GlobalObjectManager implements EntityManager {
             try {
 				chargeObjectEnProfondeur(objetATraiter, cacheChargementEnProfondeur);
 				cacheChargementEnProfondeur.estTraite(objetATraiter);
-			} catch (ParseException | InstantiationException | IllegalAccessException | IllegalArgumentException | ClassNotFoundException | RestException | IOException | SAXException | ChampNotFund | InterruptedException e) {
+			} catch (ParseException | IllegalArgumentException | RestException | IOException | SAXException | ChampNotFund | InterruptedException | ParserConfigurationException | ReflectiveOperationException e) {
 				if(cacheChargementEnProfondeur.nombreEssais(objetATraiter) < 2){
 					prendEnChargePourChargementEnProfondeur(objetATraiter, cacheChargementEnProfondeur);
 				}else{

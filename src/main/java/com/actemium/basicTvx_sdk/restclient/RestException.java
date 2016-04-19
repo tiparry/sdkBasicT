@@ -10,9 +10,28 @@ public class RestException extends Exception{
 		this.statusCodeHttp = statusCodeHttp;
 	}
 	
+	public RestException(int statusCode, Exception e) {
+		super(e);
+		this.statusCodeHttp = statusCode;
+	}
+
+	public RestException(int statusCode, String message) {
+		super(message);
+		this.statusCodeHttp = statusCode;
+	}
+
+	public RestException(int statusCode, String message, Exception e) {
+		super(message, e);
+		this.statusCodeHttp = statusCode;
+	}
+
 	@Override
 	public String getMessage() {
-		return "HttpStatus code : " + statusCodeHttp;
+		return "HttpStatus code : " + statusCodeHttp + System.lineSeparator() + super.getMessage();
+	}
+	
+	public int getStatusCodeHttp(){
+		return this.statusCodeHttp;
 	}
 	
 }

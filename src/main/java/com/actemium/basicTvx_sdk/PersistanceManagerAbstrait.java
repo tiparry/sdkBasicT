@@ -5,6 +5,8 @@ import giraudsa.marshall.exception.MarshallExeption;
 import java.io.IOException;
 import java.util.List;
 
+import javax.xml.parsers.ParserConfigurationException;
+
 import org.apache.http.ParseException;
 import org.apache.http.client.ClientProtocolException;
 import org.xml.sax.SAXException;
@@ -18,7 +20,7 @@ public abstract class PersistanceManagerAbstrait {
 
 	abstract <U> void save(U l) throws MarshallExeption, ClientProtocolException, IOException, RestException;
 
-	abstract <U> U getObjectById(Class<U> clazz, String id, EntityManager entityManager) throws ParseException, RestException, IOException, SAXException, ClassNotFoundException;
+	abstract <U> U getObjectById(Class<U> clazz, String id, EntityManager entityManager) throws ParserConfigurationException, RestException, IOException, ReflectiveOperationException, SAXException;
 
 	abstract <U> boolean getAllObject(Class<U> clazz, EntityManager entityManager, List<U> listARemplir) 
 			throws ParseException, RestException, IOException, SAXException, ClassNotFoundException;
