@@ -1,8 +1,7 @@
 package com.actemium.basicTvx_sdk;
 
-import java.util.ArrayList;
+
 import java.util.IdentityHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
@@ -10,32 +9,36 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import com.actemium.basicTvx_sdk.exception.GetObjectException;
-import com.actemium.basicTvx_sdk.exception.GetObjetEnProfondeurException;
 
 public class ManagerChargementEnProfondeur {
+	
+	static final int WEB_SERVICE_REQUEST_TIME = 50000;
+	static final int LOAD_OBJECT_TIME = 5000;
+	static final int RATIO_WORK = WEB_SERVICE_REQUEST_TIME/LOAD_OBJECT_TIME;
 
 	private Map<Object,Integer> dejaVu = new IdentityHashMap<>();
 	private Map<Future<Object>, Object> mapFutureToObject = new IdentityHashMap<>();
-	private List<GetObjectException> exceptions = new ArrayList<>();
 	public CompletionService<Object> completion;
 	public ExecutorService executor;	
 	private CompteurdeTaches compteurdeTaches = new CompteurdeTaches();
 	
 	public ManagerChargementEnProfondeur(){
-		//TODO créer mon executor( : adapter le nombre de thread aux ressources dispos) et mon completion
-		executor = Executors.newFixedThreadPool(10);
+		executor = Executors.newFixedThreadPool(determinePoolSize());
 		completion = new ExecutorCompletionService<Object>(executor);
 	}
 	
+	private int determinePoolSize(){
+		int number_cores = Runtime.getRuntime().availableProcessors();
+		return Math.max(1, number_cores/2*(1+RATIO_WORK));
+	}
+	
 
-	public  void submit(Object o, Callable<Object> task){
+	public  Future<Object> submit(Object o, Callable<Object> task){
 		compteurdeTaches.beforeSubmitTask();
-		completion.submit(task);
-		mapFutureToObject.put(completion.submit(task), o);
+		Future<Object> future = completion.submit(task);
+		mapFutureToObject.put(future, o);
+		return future;
 	}
 	
 	public Future<Object> waitForATaskToComplete() throws InterruptedException{
@@ -43,8 +46,6 @@ public class ManagerChargementEnProfondeur {
 	}
 	
 	public boolean isAllCompleted(){
-		boolean test = compteurdeTaches.isAllCompleted();
-		boolean u = !test;
 		return compteurdeTaches.isAllCompleted();
 	}
 	
@@ -71,12 +72,16 @@ public class ManagerChargementEnProfondeur {
 		return null;
 	}
 	
-	public void chargementTermine() {
-		executor.shutdown();
+	public void chargementTermineAndShutdownNow() {
+		synchronized(executor){
+		executor.shutdownNow();
+		}
 	}
 	
 	public boolean isChargementTermine(){
+		synchronized(executor){
 		return executor.isShutdown();
+		}
 	}
 	
 	public class CompteurdeTaches{

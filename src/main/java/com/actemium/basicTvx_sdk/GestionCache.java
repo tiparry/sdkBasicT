@@ -153,7 +153,6 @@ public class GestionCache {
 		private boolean isNew = false;
 		private boolean estCharge = false;
 		private long dateChargement = 0;
-		private boolean prisEnChargePourChargement = false;
 		private Future<Object> future = null;
 		
 		private Stockage(Object obj, String id){
@@ -166,10 +165,7 @@ public class GestionCache {
 		private void setChargement(Future<Object> future){
 			this.future=future;
 		}
-		private boolean setPrisEnChargePourChargement(){
-			if(this.prisEnChargePourChargement) return false;
-			return this.prisEnChargePourChargement = true;
-		}
+	
 		private Future<Object> getChargement(){
 			if (future == null)
 				return null;
@@ -177,7 +173,6 @@ public class GestionCache {
 		}
 		private void setEstCharge(){
 			dateChargement = System.currentTimeMillis();
-			prisEnChargePourChargement = false;
 			future = null;
 			estCharge = true;
 			hash = calculHash();
