@@ -11,10 +11,12 @@ public class GetObjetEnProfondeurException extends Exception{
 	 * 
 	 */
 	private static final long serialVersionUID = -6480142152730314695L;
-	private List<GetObjectException> causes = new ArrayList<>();
+	
+	private GetObjectException cause;
 	private InterruptedException interruptedException;
-	public GetObjetEnProfondeurException(Object obj, List<GetObjectException> e) {
-		this.causes = e;
+	
+	public GetObjetEnProfondeurException(Object obj, GetObjectException e) {
+		this.cause = e;
 	}
 	
 	
@@ -25,8 +27,8 @@ public class GetObjetEnProfondeurException extends Exception{
 	}
 
 
-	public List<GetObjectException> getCauses(){
-		return causes;
+	public GetObjectException getCause(){
+		return cause;
 	}
 	
 	public InterruptedException getInterruptedException(){
@@ -35,7 +37,7 @@ public class GetObjetEnProfondeurException extends Exception{
 
 	@Override
 	public String toString() {
-		return causes.toString();
+		return cause.toString();
 	}
 
 	public Object getObjetRacine() {
