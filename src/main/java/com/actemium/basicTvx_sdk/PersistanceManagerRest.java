@@ -165,19 +165,7 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 		Reader br = restClient.getReader(url, credentialsGaia);
 		if(br == null) 
 			return null;
-		synchronized (entityManager) {
-			ret = entityManager.findObject(id, clazz);
-			if(ret == null){
-				try {
-					ret = clazz.newInstance();
-					((ObjetPersistant)ret).setId(UUID.fromString(id));
-					entityManager.metEnCache(id, ret);
-				} catch (InstantiationException | IllegalAccessException e) {
-					LOGGER.error("impossible d'instancier la classe " + clazz.getName(),e);
-					throw e;
-				}
-			}
-		}
+		ret = entityManager.findObject(id, clazz);
 		((RessourceAbstraite)ret).setIdReseau(getIdReseau(br));
 		br.close();
 		return ret;

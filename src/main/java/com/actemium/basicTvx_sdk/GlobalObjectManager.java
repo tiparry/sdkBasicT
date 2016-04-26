@@ -257,10 +257,6 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param enProfondeur true si l'on veut récuperer toute l'arborescence de la réponse
 	 * @throws GetObjetEnProfondeurException 
 	 * @throws GetObjectException 
-	 * @throws MarshallExeption 
-	 * @throws InterruptedException 
-	 * @throws RestException 
-	 * @throws IOException 
 	 */
 	public Reponse getReponse(Requete request, boolean enProfondeur) throws GetObjetEnProfondeurException, GetObjectException  {
 		Reponse reponse;
