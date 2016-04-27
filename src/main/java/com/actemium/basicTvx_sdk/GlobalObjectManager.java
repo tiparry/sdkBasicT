@@ -474,14 +474,16 @@ public class GlobalObjectManager implements EntityManager {
 	 */
 	private <U> void save(final U l, final boolean hasChanged, Set<Object> objetsASauvegarder) throws IllegalAccessException, MarshallExeption, IOException, RestException {
 		if(this.isNew(l) || hasChanged){
-			boolean wasNew = gestionCache.setEstEnregistreDansGisement(l);
+			boolean wasNew = isNew(l);
+			String ancienHash = gestionCache.getHash(l);
+			gestionCache.setEstEnregistreDansGisement(l);
 			objetsASauvegarder.remove(l);
 			this.saveReferences(l, TypeRelation.COMPOSITION, objetsASauvegarder);
 			try {
 				this.persistanceManager.save(l);
 			} catch (MarshallExeption | IOException | RestException e) {
 				LOGGER.error("impossible d'enregistrer " + gestionCache.getId(l) + " de type " + l.getClass().getName());
-				gestionCache.setNEstPasEnregistreDansGisement(l, wasNew);
+				gestionCache.setNEstPasEnregistreDansGisement(l, wasNew, ancienHash);
 				throw e;
 			}
 

@@ -134,18 +134,24 @@ public class GestionCache {
 		return objetsModifies;
 	}
 	
-	synchronized boolean setEstEnregistreDansGisement(Object obj){
-		boolean wasNew = isNew(obj);
+	synchronized void setEstEnregistreDansGisement(Object obj){
 		setEstCharge(obj);
 		setNotNew(obj);
-		return wasNew;
 	}
 	
-	synchronized void setNEstPasEnregistreDansGisement(Object obj, boolean wasNew){
+	synchronized void setNEstPasEnregistreDansGisement(Object obj, boolean wasNew, String ancienHash){
 		Stockage s = dejaCharge.get(obj);
 		if(s == null)
 			return;
-		s.isNew=wasNew;
+		s.isNew = wasNew;
+		s.hash = ancienHash;
+	}
+	
+	synchronized String getHash(Object obj){
+		Stockage s = dejaCharge.get(obj);
+		if(s == null)
+			return null;
+		return s.hash;
 	}
 	
 	synchronized boolean isNew(Object obj) {
