@@ -33,35 +33,29 @@ public class GestionCache {
 	}
 	synchronized boolean estCharge(Object obj){
 		Stockage s = dejaCharge.get(obj);
-		if (s == null) return true;
+		if (s == null)
+			return true;
 		return s.estCharge();
 	}
-	/*
-	synchronized boolean setChargement(Object obj, Future<Object> future){
-		Stockage s = dejaCharge.get(obj);
-		if (s == null) return false;
-		Future<Object> ancienfuture = s.getChargement();
-		if(ancienfuture==null || ancienfuture.isDone())
-			s.setChargement(future);
-		return true;
-	}
-*/
 
 	synchronized void setEstCharge(Object obj){
 		Stockage s = dejaCharge.get(obj);
-		if(s == null) return;
+		if(s == null)
+			return;
 		s.setEstCharge();
 	}
 	
 	synchronized Future<Object> getChargement(Object obj){
 		Stockage s = dejaCharge.get(obj);
-		if(s == null) return null;
+		if(s == null)
+			return null;
 		return s.getChargement();
 	}
 	
-	synchronized boolean setEnTrainDeNourrir(Object obj, Manager_Chargement manager){
+	synchronized boolean setEnTrainDeNourrir(Object obj, ManagerChargementSDK manager){
 		Stockage s = dejaCharge.get(obj);
-		if(s == null) return false ;
+		if(s == null)
+			return false ;
 		if (s.setEnTrainDeNourrir()){
 			s.setChargement(manager.getFuturFromObject(obj));
 			return true;
@@ -71,27 +65,22 @@ public class GestionCache {
 
 	synchronized boolean isEnTrainDeNourrir(Object obj){
 		Stockage s = dejaCharge.get(obj);
-		if(s == null) return false ;
+		if(s == null) 
+			return false ;
 		return s.estEnTrainDeNourrir;
 	}
 		
 	synchronized boolean finitNourrir(Object obj){
 		Stockage s = dejaCharge.get(obj);
-		if(s == null) return false ;
+		if(s == null)
+			return false ;
 		s.finitNourrir();
 		return true;
 	}
-	/*
-	synchronized boolean resetChargement(Object obj){
-		Stockage s = dejaCharge.get(obj);
-		if(s == null) return false;
-		else s.resetChargement();
-		return true;
-	}
-	*/
 	
 	synchronized void metEnCache(String id, Object obj, boolean estNouveau){
-		if (obj == null || id == null || id.length() == 0) return;
+		if (obj == null || id == null || id.length() == 0)
+			return;
 		Class<?> clazz = obj.getClass();
 		classAndIdToObject.put(clazz, id, obj);
 		if(!dejaCharge.containsKey(obj)){
@@ -106,14 +95,17 @@ public class GestionCache {
 
 	@SuppressWarnings("unchecked")
 	synchronized <U> U getObject(Class<U> clazz, String id){
-		if(id == null || id.length() == 0 || clazz == null) return null;
+		if(id == null || id.length() == 0 || clazz == null)
+			return null;
 		return (U) classAndIdToObject.get(clazz, id);
 	}
 	
-	synchronized <U> String getId(Object o){
-		if(o == null) return null;
+	synchronized  String getId(Object o){
+		if(o == null) 
+			return null;
 		Stockage s = dejaCharge.get(o);
-		if(s == null) return null;
+		if(s == null)
+			return null;
 		return s.id;
 	}
 
@@ -125,7 +117,8 @@ public class GestionCache {
 	
 	synchronized boolean aChangeDepuisChargement(Object obj){
 		Stockage s = dejaCharge.get(obj);
-		if(s == null) return false;
+		if(s == null) 
+			return false;
 		return s.aChangeDepuisChargement();
 	}
 	
@@ -140,23 +133,37 @@ public class GestionCache {
 		}
 		return objetsModifies;
 	}
-	synchronized void setEstEnregistreDansGisement(Object obj){
+	
+	synchronized boolean setEstEnregistreDansGisement(Object obj){
+		boolean wasNew = isNew(obj);
 		setEstCharge(obj);
 		setNotNew(obj);
+		return wasNew;
 	}
+	
+	synchronized void setNEstPasEnregistreDansGisement(Object obj, boolean wasNew){
+		Stockage s = dejaCharge.get(obj);
+		if(s == null)
+			return;
+		s.isNew=wasNew;
+	}
+	
 	synchronized boolean isNew(Object obj) {
 		Stockage s = dejaCharge.get(obj);
-		if (s == null) return false;
+		if (s == null) 
+			return false;
 		return s.isNew;
 	}
 	synchronized void setNotNew(Object obj) {
 		Stockage s = dejaCharge.get(obj);
-		if(s == null) return;
+		if(s == null)
+			return;
 		s.isNew = false;
 	}
 
 	synchronized void remove(Object obj) {
-		if(obj == null) return;
+		if(obj == null) 
+			return;
 		Stockage s = dejaCharge.get(obj);
 		Class<?> clazz = obj.getClass();
 		String id = s.id;
@@ -172,7 +179,7 @@ public class GestionCache {
 	}
 	@SuppressWarnings("unchecked")
 	synchronized <U> List<U> getClasse(Class<U> clazz){
-		List<U> ret = new ArrayList<U>();
+		List<U> ret = new ArrayList<>();
 		for(Entry<Object, Stockage> entry : dejaCharge.entrySet()){
 			Object o = entry.getKey();
 			if (clazz.isInstance(o))
@@ -228,12 +235,10 @@ public class GestionCache {
 			hash = calculHash();
 			finitNourrir();
 		}
-		private void resetChargement(){
-			future =null;
-		}
 		
 		private boolean isObsolete(){
-			if(isNew) return false;
+			if(isNew) 
+				return false;
 			return System.currentTimeMillis() - dateChargement > tempsDeCache;
 		}
 		

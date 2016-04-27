@@ -50,7 +50,7 @@ public class GlobalObjectManager implements EntityManager {
 	/**la gestion du cache. */
 	GestionCache gestionCache;
 
-	private final Set<Class<?>> nonRecuperableViaWebService = new HashSet<Class<?>>();
+	private final Set<Class<?>> nonRecuperableViaWebService = new HashSet<>();
 
 	/** The persistance manager. */
 	private final PersistanceManagerAbstrait persistanceManager;
@@ -104,7 +104,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param <U> the generic type
 	 * @throws SaveAllException 
 	 */
-	public <U> void saveAll() throws SaveAllException {
+	public  void saveAll() throws SaveAllException {
 		try{
 			Set<Object> objetsASauvegarder = gestionCache.objetsModifiesDepuisChargementOuNouveau();
 			save(objetsASauvegarder);
@@ -119,8 +119,10 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws SaveException
 	 */
 	public <U> void save(U objet) throws SaveException{
-		if (objet == null) return;
-		if (!isNew(objet) && !hasChanged(objet)) return;
+		if (objet == null)
+			return;
+		if (!isNew(objet) && !hasChanged(objet)) 
+			return;
 		try{
 			Set<Object> objetsASauvegarder = new HashSet<>();
 			objetsASauvegarder.add(objet);
@@ -142,8 +144,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws InstantiationException 
 	 */
 	public <U> U createObject(final Class<U> clazz, final Date date) throws InstantiationException, IllegalAccessException {
-		final U obj = this.factory.newObject(clazz, date, gestionCache);
-		return obj;
+		return (U) this.factory.newObject(clazz, date, gestionCache);
 	}
 
 	/**
@@ -159,7 +160,7 @@ public class GlobalObjectManager implements EntityManager {
 			if(gestionCache.estDejaCharge(clazz)) {
 				return gestionCache.getClasse(clazz);
 			}
-			final List<U> listeObj = new ArrayList<U>();
+			final List<U> listeObj = new ArrayList<>();
 			final boolean estRecupereViaWebServiceDirectement = !this.nonRecuperableViaWebService.contains(clazz) && this.persistanceManager.getAllObject(clazz, this, listeObj);
 			if(estRecupereViaWebServiceDirectement) {
 				gestionCache.setClasseDejaChargee(clazz);
@@ -190,12 +191,14 @@ public class GlobalObjectManager implements EntityManager {
 
 	public <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur) throws GetObjectException, GetObjetEnProfondeurException{
 		try{
-			if(id == null || clazz == null) return null;
+			if(id == null || clazz == null) 
+				return null;
 			U obj = gestionCache.getObject(clazz, id); //on regarde en cache
 			if(obj == null){
 				obj = this.factory.newObjectById(clazz, id, gestionCache);
 			}
-			if(enProfondeur) getObjetEnProfondeur(obj);
+			if(enProfondeur) 
+				getObjetEnProfondeur(obj);
 			else nourritObjet(obj);
 			return obj;
 		}catch(InstantiationException  |  IllegalAccessException e){
@@ -212,18 +215,12 @@ public class GlobalObjectManager implements EntityManager {
 				Future<Object> future = null;
 				try {
 					future = managerChargementEnProfondeur.waitForATaskToComplete();
-					try{
-						future.get();
-					}
-					catch( ExecutionException e){ 
-						gererExecutionExceptionEnProfondeur(obj, managerChargementEnProfondeur, future, e);
-					}
-					catch (InterruptedException e){
-						Object objetInterrompu = managerChargementEnProfondeur.getObjectFromFutur(future);
-						gestionCache.finitNourrir(objetInterrompu);
-					}
+					traiterTacheTerminee(obj, managerChargementEnProfondeur, future);
 				}
 				catch (InterruptedException e) { 
+					Thread.currentThread().interrupt();
+					Object objetInterrompu = managerChargementEnProfondeur.getObjectFromFutur(future);
+					gestionCache.finitNourrir(objetInterrompu);
 					throw new GetObjetEnProfondeurException(obj, e);
 				}
 				finally{
@@ -236,38 +233,52 @@ public class GlobalObjectManager implements EntityManager {
 		}
 	}
 
+	private void traiterTacheTerminee(Object obj, ManagerChargementEnProfondeur managerChargementEnProfondeur, Future<Object> future) throws GetObjetEnProfondeurException, InterruptedException {
+		try{
+			future.get();
+		}
+		catch( ExecutionException e){ 
+			gererExecutionExceptionEnProfondeur(obj, managerChargementEnProfondeur, future, e);
+		}
+	}
+
 	private <U> void nourritObjet(U obj) throws  GetObjectException{
 		if(gestionCache.estCharge(obj))
 			return;
-		try {
-			if(gestionCache.isEnTrainDeNourrir(obj) & gestionCache.getChargement(obj)!= null){
+		if(gestionCache.isEnTrainDeNourrir(obj) & gestionCache.getChargement(obj)!= null){
+			try {
 				gestionCache.getChargement(obj).get();
 			}
-			else {
-				ManagerChargementUnique managerChargementUnique= new ManagerChargementUnique();
-				try{
-					Future<Object> future = managerChargementUnique.submit(null,new TacheWebServiceGetObjet(obj, managerChargementUnique));
-					future.get();
-				}
-				catch( ExecutionException e1){ 
-					gererExecutionExceptionUnique(obj, managerChargementUnique, e1);
-				}
-				catch(InterruptedException ie){
-					unwrappExceptionInGetObjectException(obj, ie);
-				}
-				finally{
-					gestionCache.finitNourrir(obj);
-					managerChargementUnique.chargementTermineAndShutdownNow();
-				}
-			}
+			catch (Exception e){
+				gestionCache.finitNourrir(obj);
+				unwrappExceptionInGetObjectException(obj, e);
+			}	
 		}
-		catch (Exception e){
-			gestionCache.finitNourrir(obj);
-			unwrappExceptionInGetObjectException(obj, e);
-		}	
+		else {
+				nourritEffectivementObjet(obj);
+		}
 	}
 
-	private <U> void gererExecutionExceptionUnique(U obj, ManagerChargementUnique managerChargementUnique, ExecutionException e1) throws InterruptedException,
+	private <U> void nourritEffectivementObjet(U obj) throws  GetObjectException {
+		ManagerChargementUnique managerChargementUnique= new ManagerChargementUnique();
+		try{
+			Future<Object> future = managerChargementUnique.submit(null,new TacheWebServiceGetObjet(obj, managerChargementUnique));
+			future.get();
+		}
+		catch( ExecutionException e1){ 
+			gererExecutionExceptionUnique(obj, managerChargementUnique, e1);
+		}
+		catch(InterruptedException ie){
+			Thread.currentThread().interrupt();
+			unwrappExceptionInGetObjectException(obj, ie);
+		}
+		finally{
+			gestionCache.finitNourrir(obj);
+			managerChargementUnique.chargementTermineAndShutdownNow();
+		}
+	}
+
+	private <U> void gererExecutionExceptionUnique(U obj, ManagerChargementUnique managerChargementUnique, ExecutionException e1) throws 
 	GetObjectException {
 		gestionCache.finitNourrir(obj);
 		if (isNetworkException(e1)){
@@ -275,7 +286,7 @@ public class GlobalObjectManager implements EntityManager {
 				Future<Object> future = managerChargementUnique.submit(null,new TacheWebServiceGetObjet(obj, managerChargementUnique));
 				future.get();
 			}
-			catch( ExecutionException e2){
+			catch( ExecutionException | InterruptedException e2){
 				unwrappExceptionInGetObjectException(obj, e2);;
 			}
 		}
@@ -285,11 +296,16 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 	private void unwrappExceptionInGetObjectException(Object obj,Exception e) throws GetObjectException{
+		if(e instanceof GetObjectException)
+			throw (GetObjectException)e;
 		try{
 			if(e instanceof ExecutionException)
 				unwrapAndThrowExecutionException((ExecutionException)e);
 			else if (e instanceof InterruptedException)
+			{
+				Thread.currentThread().interrupt();
 				throw (InterruptedException)e;
+			}
 		} catch (ParseException | IllegalArgumentException | RestException | IOException | SAXException | ChampNotFund | InterruptedException | ParserConfigurationException
 				| ReflectiveOperationException  e1) {
 			throw new GetObjectException(gestionCache.getId(obj), obj.getClass(), e1);
@@ -297,8 +313,7 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 
-	private <U> void chargeObjetAppelWebService(U obj, Manager_Chargement manager) throws RestException, IOException, SAXException, InterruptedException, ParserConfigurationException, ReflectiveOperationException,
-	IllegalArgumentException, ChampNotFund{
+	private <U> void chargeObjetAppelWebService(U obj, ManagerChargementSDK manager) throws RestException, IOException, SAXException, InterruptedException, ParserConfigurationException, ReflectiveOperationException, ChampNotFund{
 		if (gestionCache.estCharge(obj))
 			return;
 		if( gestionCache.setEnTrainDeNourrir(obj,manager)){
@@ -316,21 +331,13 @@ public class GlobalObjectManager implements EntityManager {
 		}
 	}
 
-	private void chargeObjectEnProfondeur(Object objetATraiter, ManagerChargementEnProfondeur managerChargementEnProfondeur) throws ParseException, RestException, IOException, SAXException, InterruptedException, IllegalArgumentException,
-	ParserConfigurationException, ReflectiveOperationException, ChampNotFund {
-		chargeObjetAppelWebService(objetATraiter, managerChargementEnProfondeur);
-		ArianeHelper.addSousObject(objetATraiter, this, managerChargementEnProfondeur);
-	}
-
-
 	boolean prendEnChargePourChargementEnProfondeur(Object o, ManagerChargementEnProfondeur managerChargementEnProfondeur, boolean retry) {
 		if(managerChargementEnProfondeur.createNewTacheChargementProfondeur(o, retry)){
-			managerChargementEnProfondeur.submit(o,new TacheChargementProfondeur(o, managerChargementEnProfondeur));
+			managerChargementEnProfondeur.submit(o,new TacheChargementProfondeur(o, managerChargementEnProfondeur, this));
 			return true;
 		}
 		return false;
 	}
-
 
 	private void gererExecutionExceptionEnProfondeur(Object obj, ManagerChargementEnProfondeur managerChargementEnProfondeur, Future<Object> future,ExecutionException e) throws GetObjetEnProfondeurException{
 		boolean retry = false;
@@ -351,28 +358,28 @@ public class GlobalObjectManager implements EntityManager {
 		return false;
 	}
 
-	private void unwrapAndThrowExecutionException(ExecutionException e) throws ParseException, IllegalArgumentException, RestException, IOException, SAXException, 
+	private void unwrapAndThrowExecutionException(ExecutionException e) throws  RestException, IOException, SAXException, 
 	ChampNotFund, InterruptedException, ParserConfigurationException, ReflectiveOperationException {
 		Throwable t = e.getCause();
 		if (t instanceof ParseException)
 			throw (ParseException)t;
-		else if (t instanceof ClassNotFoundException)
+		if (t instanceof ClassNotFoundException)
 			throw (ClassNotFoundException)t;
-		else if (t instanceof RestException)
+		if (t instanceof RestException)
 			throw (RestException)t;
-		else if (t instanceof IOException)
+		if (t instanceof IOException)
 			throw (IOException)t;
-		else if (t instanceof SAXException)
+		if (t instanceof SAXException)
 			throw (SAXException)t;
-		else if (t instanceof IllegalArgumentException)
+		if (t instanceof IllegalArgumentException)
 			throw (IllegalArgumentException)t;
-		else if (t instanceof ChampNotFund)
+		if (t instanceof ChampNotFund)
 			throw (ChampNotFund)t;
-		else if (t instanceof InterruptedException)
+		if (t instanceof InterruptedException)
 			throw (InterruptedException)t;
-		else if (t instanceof ParserConfigurationException)
+		if (t instanceof ParserConfigurationException)
 			throw (ParserConfigurationException)t;
-		else if (t instanceof ReflectiveOperationException)
+		if (t instanceof ReflectiveOperationException)
 			throw (ReflectiveOperationException)t;
 	}
 
@@ -465,12 +472,19 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws IOException 
 	 * @throws ClientProtocolException 
 	 */
-	private <U> void save(final U l, final boolean hasChanged, Set<Object> objetsASauvegarder) throws MarshallExeption, IllegalAccessException, IOException, RestException {
+	private <U> void save(final U l, final boolean hasChanged, Set<Object> objetsASauvegarder) throws IllegalAccessException, MarshallExeption, IOException, RestException {
 		if(this.isNew(l) || hasChanged){
-			gestionCache.setEstEnregistreDansGisement(l);
+			boolean wasNew = gestionCache.setEstEnregistreDansGisement(l);
 			objetsASauvegarder.remove(l);
 			this.saveReferences(l, TypeRelation.COMPOSITION, objetsASauvegarder);
-			this.persistanceManager.save(l);
+			try {
+				this.persistanceManager.save(l);
+			} catch (MarshallExeption | IOException | RestException e) {
+				LOGGER.error("impossible d'enregistrer " + gestionCache.getId(l) + " de type " + l.getClass().getName());
+				gestionCache.setNEstPasEnregistreDansGisement(l, wasNew);
+				throw e;
+			}
+
 		} 
 	}
 
@@ -554,26 +568,25 @@ public class GlobalObjectManager implements EntityManager {
 		gestionCache.metEnCache(id, obj, false);
 	}
 
-	@Override
-	protected void finalize() throws Throwable {
-		super.finalize();
-	}
-
 	class TacheChargementProfondeur implements Callable<Object> {
 
 		private final Object objetATraiter;
 		private final ManagerChargementEnProfondeur managerChargementEnProfondeur;
+		private final GlobalObjectManager gom;
 
-		public TacheChargementProfondeur(Object objetATraiter, ManagerChargementEnProfondeur managerChargementEnProfondeur) {
+		public TacheChargementProfondeur(Object objetATraiter, ManagerChargementEnProfondeur managerChargementEnProfondeur, GlobalObjectManager gom) {
 			super();
 			this.objetATraiter = objetATraiter;
 			this.managerChargementEnProfondeur = managerChargementEnProfondeur;
+			this.gom=gom;
 		}
 
 		@Override
 		public Object call() throws RestException, IOException, SAXException, ChampNotFund, InterruptedException, ParserConfigurationException, ReflectiveOperationException {
-			if (!Thread.currentThread().isInterrupted()) 
-				chargeObjectEnProfondeur(objetATraiter, managerChargementEnProfondeur);
+			if (!Thread.currentThread().isInterrupted()) {
+			chargeObjetAppelWebService(objetATraiter, managerChargementEnProfondeur);
+			ArianeHelper.addSousObject(objetATraiter, gom, managerChargementEnProfondeur);
+			}
 			return objetATraiter;
 		}   
 	}

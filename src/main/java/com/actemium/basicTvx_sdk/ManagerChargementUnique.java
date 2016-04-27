@@ -5,7 +5,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-public class ManagerChargementUnique implements Manager_Chargement {
+public class ManagerChargementUnique implements ManagerChargementSDK {
 	Future<Object> future;
 	ExecutorService executor;
 	
@@ -13,9 +13,9 @@ public class ManagerChargementUnique implements Manager_Chargement {
 		executor = Executors.newSingleThreadExecutor();
 	}
 	
+	@Override
 	public synchronized Future<Object> submit(Object o, Callable<Object> task){
-		Future<Object> future = executor.submit(task);
-		this.future=future;
+		future= executor.submit(task);
 		return future;
 	}
 	
@@ -24,12 +24,14 @@ public class ManagerChargementUnique implements Manager_Chargement {
 			return future;
 	}
 
+	@Override
 	public void chargementTermineAndShutdownNow() {
 		synchronized(executor){
 			executor.shutdownNow();
 		}
 	}
 
+	@Override
 	public boolean isChargementTermine(){
 		synchronized(executor){
 			return executor.isShutdown();
