@@ -245,21 +245,21 @@ public class GlobalObjectManager implements EntityManager {
 	private <U> void nourritObjet(U obj) throws  GetObjectException{
 		if(gestionCache.estCharge(obj))
 			return;
-		try {
-			if(gestionCache.isEnTrainDeNourrir(obj) & gestionCache.getChargement(obj)!= null){
+		if(gestionCache.isEnTrainDeNourrir(obj) & gestionCache.getChargement(obj)!= null){
+			try {
 				gestionCache.getChargement(obj).get();
 			}
-			else {
-				nourritEffectivementObjet(obj);
-			}
+			catch (Exception e){
+				gestionCache.finitNourrir(obj);
+				unwrappExceptionInGetObjectException(obj, e);
+			}	
 		}
-		catch (Exception e){
-			gestionCache.finitNourrir(obj);
-			unwrappExceptionInGetObjectException(obj, e);
-		}	
+		else {
+				nourritEffectivementObjet(obj);
+		}
 	}
 
-	private <U> void nourritEffectivementObjet(U obj) throws InterruptedException, GetObjectException {
+	private <U> void nourritEffectivementObjet(U obj) throws  GetObjectException {
 		ManagerChargementUnique managerChargementUnique= new ManagerChargementUnique();
 		try{
 			Future<Object> future = managerChargementUnique.submit(null,new TacheWebServiceGetObjet(obj, managerChargementUnique));
@@ -278,7 +278,7 @@ public class GlobalObjectManager implements EntityManager {
 		}
 	}
 
-	private <U> void gererExecutionExceptionUnique(U obj, ManagerChargementUnique managerChargementUnique, ExecutionException e1) throws InterruptedException,
+	private <U> void gererExecutionExceptionUnique(U obj, ManagerChargementUnique managerChargementUnique, ExecutionException e1) throws 
 	GetObjectException {
 		gestionCache.finitNourrir(obj);
 		if (isNetworkException(e1)){
@@ -286,7 +286,7 @@ public class GlobalObjectManager implements EntityManager {
 				Future<Object> future = managerChargementUnique.submit(null,new TacheWebServiceGetObjet(obj, managerChargementUnique));
 				future.get();
 			}
-			catch( ExecutionException e2){
+			catch( ExecutionException | InterruptedException e2){
 				unwrappExceptionInGetObjectException(obj, e2);;
 			}
 		}
@@ -296,11 +296,16 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 	private void unwrappExceptionInGetObjectException(Object obj,Exception e) throws GetObjectException{
+		if(e instanceof GetObjectException)
+			throw (GetObjectException)e;
 		try{
 			if(e instanceof ExecutionException)
 				unwrapAndThrowExecutionException((ExecutionException)e);
 			else if (e instanceof InterruptedException)
+			{
+				Thread.currentThread().interrupt();
 				throw (InterruptedException)e;
+			}
 		} catch (ParseException | IllegalArgumentException | RestException | IOException | SAXException | ChampNotFund | InterruptedException | ParserConfigurationException
 				| ReflectiveOperationException  e1) {
 			throw new GetObjectException(gestionCache.getId(obj), obj.getClass(), e1);
@@ -358,23 +363,23 @@ public class GlobalObjectManager implements EntityManager {
 		Throwable t = e.getCause();
 		if (t instanceof ParseException)
 			throw (ParseException)t;
-		else if (t instanceof ClassNotFoundException)
+		if (t instanceof ClassNotFoundException)
 			throw (ClassNotFoundException)t;
-		else if (t instanceof RestException)
+		if (t instanceof RestException)
 			throw (RestException)t;
-		else if (t instanceof IOException)
+		if (t instanceof IOException)
 			throw (IOException)t;
-		else if (t instanceof SAXException)
+		if (t instanceof SAXException)
 			throw (SAXException)t;
-		else if (t instanceof IllegalArgumentException)
+		if (t instanceof IllegalArgumentException)
 			throw (IllegalArgumentException)t;
-		else if (t instanceof ChampNotFund)
+		if (t instanceof ChampNotFund)
 			throw (ChampNotFund)t;
-		else if (t instanceof InterruptedException)
+		if (t instanceof InterruptedException)
 			throw (InterruptedException)t;
-		else if (t instanceof ParserConfigurationException)
+		if (t instanceof ParserConfigurationException)
 			throw (ParserConfigurationException)t;
-		else if (t instanceof ReflectiveOperationException)
+		if (t instanceof ReflectiveOperationException)
 			throw (ReflectiveOperationException)t;
 	}
 
@@ -467,12 +472,19 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws IOException 
 	 * @throws ClientProtocolException 
 	 */
-	private <U> void save(final U l, final boolean hasChanged, Set<Object> objetsASauvegarder) throws MarshallExeption, IllegalAccessException, IOException, RestException {
+	private <U> void save(final U l, final boolean hasChanged, Set<Object> objetsASauvegarder) throws IllegalAccessException, MarshallExeption, IOException, RestException {
 		if(this.isNew(l) || hasChanged){
-			gestionCache.setEstEnregistreDansGisement(l);
+			boolean wasNew = gestionCache.setEstEnregistreDansGisement(l);
 			objetsASauvegarder.remove(l);
 			this.saveReferences(l, TypeRelation.COMPOSITION, objetsASauvegarder);
-			this.persistanceManager.save(l);
+			try {
+				this.persistanceManager.save(l);
+			} catch (MarshallExeption | IOException | RestException e) {
+				LOGGER.error("impossible d'enregistrer " + gestionCache.getId(l) + " de type " + l.getClass().getName());
+				gestionCache.setNEstPasEnregistreDansGisement(l, wasNew);
+				throw e;
+			}
+
 		} 
 	}
 
