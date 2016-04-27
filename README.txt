@@ -7,7 +7,7 @@ L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes
 	<dependency>
 			<groupId>com.actemium</groupId>
 	  		<artifactId>basicTvx_sdk</artifactId>
-	  		<version>1.0.2</version>
+	  		<version>1.0.3</version>
 	</dependency>
 
 	<!-- Apache HTTP Client-->
@@ -21,14 +21,14 @@ L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes
 	<dependency>
 	  <groupId>com.rff</groupId>
 	  <artifactId>BasicTravaux</artifactId>
-	  <version>1.0.2</version>
+	  <version>1.0.4</version>
 	</dependency>
 	
 	<!-- lib de serialisation-->
 	<dependency>
   		<groupId>com.actemium</groupId>
   		<artifactId>Marshalling</artifactId>
-  		<version>1.0.2</version>
+  		<version>1.0.3</version>
 	</dependency>
 
 
@@ -146,9 +146,7 @@ Voila la liste des autres méthodes publiques disponible dans le GOM :
 		try {
 			monObjet = (MonObjet)getObject(MonObjet.class, uuid, true);
 		} catch (GetObjetEnProfondeurException e) {
-			for(GetObjectException ex : e.getCauses()){
-				LOGGER.error(ex.getMessage(), ex);
-			}
+			
 			if(e.getInterruptedException() != null)
 				LOGGER.error(e.getInterruptedException().getMessage(), e.getInterruptedException());
 			monObjet= (MonObjet) e.getObjetRacine();
@@ -189,9 +187,7 @@ Dans le cas d'un usage en profondeur, voila comment gérer finement les Exceptio
 		try {
 			reponse = (MaReponse)getReponse(requete, true);
 		} catch (GetObjetEnProfondeurException e) {
-			for(GetObjectException ex : e.getCauses()){
-				LOGGER.error(ex.getMessage(), ex);
-			}
+			
 			if(e.getInterruptedException() != null)
 				LOGGER.error(e.getInterruptedException().getMessage(), e.getInterruptedException());
 			reponse = (MaReponse) e.getObjetRacine();

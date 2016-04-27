@@ -176,9 +176,7 @@ Dans le cas d'un usage en profondeur, voila comment gérer finement les Exceptio
 		try {
 			monObjet = (MonObjet)getObject(MonObjet.class, uuid, true);
 		} catch (GetObjetEnProfondeurException e) {
-			for(GetObjectException ex : e.getCauses()){
-				LOGGER.error(ex.getMessage(), ex);
-			}
+			
 			if(e.getInterruptedException() != null)
 				LOGGER.error(e.getInterruptedException().getMessage(), e.getInterruptedException());
 			monObjet= (MonObjet) e.getObjetRacine();
@@ -221,9 +219,7 @@ Dans le cas d'un usage en profondeur, voila comment gérer finement les Exceptio
 		try {
 			reponse = (MaReponse)getReponse(requete, true);
 		} catch (GetObjetEnProfondeurException e) {
-			for(GetObjectException ex : e.getCauses()){
-				LOGGER.error(ex.getMessage(), ex);
-			}
+			
 			if(e.getInterruptedException() != null)
 				LOGGER.error(e.getInterruptedException().getMessage(), e.getInterruptedException());
 			reponse = (MaReponse) e.getObjetRacine();
