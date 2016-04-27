@@ -297,7 +297,7 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 
-	private <U> void chargeObjetAppelWebService(U obj, Manager_Chargement manager) throws ParseException, RestException, IOException, SAXException, InterruptedException, ParserConfigurationException, ReflectiveOperationException,
+	private <U> void chargeObjetAppelWebService(U obj, Manager_Chargement manager) throws RestException, IOException, SAXException, InterruptedException, ParserConfigurationException, ReflectiveOperationException,
 	IllegalArgumentException, ChampNotFund{
 		if (gestionCache.estCharge(obj))
 			return;
@@ -346,7 +346,7 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 	private boolean isNetworkException(ExecutionException e){
-		if(e.getCause() instanceof RestException | e.getCause() instanceof IOException)
+		if(e.getCause() instanceof RestException || e.getCause() instanceof IOException)
 			return true;
 		return false;
 	}
@@ -448,7 +448,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws IOException 
 	 * @throws ClientProtocolException 
 	 */
-	private void save(Set<Object> objetsASauvegarder) throws IllegalAccessException, MarshallExeption, ClientProtocolException, IOException, RestException{
+	private void save(Set<Object> objetsASauvegarder) throws IllegalAccessException, MarshallExeption, IOException, RestException{
 		Object obj = getObjetToSave(objetsASauvegarder);
 		while(obj != null){
 			this.save(obj, this.hasChanged(obj), objetsASauvegarder);
@@ -469,7 +469,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws IOException 
 	 * @throws ClientProtocolException 
 	 */
-	private <U> void save(final U l, final boolean hasChanged, Set<Object> objetsASauvegarder) throws MarshallExeption, IllegalAccessException, ClientProtocolException, IOException, RestException {
+	private <U> void save(final U l, final boolean hasChanged, Set<Object> objetsASauvegarder) throws MarshallExeption, IllegalAccessException, IOException, RestException {
 		if(this.isNew(l) || hasChanged){
 			gestionCache.setEstEnregistreDansGisement(l);
 			objetsASauvegarder.remove(l);
@@ -491,7 +491,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws IOException 
 	 * @throws ClientProtocolException 
 	 */
-	private <U> void saveReferences(final U l, final TypeRelation relation, Set<Object> objetsASauvegarder) throws IllegalAccessException, MarshallExeption, ClientProtocolException, IOException, RestException {
+	private <U> void saveReferences(final U l, final TypeRelation relation, Set<Object> objetsASauvegarder) throws IllegalAccessException, MarshallExeption, IOException, RestException {
 		if(relation == TypeRelation.COMPOSITION){
 			final List<Champ> champs = TypeExtension.getSerializableFields(l.getClass());
 			for(final Champ champ : champs){
@@ -575,7 +575,7 @@ public class GlobalObjectManager implements EntityManager {
 		}
 
 		@Override
-		public Object call() throws ParseException, IllegalArgumentException, RestException, IOException, SAXException, ChampNotFund, InterruptedException, ParserConfigurationException, ReflectiveOperationException {
+		public Object call() throws RestException, IOException, SAXException, ChampNotFund, InterruptedException, ParserConfigurationException, ReflectiveOperationException {
 			if (!Thread.currentThread().isInterrupted()) 
 				chargeObjectEnProfondeur(objetATraiter, managerChargementEnProfondeur);
 			return objetATraiter;
@@ -593,7 +593,7 @@ public class GlobalObjectManager implements EntityManager {
 		}
 
 		@Override
-		public Object call() throws ParseException, RestException, IOException, SAXException, ParserConfigurationException, ReflectiveOperationException, IllegalArgumentException, InterruptedException, ChampNotFund {
+		public Object call() throws RestException, IOException, SAXException, ParserConfigurationException, ReflectiveOperationException, InterruptedException, ChampNotFund {
 			if (!Thread.currentThread().isInterrupted()) 
 				chargeObjetAppelWebService(objetATraiter, managerChargementUnique);
 			return objetATraiter;
