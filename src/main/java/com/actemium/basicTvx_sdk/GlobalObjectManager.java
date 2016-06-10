@@ -104,12 +104,14 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param <U> the generic type
 	 * @throws SaveAllException 
 	 */
-	public  void saveAll() throws SaveAllException {
+	public synchronized void saveAll() throws SaveAllException {
 		try{
 			Set<Object> objetsASauvegarder = gestionCache.objetsModifiesDepuisChargementOuNouveau();
 			save(objetsASauvegarder);
 		}catch(MarshallExeption | IllegalAccessException | IOException | RestException e){
 			LOGGER.error("impossible de sauvegarder", e);
+			gestionCache.purge();
+			LOGGER.error("erreur dans saveAll(), Cache reinitialisé");
 			throw new SaveAllException("impossible de sauvegarder", e);
 		}
 	}
@@ -118,7 +120,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param objet
 	 * @throws SaveException
 	 */
-	public <U> void save(U objet) throws SaveException{
+	public synchronized <U> void save(U objet) throws SaveException{
 		if (objet == null)
 			return;
 		if (!isNew(objet) && !hasChanged(objet)) 
@@ -129,6 +131,8 @@ public class GlobalObjectManager implements EntityManager {
 			save(objetsASauvegarder);
 		}catch(MarshallExeption | IllegalAccessException | IOException | RestException e){
 			LOGGER.error("impossible de sauvegarder", e);
+			gestionCache.purge();
+			LOGGER.error("erreur dans save(), Cache reinitialisé");
 			throw new SaveException(e);
 		}
 	}
@@ -155,7 +159,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @return the all object by type
 	 * @throws GetAllObjectException 
 	 */
-	public <U> List<U> getAllObject(final Class<U> clazz) throws GetAllObjectException{
+	public synchronized <U> List<U> getAllObject(final Class<U> clazz) throws GetAllObjectException{
 		try{
 			if(gestionCache.estDejaCharge(clazz)) {
 				return gestionCache.getClasse(clazz);
@@ -173,6 +177,8 @@ public class GlobalObjectManager implements EntityManager {
 			return listeObj;
 		}catch(ParseException | ClassNotFoundException | RestException | IOException | SAXException e){
 			LOGGER.error("impossible de récupérer l'objet", e);
+			gestionCache.purge();
+			LOGGER.error("erreur dans getAllObject(), Cache reinitialisé");
 			throw new GetAllObjectException(e);
 		}
 	}
@@ -189,7 +195,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws GetObjetEnProfondeurException 
 	 */
 
-	public <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur) throws GetObjectException, GetObjetEnProfondeurException{
+	public synchronized <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur) throws GetObjectException, GetObjetEnProfondeurException{
 		try{
 			if(id == null || clazz == null) 
 				return null;
@@ -203,7 +209,14 @@ public class GlobalObjectManager implements EntityManager {
 			return obj;
 		}catch(InstantiationException  |  IllegalAccessException e){
 			LOGGER.error("impossible de récupérer l'objet", e);
+			gestionCache.purge();
+			LOGGER.error("erreur dans getObject(), Cache reinitialisé");
 			throw new GetObjectException(id, clazz, e);
+		}
+		catch(GetObjetEnProfondeurException e){
+			gestionCache.purge();
+			LOGGER.error("erreur dans getObjectEnProfondeur(), Cache reinitialisé");
+			throw e;
 		}
 	}
 
@@ -413,15 +426,22 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws GetObjetEnProfondeurException 
 	 * @throws GetObjectException 
 	 */
-	public Reponse getReponse(Requete request, boolean enProfondeur) throws GetObjetEnProfondeurException, GetObjectException  {
+	public synchronized Reponse getReponse(Requete request, boolean enProfondeur) throws GetObjetEnProfondeurException, GetObjectException  {
 		Reponse reponse;
 		try {
 			reponse = persistanceManager.getReponse(request, this);
+			if(enProfondeur){
+				getObjetEnProfondeur(reponse);
+			}
 		} catch (MarshallExeption | IOException | RestException e) {
+			gestionCache.purge();
+			LOGGER.error("erreur dans getReponse(), Cache reinitialisé");
 			throw new GetObjectException("objet sans id", request.getClass(), e);
 		}
-		if(enProfondeur){
-			getObjetEnProfondeur(reponse);
+		catch(GetObjetEnProfondeurException e){
+			gestionCache.purge();
+			LOGGER.error("erreur dans getObjectEnProfondeur() de getReponse(), Cache reinitialisé");
+			throw e;
 		}
 		return reponse;
 	}
