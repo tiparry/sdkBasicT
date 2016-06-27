@@ -4,11 +4,16 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Date;
 import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.rff.basictravaux.model.bdd.ObjetPersistant;
 
 import utils.Constants;
 
 public class ObjectFactory {
+	private static Logger LOGGER = LoggerFactory.getLogger(ObjectFactory.class);
 
 	private <U> void setId(U ret, UUID id) {
 		if(ret instanceof ObjetPersistant)
@@ -55,6 +60,7 @@ public class ObjectFactory {
 				constr.setAccessible(true);
 				ret = (U) constr.newInstance(Constants.getNullArgument());
 			} catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e1) {
+				LOGGER.debug("impossible d'instancier la classe " + clazz.getName());
 				throw e;
 			}
 		}
