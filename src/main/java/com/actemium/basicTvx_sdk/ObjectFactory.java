@@ -42,7 +42,7 @@ public class ObjectFactory {
 	}
 
 	<U> U newObjectById(Class<U> clazz, String id, GestionCache cache) throws InstantiationException, IllegalAccessException {
-		U ret = clazz.newInstance();
+		U ret = newInstance(clazz);
 		setId(ret, UUID.fromString(id));
 		cache.metEnCache(id, ret, true);
 		return ret;
@@ -50,6 +50,15 @@ public class ObjectFactory {
 
 
 	<U> U newObject(Class<U> clazz, Date date, GestionCache cache) throws InstantiationException , IllegalAccessException{
+		U ret = newInstance(clazz);
+		UUID id = newUuid();
+		setId(ret, id);
+		setDateCration(ret, date);
+		cache.metEnCache(id.toString(), ret, true);
+		return ret;
+	}
+	
+	private <U> U newInstance(Class<U> clazz) throws InstantiationException , IllegalAccessException{
 		U ret;
 		try{
 			ret = clazz.newInstance();
@@ -64,11 +73,6 @@ public class ObjectFactory {
 				throw e;
 			}
 		}
-		
-		UUID id = newUuid();
-		setId(ret, id);
-		setDateCration(ret, date);
-		cache.metEnCache(id.toString(), ret, true);
 		return ret;
 	}
 }
