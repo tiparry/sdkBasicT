@@ -1,8 +1,12 @@
 package com.actemium.basicTvx_sdk;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Date;
 import java.util.UUID;
 import com.rff.basictravaux.model.bdd.ObjetPersistant;
+
+import utils.Constants;
 
 public class ObjectFactory {
 
@@ -40,8 +44,21 @@ public class ObjectFactory {
 	}
 
 
-	<U> U newObject(Class<U> clazz, Date date, GestionCache cache) throws InstantiationException, IllegalAccessException{
-		U ret = clazz.newInstance();
+	<U> U newObject(Class<U> clazz, Date date, GestionCache cache) throws InstantiationException , IllegalAccessException{
+		U ret;
+		try{
+			ret = clazz.newInstance();
+		}catch(InstantiationException | IllegalAccessException e){
+			Constructor<?> constr;
+			try {
+				constr = clazz.getDeclaredConstructor(Constants.getClassVide());
+				constr.setAccessible(true);
+				ret = (U) constr.newInstance(Constants.getNullArgument());
+			} catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e1) {
+				throw e;
+			}
+		}
+		
 		UUID id = newUuid();
 		setId(ret, id);
 		setDateCration(ret, date);
