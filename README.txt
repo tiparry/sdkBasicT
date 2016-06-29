@@ -7,7 +7,7 @@ L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes
 	<dependency>
 			<groupId>com.actemium</groupId>
 	  		<artifactId>basicTvx_sdk</artifactId>
-	  		<version>1.0.3</version>
+	  		<version>1.0.4</version>
 	</dependency>
 
 	<!-- Apache HTTP Client-->
@@ -21,7 +21,7 @@ L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes
 	<dependency>
 	  <groupId>com.rff</groupId>
 	  <artifactId>BasicTravaux</artifactId>
-	  <version>1.0.4</version>
+	  <version>1.0.5</version>
 	</dependency>
 	
 	<!-- lib de serialisation-->
