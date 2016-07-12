@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -230,7 +231,7 @@ public class RestClient {
 
 			HttpEntity entity = response.getEntity();
 			if (entity != null) {
-				return new BufferedReader(new InputStreamReader(entity.getContent()));
+				return new BufferedReader(new InputStreamReader(entity.getContent(), Charset.forName(UTF8)));
 			} else {
 				HttpClientUtils.closeQuietly(response);
 				return null;
