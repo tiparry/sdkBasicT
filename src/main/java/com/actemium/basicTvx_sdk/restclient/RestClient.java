@@ -267,7 +267,7 @@ public class RestClient {
 			}
 			HttpEntity entityReponse = response.getEntity();
 			if (entityReponse != null) {
-				return new BufferedReader(new InputStreamReader(entityReponse.getContent()));
+				return new BufferedReader(new InputStreamReader(entityReponse.getContent(), Charset.forName(UTF8)));
 			} else {
 				HttpClientUtils.closeQuietly(response);
 				return null;
