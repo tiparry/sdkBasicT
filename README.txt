@@ -7,7 +7,7 @@ L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes
 	<dependency>
 			<groupId>com.actemium</groupId>
 	  		<artifactId>basicTvx_sdk</artifactId>
-	  		<version>1.0.4</version>
+	  		<version>1.0.5</version>
 	</dependency>
 
 	<!-- Apache HTTP Client-->
@@ -28,7 +28,7 @@ L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes
 	<dependency>
   		<groupId>com.actemium</groupId>
   		<artifactId>Marshalling</artifactId>
-  		<version>1.0.3</version>
+  		<version>1.0.4</version>
 	</dependency>
 
 
@@ -87,22 +87,9 @@ il est aussi possible de supprimer un objet du cache unitairement si par exemple
 
 Voila la liste des autres méthodes publiques disponible dans le GOM : 
 
-
-
-     /**
-     * Sauvegarde ou update dans le gisement les objets nouveaux ou modifies.
-     *
-     * @param <U> the generic type
-     */
-    public <U> void saveAll()
-    
-     
-     /**
-     * Sauvegarde de l'objet avec sa grappe d'objet
-     * @param objet
-     */
-    public <U> void save(U objet) 
-
+!!!!!!!!!
+ATTENTION : lorsque les méthodes saveAll, save, getAllObject, getObject, getReponse génèrent leurs exceptions, le cache est entièrement purgé. Tous les objets déclarés jusque là au moyen du GOM (avec createObject, getObject, getAllObject ou getReponse) deviennent inutilisables.
+!!!!!!!!!
 
     /**
 	 * Creates the object.
@@ -115,6 +102,21 @@ Voila la liste des autres méthodes publiques disponible dans le GOM :
 	 public <U> U createObject(final Class<U> clazz, final Date date) 
 	   
 	   
+	     /**
+     * Sauvegarde ou update dans le gisement les objets nouveaux ou modifies.
+     *
+     * @param <U> the generic type
+     */
+    public synchronized <U> void saveAll()
+    
+     
+     /**
+     * Sauvegarde de l'objet avec sa grappe d'objet
+     * @param objet
+     */
+    public synchronized <U> void save(U objet) 
+	   
+	    
 	   
 	/**
 	 * Retourne tous les objets présent dans le gisement pour le type U .
@@ -123,7 +125,7 @@ Voila la liste des autres méthodes publiques disponible dans le GOM :
 	 * @param clazz the clazz
 	 * @return the all object by type
 	 */
-	public <U> List<U> getAllObject(final Class<U> clazz)
+	public synchronized <U> List<U> getAllObject(final Class<U> clazz)
 	
 	
 
@@ -137,21 +139,19 @@ Voila la liste des autres méthodes publiques disponible dans le GOM :
 	 * @return the object by type and id
 	 * @throws InterruptedException 
 	 */
-	public <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur)
+	public synchronized <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur)
 
 	 
-	 Dans le cas d'un usage en profondeur, voila comment gérer finement les Exceptions eventuelles remontées par cette méthode:
-		
-		MonObjet monObjet;
-		try {
-			monObjet = (MonObjet)getObject(MonObjet.class, uuid, true);
-		} catch (GetObjetEnProfondeurException e) {
-			
-			if(e.getInterruptedException() != null)
-				LOGGER.error(e.getInterruptedException().getMessage(), e.getInterruptedException());
-			monObjet= (MonObjet) e.getObjetRacine();
-		}
-	 
+	
+	/**
+	 * Poste l'objet Requete au serveur et récupere l'objet Reponse
+	 *
+	 * @param Requete
+	 * @param enProfondeur true si l'on veut récuperer toute la grappe de la réponse
+	 */
+	public synchronized Reponse getReponse(Requete request, boolean enProfondeur)
+
+ 
 	 
 	 
 	 
@@ -173,27 +173,6 @@ Voila la liste des autres méthodes publiques disponible dans le GOM :
      public boolean hasChanged(final Object objet){
 	
 	
-	/**
-	 * Poste l'objet Requete au serveur et récupere l'objet Reponse
-	 *
-	 * @param Requete
-	 * @param enProfondeur true si l'on veut récuperer toute la grappe de la réponse
-	 */
-	public Reponse getReponse(Requete request, boolean enProfondeur)
-
-Dans le cas d'un usage en profondeur, voila comment gérer finement les Exceptions eventuelles remontées par cette méthode:
-		
-		MaReponse reponse;
-		try {
-			reponse = (MaReponse)getReponse(requete, true);
-		} catch (GetObjetEnProfondeurException e) {
-			
-			if(e.getInterruptedException() != null)
-				LOGGER.error(e.getInterruptedException().getMessage(), e.getInterruptedException());
-			reponse = (MaReponse) e.getObjetRacine();
-		}
-
-
 
 	
 3- Configuration des logs
