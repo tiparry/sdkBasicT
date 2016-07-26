@@ -590,12 +590,12 @@ public class GlobalObjectManager implements EntityManager {
 	@Override
 	public synchronized <U> U findObjectOrCreate(final String id, final Class<U> clazz, final boolean fromExt) throws InstantiationException, IllegalAccessException {
 		U obj = gestionCache.getObject(clazz, id); //on regarde en cache
-		if (obj != null && fromExt ){
-			this.gestionCache.setNotNew(obj);
-		}
-		else if(obj == null){
+		 if(obj == null){
 			obj = this.factory.newObjectById(clazz, id, gestionCache);
 		}
+		 if (obj!=null && fromExt){
+			 this.gestionCache.setNotNew(obj);
+		 }
 		return obj;
 	}
 
