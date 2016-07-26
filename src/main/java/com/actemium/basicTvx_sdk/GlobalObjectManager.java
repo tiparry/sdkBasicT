@@ -147,7 +147,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws IllegalAccessException 
 	 * @throws InstantiationException 
 	 */
-	public <U> U createObject(final Class<U> clazz, final Date date) throws InstantiationException, IllegalAccessException {
+	public synchronized <U> U createObject(final Class<U> clazz, final Date date) throws InstantiationException, IllegalAccessException {
 		return (U) this.factory.newObject(clazz, date, gestionCache);
 	}
 
@@ -159,7 +159,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @return the all object by type
 	 * @throws GetAllObjectException 
 	 */
-	public synchronized <U> List<U> getAllObject(final Class<U> clazz) throws GetAllObjectException{
+	public <U> List<U> getAllObject(final Class<U> clazz) throws GetAllObjectException{
 		try{
 			if(gestionCache.estDejaCharge(clazz)) {
 				return gestionCache.getClasse(clazz);
@@ -177,7 +177,7 @@ public class GlobalObjectManager implements EntityManager {
 			return listeObj;
 		}catch(ParseException | ClassNotFoundException | RestException | IOException | SAXException e){
 			LOGGER.error("impossible de récupérer l'objet", e);
-			gestionCache.purge();
+			this.purgeCache();
 			LOGGER.error("erreur dans getAllObject(), Cache reinitialisé");
 			throw new GetAllObjectException(e);
 		}
@@ -195,26 +195,23 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws GetObjetEnProfondeurException 
 	 */
 
-	public synchronized <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur) throws GetObjectException, GetObjetEnProfondeurException{
+	public <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur) throws GetObjectException, GetObjetEnProfondeurException{
 		try{
 			if(id == null || clazz == null) 
 				return null;
-			U obj = gestionCache.getObject(clazz, id); //on regarde en cache
-			if(obj == null){
-				obj = this.factory.newObjectById(clazz, id, gestionCache);
-			}
+			U obj = findObjectOrCreate(id, clazz, false);
 			if(enProfondeur) 
 				getObjetEnProfondeur(obj);
 			else nourritObjet(obj);
 			return obj;
 		}catch(InstantiationException  |  IllegalAccessException e){
 			LOGGER.error("impossible de récupérer l'objet", e);
-			gestionCache.purge();
+			this.purgeCache();
 			LOGGER.error("erreur dans getObject(), Cache reinitialisé");
 			throw new GetObjectException(id, clazz, e);
 		}
 		catch(GetObjetEnProfondeurException e){
-			gestionCache.purge();
+			this.purgeCache();
 			LOGGER.error("erreur dans getObjectEnProfondeur(), Cache reinitialisé");
 			throw e;
 		}
@@ -401,7 +398,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * Purge le Cache du GOM pour éviter les fuites mémoires lorsqu'on a fini un traitement.
 	 *
 	 */
-	public void purgeCache() {
+	public synchronized void purgeCache() {
 		this.gestionCache.purge();
 	}
 
@@ -426,7 +423,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws GetObjetEnProfondeurException 
 	 * @throws GetObjectException 
 	 */
-	public synchronized Reponse getReponse(Requete request, boolean enProfondeur) throws GetObjetEnProfondeurException, GetObjectException  {
+	public Reponse getReponse(Requete request, boolean enProfondeur) throws GetObjetEnProfondeurException, GetObjectException  {
 		Reponse reponse;
 		try {
 			reponse = persistanceManager.getReponse(request, this);
@@ -434,12 +431,12 @@ public class GlobalObjectManager implements EntityManager {
 				getObjetEnProfondeur(reponse);
 			}
 		} catch (MarshallExeption | IOException | RestException e) {
-			gestionCache.purge();
+			this.purgeCache();
 			LOGGER.error("erreur dans getReponse(), Cache reinitialisé");
 			throw new GetObjectException("objet sans id", request.getClass(), e);
 		}
 		catch(GetObjetEnProfondeurException e){
-			gestionCache.purge();
+			this.purgeCache();
 			LOGGER.error("erreur dans getObjectEnProfondeur() de getReponse(), Cache reinitialisé");
 			throw e;
 		}
@@ -573,21 +570,33 @@ public class GlobalObjectManager implements EntityManager {
 	 * @return
 	 * @see giraudsa.marshall.deserialisation.EntityManager#findObject(java.lang.String, java.lang.Class)
 	 */
-	@Override public <U> U findObject(final String id, final Class<U> clazz) {
+	@Override public synchronized <U> U findObject(final String id, final Class<U> clazz) {
 		U obj = this.gestionCache.getObject(clazz, id);
 		if(obj != null)
 			this.gestionCache.setNotNew(obj);
 		return obj;
 	}
 
+
 	/**
-	 * Méthode qui met en cache l'objet et son id comme clef de la map du cache.
+	 * Méthode pour récupérer un objet ou creer depuis le cache du global object manager.
 	 * @param id
-	 * @param obj
-	 * @see giraudsa.marshall.deserialisation.EntityManager#metEnCache(java.lang.String, java.lang.Object)
+	 * @param clazz
+	 * @return
+	 * @throws IllegalAccessException 
+	 * @throws InstantiationException 
+	 * @see giraudsa.marshall.deserialisation.EntityManager#findObjectOrCreate(java.lang.String, java.lang.Class, boolean )
 	 */
-	@Override public void metEnCache(final String id, final Object obj) {
-		gestionCache.metEnCache(id, obj, false);
+	@Override
+	public synchronized <U> U findObjectOrCreate(final String id, final Class<U> clazz, final boolean fromExt) throws InstantiationException, IllegalAccessException {
+		U obj = gestionCache.getObject(clazz, id); //on regarde en cache
+		if (obj != null && fromExt ){
+			this.gestionCache.setNotNew(obj);
+		}
+		else if(obj == null){
+			obj = this.factory.newObjectById(clazz, id, gestionCache);
+		}
+		return obj;
 	}
 
 	class TacheChargementProfondeur implements Callable<Object> {
