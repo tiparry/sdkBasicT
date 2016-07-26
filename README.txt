@@ -7,7 +7,7 @@ L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes
 	<dependency>
 			<groupId>com.actemium</groupId>
 	  		<artifactId>basicTvx_sdk</artifactId>
-	  		<version>1.0.5</version>
+	  		<version>1.0.6</version>
 	</dependency>
 
 	<!-- Apache HTTP Client-->
@@ -28,7 +28,7 @@ L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes
 	<dependency>
   		<groupId>com.actemium</groupId>
   		<artifactId>Marshalling</artifactId>
-  		<version>1.0.4</version>
+  		<version>1.0.5</version>
 	</dependency>
 
 
@@ -70,7 +70,7 @@ Afin d'éviter au GOM d'occuper toujours plus de mémoire au fil du temps si la 
 	 * Purge le Cache du GOM pour éviter les fuites mémoires lorsqu'on a fini un traitement.
 	 *
 	 */
-	public void purgeCache()
+	public synchronized void purgeCache()
 	
 il est aussi possible de supprimer un objet du cache unitairement si par exemple il est créé en local et qu'on veut finalement ne pas le garder
 
@@ -99,7 +99,7 @@ ATTENTION : lorsque les méthodes saveAll, save, getAllObject, getObject, getRep
 	 * @param date the date
 	 * @return the u
 	 */
-	 public <U> U createObject(final Class<U> clazz, final Date date) 
+	 public synchronized <U> U createObject(final Class<U> clazz, final Date date) 
 	   
 	   
 	     /**
@@ -125,7 +125,7 @@ ATTENTION : lorsque les méthodes saveAll, save, getAllObject, getObject, getRep
 	 * @param clazz the clazz
 	 * @return the all object by type
 	 */
-	public synchronized <U> List<U> getAllObject(final Class<U> clazz)
+	public  <U> List<U> getAllObject(final Class<U> clazz)
 	
 	
 
@@ -139,7 +139,7 @@ ATTENTION : lorsque les méthodes saveAll, save, getAllObject, getObject, getRep
 	 * @return the object by type and id
 	 * @throws InterruptedException 
 	 */
-	public synchronized <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur)
+	public  <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur)
 
 	 
 	
@@ -149,7 +149,7 @@ ATTENTION : lorsque les méthodes saveAll, save, getAllObject, getObject, getRep
 	 * @param Requete
 	 * @param enProfondeur true si l'on veut récuperer toute la grappe de la réponse
 	 */
-	public synchronized Reponse getReponse(Requete request, boolean enProfondeur)
+	public  Reponse getReponse(Requete request, boolean enProfondeur)
 
  
 	 
