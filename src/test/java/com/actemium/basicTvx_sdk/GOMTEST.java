@@ -20,7 +20,6 @@ import com.rff.basictravaux.model.webservice.requete.RequeteDemandesCapaciteByDa
 
 import ariane.modele.structure.Structure;
 import giraudsa.marshall.deserialisation.text.json.JsonUnmarshaller;
-import giraudsa.marshall.exception.ChampNotFund;
 import giraudsa.marshall.exception.JsonHandlerException;
 import giraudsa.marshall.exception.NotImplementedSerializeException;
 import giraudsa.marshall.exception.UnmarshallExeption;

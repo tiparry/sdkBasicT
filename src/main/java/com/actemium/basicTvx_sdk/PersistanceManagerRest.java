@@ -2,6 +2,7 @@ package com.actemium.basicTvx_sdk;
 
 import giraudsa.marshall.deserialisation.EntityManager;
 import giraudsa.marshall.deserialisation.text.json.JsonUnmarshaller;
+import giraudsa.marshall.exception.InstanciationException;
 import giraudsa.marshall.exception.MarshallExeption;
 import giraudsa.marshall.exception.UnmarshallExeption;
 import giraudsa.marshall.serialisation.text.json.JsonMarshaller;
@@ -10,17 +11,12 @@ import utils.ConfigurationMarshalling;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.List;
-import java.util.UUID;
-
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
 import org.apache.http.HttpStatus;
-import org.apache.http.ParseException;
 import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.ClientProtocolException;
-
 import com.actemium.basicTvx_sdk.restclient.RestClient;
 import com.actemium.basicTvx_sdk.restclient.RestException;
 import com.actemium.basicTvx_sdk.restclient.Serialisation;
@@ -28,7 +24,6 @@ import com.rff.basictravaux.model.AnnuaireWS;
 import com.rff.basictravaux.model.webservice.reponse.Reponse;
 import com.rff.basictravaux.model.webservice.requete.Requete;
 
-import ariane.modele.base.ObjetPersistant;
 import ariane.modele.ressource.RessourceAbstraite;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +32,7 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.ext.DefaultHandler2;
 
-public class PersistanceManagerRest extends PersistanceManagerAbstrait {
+ class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	private static final Logger LOGGER = LoggerFactory.getLogger(PersistanceManagerRest.class);
 	private RestClient restClient;
 	
@@ -65,7 +60,7 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	}
 	
 	@Override
-	Reponse getReponse(Requete requete, EntityManager entityManager) throws MarshallExeption, RestException, IOException {
+	Reponse getReponse(Requete requete, EntityManager entityManager) throws MarshallExeption, RestException, IOException{
 		String urn = annuaire.getRequestUrl(requete.getClass());
 		if (urn == null) {
 			return null;
@@ -82,7 +77,7 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	}
 
 	@Override
-	<U> U getObjectById(Class<U> clazz, String id, EntityManager entityManager) throws RestException, IOException, ReflectiveOperationException, ParserConfigurationException, SAXException {
+	<U> U getObjectById(Class<U> clazz, String id, EntityManager entityManager) throws IOException, RestException, SAXException, InstanciationException{
 		String urn = annuaire.getUrlExtension(clazz);
 		if (urn == null) {
 			return chargeIdReseau(clazz, id, entityManager);
@@ -106,7 +101,7 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 
 
 	@Override
-	<U> boolean getAllObject(Class<U> clazz, EntityManager entityManager, List<U> listeARemplir) throws RestException, IOException {
+	<U> boolean getAllObject(Class<U> clazz, EntityManager entityManager, List<U> listeARemplir) throws RestException, IOException{
 		String urn = annuaire.getAllUrlExtension(clazz);
 		if (urn == null) {
 			return false;
@@ -152,20 +147,20 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 		this.credentialsGaia = credentials;
 	}
 	
-	private <U> U chargeIdReseau(Class<U> clazz, String id, EntityManager entityManager) throws RestException, IOException, ReflectiveOperationException, ParserConfigurationException, SAXException {
+	private <U> U chargeIdReseau(Class<U> clazz, String id, EntityManager entityManager) throws IOException, SAXException, InstanciationException, RestException{
 		if(gaiaUrl != null && RessourceAbstraite.class.isAssignableFrom(clazz)){
 			return extractIdReseau(clazz, id, gaiaUrl, entityManager);
 		}
 		return null;
 	}
 	
-	private <U> U extractIdReseau(Class<U> clazz, String id, String urn, EntityManager entityManager) throws IOException, RestException, ReflectiveOperationException, ParserConfigurationException, SAXException {
+	private <U> U extractIdReseau(Class<U> clazz, String id, String urn, EntityManager entityManager) throws IOException, SAXException, InstanciationException, RestException{
 		U ret;
 		String url = urn.replace("{id}", id);
 		Reader br = restClient.getReader(url, credentialsGaia);
 		if(br == null) 
 			return null;
-		ret = entityManager.findObject(id, clazz);
+		ret = entityManager.findObjectOrCreate(id, clazz, true);
 		((RessourceAbstraite)ret).setIdReseau(getIdReseau(br));
 		br.close();
 		return ret;
@@ -173,18 +168,17 @@ public class PersistanceManagerRest extends PersistanceManagerAbstrait {
 
 
 
-	private Long getIdReseau(Reader br) throws ParserConfigurationException, SAXException, IOException{
+	private Long getIdReseau(Reader br) throws SAXException, IOException{
 		if (br == null) 
 			return null;
 		try{
-			SAXParserFactory factory = SAXParserFactory.newInstance();
-			SAXParser saxParser = factory.newSAXParser();
+			SAXParser saxParser = SAXParserFactory.newInstance().newSAXParser();
 			RessourceAbstraiteArianeHandler handler = new RessourceAbstraiteArianeHandler();
 			saxParser.parse(new InputSource(br), handler);
 			return handler.getIdExterne();
-		}catch(ParserConfigurationException | SAXException | IOException e){
-			LOGGER.error("probleme dans la determination de l'id reseau", e);
-			throw e;
+		} catch (ParserConfigurationException e) {
+			LOGGER.error("impossible de construire le SAXPARSER", e);
+			throw new SAXException("impossible de construire le SAXPARSER", e);
 		}
 	}
 	

@@ -300,7 +300,7 @@ public class RestClient {
 	        HttpEntity res = response.getEntity();
 	        String message = null;
 	        if (res != null) {
-	            message = EntityUtils.toString(res);
+	            message = EntityUtils.toString(res, UTF8);
 	        } else {
 	        	message = "pas de message";
 	        }
@@ -341,7 +341,7 @@ public class RestClient {
 			HttpEntity res = response.getEntity();
 			String message = null;
 		    if (res != null) {
-		       message = EntityUtils.toString(res);
+		       message = EntityUtils.toString(res, UTF8);
 		    } else {
 		      message = "";
 		    }

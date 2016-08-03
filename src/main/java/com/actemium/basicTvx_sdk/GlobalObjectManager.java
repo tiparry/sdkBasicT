@@ -2,7 +2,7 @@ package com.actemium.basicTvx_sdk;
 
 import giraudsa.marshall.annotations.TypeRelation;
 import giraudsa.marshall.deserialisation.EntityManager;
-import giraudsa.marshall.exception.ChampNotFund;
+import giraudsa.marshall.exception.InstanciationException;
 import giraudsa.marshall.exception.MarshallExeption;
 
 import java.io.IOException;
@@ -144,11 +144,10 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param clazz the clazz
 	 * @param date the date
 	 * @return the u
-	 * @throws IllegalAccessException 
-	 * @throws InstantiationException 
+	 * @throws InstanciationException 
 	 */
-	public synchronized <U> U createObject(final Class<U> clazz, final Date date) throws InstantiationException, IllegalAccessException {
-		return (U) this.factory.newObject(clazz, date, gestionCache);
+	public synchronized <U> U createObject(final Class<U> clazz, final Date date) throws InstanciationException {
+		return this.factory.newObject(clazz, date, gestionCache);
 	}
 
 	/**
@@ -175,7 +174,7 @@ public class GlobalObjectManager implements EntityManager {
 				gestionCache.setEstCharge(o);//on dit au cache que c'est chargé...
 			}
 			return listeObj;
-		}catch(ParseException | ClassNotFoundException | RestException | IOException | SAXException e){
+		}catch(ParseException | RestException | IOException  e){
 			LOGGER.error("impossible de récupérer l'objet", e);
 			this.purgeCache();
 			LOGGER.error("erreur dans getAllObject(), Cache reinitialisé");
@@ -204,7 +203,7 @@ public class GlobalObjectManager implements EntityManager {
 				getObjetEnProfondeur(obj);
 			else nourritObjet(obj);
 			return obj;
-		}catch(InstantiationException  |  IllegalAccessException e){
+		}catch(InstanciationException e){
 			LOGGER.error("impossible de récupérer l'objet", e);
 			this.purgeCache();
 			LOGGER.error("erreur dans getObject(), Cache reinitialisé");
@@ -212,7 +211,7 @@ public class GlobalObjectManager implements EntityManager {
 		}
 		catch(GetObjetEnProfondeurException e){
 			this.purgeCache();
-			LOGGER.error("erreur dans getObjectEnProfondeur(), Cache reinitialisé");
+			LOGGER.error("erreur dans getObjectEnProfondeur(), Cache reinitialisé", e);
 			throw e;
 		}
 	}
@@ -297,11 +296,11 @@ public class GlobalObjectManager implements EntityManager {
 				future.get();
 			}
 			catch( ExecutionException | InterruptedException e2){
-				unwrappExceptionInGetObjectException(obj, e2);;
+				unwrappExceptionInGetObjectException(obj, e2);
 			}
 		}
 		else{
-			unwrappExceptionInGetObjectException(obj, e1);;
+			unwrappExceptionInGetObjectException(obj, e1);
 		}
 	}
 
@@ -316,14 +315,13 @@ public class GlobalObjectManager implements EntityManager {
 				Thread.currentThread().interrupt();
 				throw (InterruptedException)e;
 			}
-		} catch (ParseException | IllegalArgumentException | RestException | IOException | SAXException | ChampNotFund | InterruptedException | ParserConfigurationException
-				| ReflectiveOperationException  e1) {
+		} catch (NullPointerException | InterruptedException | RestException | IOException | SAXException | ParserConfigurationException | ReflectiveOperationException  e1) {
 			throw new GetObjectException(gestionCache.getId(obj), obj.getClass(), e1);
 		}
 	}
 
 
-	private <U> void chargeObjetAppelWebService(U obj, ManagerChargementSDK manager) throws RestException, IOException, SAXException, InterruptedException, ParserConfigurationException, ReflectiveOperationException, ChampNotFund{
+	private <U> void chargeObjetAppelWebService(U obj, ManagerChargementSDK manager) throws IOException, RestException, SAXException, InstanciationException, InterruptedException, ParserConfigurationException, ReflectiveOperationException {
 		if (gestionCache.estCharge(obj))
 			return;
 		if( gestionCache.setEnTrainDeNourrir(obj,manager)){
@@ -369,7 +367,7 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 	private void unwrapAndThrowExecutionException(ExecutionException e) throws  RestException, IOException, SAXException, 
-	ChampNotFund, InterruptedException, ParserConfigurationException, ReflectiveOperationException {
+	 InterruptedException, ParserConfigurationException, ReflectiveOperationException {
 		Throwable t = e.getCause();
 		if (t instanceof ParseException)
 			throw (ParseException)t;
@@ -383,8 +381,6 @@ public class GlobalObjectManager implements EntityManager {
 			throw (SAXException)t;
 		if (t instanceof IllegalArgumentException)
 			throw (IllegalArgumentException)t;
-		if (t instanceof ChampNotFund)
-			throw (ChampNotFund)t;
 		if (t instanceof InterruptedException)
 			throw (InterruptedException)t;
 		if (t instanceof ParserConfigurationException)
@@ -410,6 +406,11 @@ public class GlobalObjectManager implements EntityManager {
 		gestionCache.remove(obj);
 	}
 
+	/**
+	 * permet de définir à partir de combien de temps apres le chargement un objet est considéré comme obsolète
+	 * @param duree
+	 * @param unite
+	 */
 	public void setDureeCache(long duree, TimeUnit unite){
 		gestionCache.setDureeCache(unite.toMillis(duree));
 	}
@@ -563,32 +564,19 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 
-	/**
-	 * Méthode pour récupérer un objet depuis le cache du global object manager.
-	 * @param id
-	 * @param clazz
-	 * @return
-	 * @see giraudsa.marshall.deserialisation.EntityManager#findObject(java.lang.String, java.lang.Class)
-	 */
-	@Override public synchronized <U> U findObject(final String id, final Class<U> clazz) {
-		U obj = this.gestionCache.getObject(clazz, id);
-		if(obj != null)
-			this.gestionCache.setNotNew(obj);
-		return obj;
-	}
-
 
 	/**
 	 * Méthode pour récupérer un objet ou creer depuis le cache du global object manager.
 	 * @param id
 	 * @param clazz
 	 * @return
+	 * @throws InstanciationException 
 	 * @throws IllegalAccessException 
 	 * @throws InstantiationException 
 	 * @see giraudsa.marshall.deserialisation.EntityManager#findObjectOrCreate(java.lang.String, java.lang.Class, boolean )
 	 */
 	@Override
-	public synchronized <U> U findObjectOrCreate(final String id, final Class<U> clazz, final boolean fromExt) throws InstantiationException, IllegalAccessException {
+	public synchronized <U> U findObjectOrCreate(final String id, final Class<U> clazz, final boolean fromExt) throws InstanciationException {
 		U obj = gestionCache.getObject(clazz, id); //on regarde en cache
 		 if(obj == null){
 			obj = this.factory.newObjectById(clazz, id, gestionCache);
@@ -613,7 +601,7 @@ public class GlobalObjectManager implements EntityManager {
 		}
 
 		@Override
-		public Object call() throws RestException, IOException, SAXException, ChampNotFund, InterruptedException, ParserConfigurationException, ReflectiveOperationException {
+		public Object call() throws IOException, RestException, SAXException, InstanciationException, InterruptedException, ParserConfigurationException, ReflectiveOperationException {
 			if (!Thread.currentThread().isInterrupted()) {
 			chargeObjetAppelWebService(objetATraiter, managerChargementEnProfondeur);
 			ArianeHelper.addSousObject(objetATraiter, gom, managerChargementEnProfondeur);
@@ -633,7 +621,7 @@ public class GlobalObjectManager implements EntityManager {
 		}
 
 		@Override
-		public Object call() throws RestException, IOException, SAXException, ParserConfigurationException, ReflectiveOperationException, InterruptedException, ChampNotFund {
+		public Object call() throws IOException, RestException, SAXException, InstanciationException, InterruptedException, ParserConfigurationException, ReflectiveOperationException {
 			if (!Thread.currentThread().isInterrupted()) 
 				chargeObjetAppelWebService(objetATraiter, managerChargementUnique);
 			return objetATraiter;
