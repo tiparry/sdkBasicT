@@ -375,7 +375,7 @@ public class RestClient {
 	        HttpEntity entity = response.getEntity();
 	        String message = null;
 	        if (entity != null) {
-	            message = EntityUtils.toString(entity);
+	            message = EntityUtils.toString(entity, Charset.forName(UTF8));
 	        } else {
 	        	 message = "";
 	        }
@@ -409,7 +409,7 @@ public class RestClient {
 		    HttpEntity entity = response.getEntity();
 		    // do something useful with the response body
 		    // and ensure it is fully consumed²
-		    message = EntityUtils.toString(entity);
+		    message = EntityUtils.toString(entity, Charset.forName(UTF8));
 		    throw new RestException(statusCode, "retour serveur : " + message +
             		System.lineSeparator() + "Probleme de connexion " + (data == null ? "getReader" : "postReader " + data) + " sur "  + url);
 		} catch (IOException e) {
