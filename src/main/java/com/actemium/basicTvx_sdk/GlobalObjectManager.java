@@ -110,8 +110,8 @@ public class GlobalObjectManager implements EntityManager {
 			save(objetsASauvegarder);
 		}catch(MarshallExeption | IllegalAccessException | IOException | RestException e){
 			LOGGER.error("impossible de sauvegarder", e);
-			gestionCache.purge();
-			LOGGER.error("erreur dans saveAll(), Cache reinitialisé");
+			//gestionCache.purge();
+			//LOGGER.error("erreur dans saveAll(), Cache reinitialisé");
 			throw new SaveAllException("impossible de sauvegarder", e);
 		}
 	}
@@ -131,8 +131,8 @@ public class GlobalObjectManager implements EntityManager {
 			save(objetsASauvegarder);
 		}catch(MarshallExeption | IllegalAccessException | IOException | RestException e){
 			LOGGER.error("impossible de sauvegarder", e);
-			gestionCache.purge();
-			LOGGER.error("erreur dans save(), Cache reinitialisé");
+			//gestionCache.purge();
+			//LOGGER.error("erreur dans save(), Cache reinitialisé");
 			throw new SaveException(e);
 		}
 	}
