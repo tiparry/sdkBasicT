@@ -1,10 +1,9 @@
 package com.actemium.basicTvx_sdk.exception;
 
 /**
- * Lorsque cette exception est générée, le cache est purgé. Les objets déclarés précédemment
- * au moyen du GlobalObjectManager (avec createObject, getObject, getAllObject ou getReponse)
- * ne sont plus utilisables.
- */
+ * Lorsque cette exception est générée, le cache est potentiellement dans un état incohérent pouvant mener à des erreurs par la suite. 
+ * Il est fortement conseiller à l'utilisateur de purger le cache et de reconstruire ses objets.
+ *  */
 public class SaveException extends Exception {
 	
 	
