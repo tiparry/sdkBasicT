@@ -493,6 +493,7 @@ public class GlobalObjectManager implements EntityManager {
 		if(this.isNew(l) || hasChanged){
 			boolean wasNew = isNew(l);
 			String ancienHash = gestionCache.getHash(l);
+			boolean wasCharge= gestionCache.estCharge(l);
 			gestionCache.setEstEnregistreDansGisement(l);
 			objetsASauvegarder.remove(l);
 			this.saveReferences(l, TypeRelation.COMPOSITION, objetsASauvegarder);
@@ -500,7 +501,7 @@ public class GlobalObjectManager implements EntityManager {
 				this.persistanceManager.save(l);
 			} catch (MarshallExeption | IOException | RestException e) {
 				LOGGER.error("impossible d'enregistrer " + gestionCache.getId(l) + " de type " + l.getClass().getName());
-				gestionCache.setNEstPasEnregistreDansGisement(l, wasNew, ancienHash);
+				gestionCache.setNEstPasEnregistreDansGisement(l, wasNew, ancienHash,wasCharge);
 				throw e;
 			}
 

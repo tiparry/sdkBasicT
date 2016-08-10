@@ -139,12 +139,13 @@ public class GestionCache {
 		setNotNew(obj);
 	}
 	
-	synchronized void setNEstPasEnregistreDansGisement(Object obj, boolean wasNew, String ancienHash){
+	synchronized void setNEstPasEnregistreDansGisement(Object obj, boolean wasNew, String ancienHash, boolean wasCharge){
 		Stockage s = dejaCharge.get(obj);
 		if(s == null)
 			return;
 		s.isNew = wasNew;
 		s.hash = ancienHash;
+		s.estCharge=wasCharge;
 	}
 	
 	synchronized String getHash(Object obj){
