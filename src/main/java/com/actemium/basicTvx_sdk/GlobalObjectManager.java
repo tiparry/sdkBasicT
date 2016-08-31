@@ -56,8 +56,11 @@ public class GlobalObjectManager implements EntityManager {
 	private final PersistanceManagerAbstrait persistanceManager;
 
 
-
 	private static GlobalObjectManager instance = null;
+	
+	/** attribut determinant la purge automatique du cache en cas d'exception GetAllObjectException 
+	 * GetObjectException, GetObjectEnProfondeurException, SaveAllException, SaveException**/
+	private final boolean isCachePurgeAutomatiquementSiException;
 
 
 	/**
@@ -74,10 +77,11 @@ public class GlobalObjectManager implements EntityManager {
 	 * Instantiates a new global object manager.
 	 * @param remplirIdReseau 
 	 */
-	private GlobalObjectManager(String httpLogin, String httpPwd, String gisementBaseUrl){
+	private GlobalObjectManager(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException){
 		this.factory = new ObjectFactory();
 		this.persistanceManager = new PersistanceManagerRest(httpLogin,  httpPwd, gisementBaseUrl);
 		this.gestionCache = new GestionCache();
+		this.isCachePurgeAutomatiquementSiException=isCachePurgeAutomatiquementSiException;
 	}
 
 	/**
@@ -91,7 +95,11 @@ public class GlobalObjectManager implements EntityManager {
 
 
 	public static void init(String httpLogin, String httpPwd, String gisementBaseUrl){
-		instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl);
+		instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl, false);
+	}
+	
+	public static void init(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException){
+		instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl, isCachePurgeAutomatiquementSiException);
 	}
 
 	public void nourrirIdReseau(String host, String username, String password){
@@ -110,8 +118,8 @@ public class GlobalObjectManager implements EntityManager {
 			save(objetsASauvegarder);
 		}catch(MarshallExeption | IllegalAccessException | IOException | RestException e){
 			LOGGER.error("impossible de sauvegarder", e);
-			//gestionCache.purge();
-			//LOGGER.error("erreur dans saveAll(), Cache reinitialisé");
+			if (purgeCacheAutomatiquementSiException())
+				LOGGER.error("erreur dans saveAll(), Cache reinitialisé");
 			throw new SaveAllException("impossible de sauvegarder", e);
 		}
 	}
@@ -131,8 +139,8 @@ public class GlobalObjectManager implements EntityManager {
 			save(objetsASauvegarder);
 		}catch(MarshallExeption | IllegalAccessException | IOException | RestException e){
 			LOGGER.error("impossible de sauvegarder", e);
-			//gestionCache.purge();
-			//LOGGER.error("erreur dans save(), Cache reinitialisé");
+			if (purgeCacheAutomatiquementSiException())
+				LOGGER.error("erreur dans save(), Cache reinitialisé");
 			throw new SaveException(e);
 		}
 	}
@@ -176,8 +184,8 @@ public class GlobalObjectManager implements EntityManager {
 			return listeObj;
 		}catch(ParseException | RestException | IOException  e){
 			LOGGER.error("impossible de récupérer l'objet", e);
-			//this.purgeCache();
-			//LOGGER.error("erreur dans getAllObject(), Cache reinitialisé");
+			if(purgeCacheAutomatiquementSiException())
+				LOGGER.error("erreur dans getAllObject(), Cache reinitialisé");
 			throw new GetAllObjectException(e);
 		}
 	}
@@ -205,13 +213,13 @@ public class GlobalObjectManager implements EntityManager {
 			return obj;
 		}catch(InstanciationException e){
 			LOGGER.error("impossible de récupérer l'objet", e);
-			//this.purgeCache();
-			//LOGGER.error("erreur dans getObject(), Cache reinitialisé");
+			if (purgeCacheAutomatiquementSiException())
+				LOGGER.error("erreur dans getObject(), Cache reinitialisé");
 			throw new GetObjectException(id, clazz, e);
 		}
 		catch(GetObjetEnProfondeurException e){
-			//this.purgeCache();
-			//LOGGER.error("erreur dans getObjectEnProfondeur(), Cache reinitialisé", e);
+			if (purgeCacheAutomatiquementSiException())
+				LOGGER.error("erreur dans getObjectEnProfondeur(), Cache reinitialisé", e);
 			throw e;
 		}
 	}
@@ -389,7 +397,15 @@ public class GlobalObjectManager implements EntityManager {
 			throw (ReflectiveOperationException)t;
 	}
 
-
+	
+	private boolean purgeCacheAutomatiquementSiException(){
+		if(isCachePurgeAutomatiquementSiException){
+			purgeCache();
+			return true;
+		}
+		return false;
+	}
+	
 	/**
 	 * Purge le Cache du GOM pour éviter les fuites mémoires lorsqu'on a fini un traitement.
 	 *
@@ -432,13 +448,13 @@ public class GlobalObjectManager implements EntityManager {
 				getObjetEnProfondeur(reponse);
 			}
 		} catch (MarshallExeption | IOException | RestException e) {
-			//this.purgeCache();
-			//LOGGER.error("erreur dans getReponse(), Cache reinitialisé");
+			if (purgeCacheAutomatiquementSiException())
+				LOGGER.error("erreur dans getReponse(), Cache reinitialisé");
 			throw new GetObjectException("objet sans id", request.getClass(), e);
 		}
 		catch(GetObjetEnProfondeurException e){
-			//this.purgeCache();
-			//LOGGER.error("erreur dans getObjectEnProfondeur() de getReponse(), Cache reinitialisé");
+			if (purgeCacheAutomatiquementSiException())
+				LOGGER.error("erreur dans getObjectEnProfondeur() de getReponse(), Cache reinitialisé");
 			throw e;
 		}
 		return reponse;

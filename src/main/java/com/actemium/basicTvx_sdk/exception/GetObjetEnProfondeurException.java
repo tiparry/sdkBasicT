@@ -5,7 +5,7 @@ import java.util.List;
 
 /**
  * Lorsque cette exception est générée, le cache est potentiellement dans un état incohérent pouvant mener à des erreurs par la suite. 
- * Il est fortement conseiller à l'utilisateur de purger le cache et de reconstruire ses objets.
+ * Si la purge automatique du cache n'a pas été activée lors de l'init, la gestion des incohérences du Cache incombe à l'utilisateur.
  *  */
 public class GetObjetEnProfondeurException extends Exception{
 
