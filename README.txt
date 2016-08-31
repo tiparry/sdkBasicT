@@ -1,7 +1,7 @@
 ﻿1- Librairies à utiliser - Dependance maven
 -------------------------------------------------------------------------------------------------
 
-L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes dans votre projet:
+L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes dans votre projet (versions des dépendances à mettre à jour si besoin):
 
 	<!-- SDK basic Travaux-->
 	<dependency>
@@ -21,14 +21,14 @@ L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes
 	<dependency>
 	  <groupId>com.rff</groupId>
 	  <artifactId>BasicTravaux</artifactId>
-	  <version>1.0.5</version>
+	  <version>1.0.6</version>
 	</dependency>
 	
 	<!-- lib de serialisation-->
 	<dependency>
   		<groupId>com.actemium</groupId>
   		<artifactId>Marshalling</artifactId>
-  		<version>1.0.5</version>
+  		<version>1.0.7</version>
 	</dependency>
 
 
@@ -46,6 +46,16 @@ Le GOM doit être instancié avant le premier usage de la manière suivante :
 	String pwd = "APP_PASSWORD";
 	String baseUrl = "http://ip:port/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/";
 	GlobalObjectManager.init(login, pwd, baseUrl);
+	
+Une deuxième instantiation est possible. C'est celle conseillé : 
+
+String login = "APP_CLIENT";
+	String pwd = "APP_PASSWORD";
+	String baseUrl = "http://ip:port/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/";
+	boolean isCachePurgeAutomatiquementSiException = true;
+	GlobalObjectManager.init(login, pwd, baseUrl, isCachePurgeAutomatiquementSiException);
+	
+Elle instancie le gom de telle manière qu'il se purge automatiquement en cas de certaines exceptions, pour se prémunir d'un état potentiellement incohérent, susceptible de générer des erreurs par la suite.
 
 Après cette phase d'initialisation, le GOM est disponible sur le simple appel suivant :
 
@@ -88,7 +98,8 @@ il est aussi possible de supprimer un objet du cache unitairement si par exemple
 Voila la liste des autres méthodes publiques disponible dans le GOM : 
 
 !!!!!!!!!
-ATTENTION : lorsque les méthodes saveAll, save, getAllObject, getObject, getReponse génèrent leurs exceptions, le cache est entièrement purgé. Tous les objets déclarés jusque là au moyen du GOM (avec createObject, getObject, getAllObject ou getReponse) deviennent inutilisables.
+ATTENTION : lorsque les méthodes saveAll, save, getAllObject, getObject, getReponse génèrent leurs exceptions, le cache n'est pas par défaut purgé. Il est potentiellement dans un état incohérent. 
+			Le choix de la purge automatique est fortement conseillé, accessible en apellant la methode init() avec le paramètre boolean true.
 !!!!!!!!!
 
     /**
