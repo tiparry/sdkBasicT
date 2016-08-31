@@ -110,8 +110,8 @@ public class GlobalObjectManager implements EntityManager {
 			save(objetsASauvegarder);
 		}catch(MarshallExeption | IllegalAccessException | IOException | RestException e){
 			LOGGER.error("impossible de sauvegarder", e);
-			gestionCache.purge();
-			LOGGER.error("erreur dans saveAll(), Cache reinitialisé");
+			//gestionCache.purge();
+			//LOGGER.error("erreur dans saveAll(), Cache reinitialisé");
 			throw new SaveAllException("impossible de sauvegarder", e);
 		}
 	}
@@ -131,8 +131,8 @@ public class GlobalObjectManager implements EntityManager {
 			save(objetsASauvegarder);
 		}catch(MarshallExeption | IllegalAccessException | IOException | RestException e){
 			LOGGER.error("impossible de sauvegarder", e);
-			gestionCache.purge();
-			LOGGER.error("erreur dans save(), Cache reinitialisé");
+			//gestionCache.purge();
+			//LOGGER.error("erreur dans save(), Cache reinitialisé");
 			throw new SaveException(e);
 		}
 	}
@@ -176,8 +176,8 @@ public class GlobalObjectManager implements EntityManager {
 			return listeObj;
 		}catch(ParseException | RestException | IOException  e){
 			LOGGER.error("impossible de récupérer l'objet", e);
-			this.purgeCache();
-			LOGGER.error("erreur dans getAllObject(), Cache reinitialisé");
+			//this.purgeCache();
+			//LOGGER.error("erreur dans getAllObject(), Cache reinitialisé");
 			throw new GetAllObjectException(e);
 		}
 	}
@@ -205,13 +205,13 @@ public class GlobalObjectManager implements EntityManager {
 			return obj;
 		}catch(InstanciationException e){
 			LOGGER.error("impossible de récupérer l'objet", e);
-			this.purgeCache();
-			LOGGER.error("erreur dans getObject(), Cache reinitialisé");
+			//this.purgeCache();
+			//LOGGER.error("erreur dans getObject(), Cache reinitialisé");
 			throw new GetObjectException(id, clazz, e);
 		}
 		catch(GetObjetEnProfondeurException e){
-			this.purgeCache();
-			LOGGER.error("erreur dans getObjectEnProfondeur(), Cache reinitialisé", e);
+			//this.purgeCache();
+			//LOGGER.error("erreur dans getObjectEnProfondeur(), Cache reinitialisé", e);
 			throw e;
 		}
 	}
@@ -432,13 +432,13 @@ public class GlobalObjectManager implements EntityManager {
 				getObjetEnProfondeur(reponse);
 			}
 		} catch (MarshallExeption | IOException | RestException e) {
-			this.purgeCache();
-			LOGGER.error("erreur dans getReponse(), Cache reinitialisé");
+			//this.purgeCache();
+			//LOGGER.error("erreur dans getReponse(), Cache reinitialisé");
 			throw new GetObjectException("objet sans id", request.getClass(), e);
 		}
 		catch(GetObjetEnProfondeurException e){
-			this.purgeCache();
-			LOGGER.error("erreur dans getObjectEnProfondeur() de getReponse(), Cache reinitialisé");
+			//this.purgeCache();
+			//LOGGER.error("erreur dans getObjectEnProfondeur() de getReponse(), Cache reinitialisé");
 			throw e;
 		}
 		return reponse;
@@ -494,6 +494,7 @@ public class GlobalObjectManager implements EntityManager {
 		if(this.isNew(l) || hasChanged){
 			boolean wasNew = isNew(l);
 			String ancienHash = gestionCache.getHash(l);
+			boolean wasCharge= gestionCache.estCharge(l);
 			gestionCache.setEstEnregistreDansGisement(l);
 			objetsASauvegarder.remove(l);
 			this.saveReferences(l, TypeRelation.COMPOSITION, objetsASauvegarder);
@@ -501,7 +502,7 @@ public class GlobalObjectManager implements EntityManager {
 				this.persistanceManager.save(l);
 			} catch (MarshallExeption | IOException | RestException e) {
 				LOGGER.error("impossible d'enregistrer " + gestionCache.getId(l) + " de type " + l.getClass().getName());
-				gestionCache.setNEstPasEnregistreDansGisement(l, wasNew, ancienHash);
+				gestionCache.setNEstPasEnregistreDansGisement(l, wasNew, ancienHash,wasCharge);
 				throw e;
 			}
 
