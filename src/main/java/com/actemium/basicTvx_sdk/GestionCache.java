@@ -16,6 +16,9 @@ import com.actemium.basicTvx_sdk.util.BiHashMap;
 import giraudsa.marshall.exception.MarshallExeption;
 import giraudsa.marshall.serialisation.text.json.JsonMarshaller;
 
+/**
+ * le gestionnaire des objets du cache.
+ */
 public class GestionCache {
 	private final static long tempsDeCacheMinimum = 1000 * 60; //une minute 
 	private long tempsDeCache = 1000 * 60 * 60; //une heure 

@@ -94,14 +94,36 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 
+	/**
+	 * methode d'initialisation du GlobalObjectManager. La purge automatique du cache en cas d'exception est désactivée. 
+	 * 
+	 * @param httpLogin le login http
+	 * @param httpPwd le mot de pase http
+	 * @param gisementBaseUrl l'adresse url du gisement BasicTravaux auquel on veut se connecter
+	 */
 	public static void init(String httpLogin, String httpPwd, String gisementBaseUrl){
 		instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl, false);
 	}
 	
+	/**
+	 * méthode d'initialisation du GlobalObjectmanager, permet de choisir ou non la purge automatique du cache en cas d'exception.
+	 * 
+	 * @param httpLogin le login BasicTravaux
+	 * @param httpPwd le mot de passe BasicTravaux
+	 * @param gisementBaseUrl l'adresse url du gisement BasicTravaux auquel on veut se connecter
+	 * @param isCachePurgeAutomatiquementSiException le boolean pour decider de la purge automatique du cache en cas d'exception
+	 */
 	public static void init(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException){
 		instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl, isCachePurgeAutomatiquementSiException);
 	}
 
+	/**
+	 * méthode d'initialisation des paramètres gaia
+	 * 
+	 * @param host l'adresse url du gisement gaia
+	 * @param username le login gaia
+	 * @param password le mot de passe gaia
+	 */
 	public void nourrirIdReseau(String host, String username, String password){
 		((PersistanceManagerRest)persistanceManager).setConfigAriane(host, username, password);
 	}
@@ -125,7 +147,9 @@ public class GlobalObjectManager implements EntityManager {
 	}
 	/**
 	 * Sauvegarde de l'objet avec sa grappe d'objet
-	 * @param objet
+	 * 
+	 * @param <U> le type generique
+	 * @param  objet l'objet de type U
 	 * @throws SaveException
 	 */
 	public synchronized <U> void save(U objet) throws SaveException{
@@ -148,10 +172,10 @@ public class GlobalObjectManager implements EntityManager {
 	/**
 	 * Creates the object.
 	 *
-	 * @param <U> the generic type
-	 * @param clazz the clazz
+	 * @param <U> le type generique
+	 * @param clazz la classe de type U
 	 * @param date the date
-	 * @return the u
+	 * @return  l'objet crée
 	 * @throws InstanciationException 
 	 */
 	public synchronized <U> U createObject(final Class<U> clazz, final Date date) throws InstanciationException {
@@ -159,11 +183,11 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 	/**
-	 * Gets the all object by type.
+	 * Gets  all object by type.
 	 *
-	 * @param <U> the generic type
+	 * @param <U> le type generique
 	 * @param clazz the clazz
-	 * @return the all object by type
+	 * @return all object by type
 	 * @throws GetAllObjectException 
 	 */
 	public <U> List<U> getAllObject(final Class<U> clazz) throws GetAllObjectException{
@@ -191,17 +215,16 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 	/**
-	 * Recupere un objet en fonction de son type et de son id. Le crée s'il n'existe pas.
-	 *
-	 * @param <U> the generic type
-	 * @param clazz the clazz
-	 * @param id the id
-	 * @param enProfondeur boolean permettant de provoquer une recuperation de la grappe d'objet en profondeur
-	 * @return the object by type and id
-	 * @throws GetObjectException 
-	 * @throws GetObjetEnProfondeurException 
+	 * Recupere un objet du gisement en fonction de son type et de son id. Le crée localement dans le cache s'il n'existe pas.
+	 * 
+	 * @param <U> le type generique
+	 * @param clazz 
+	 * @param id l'id
+	 * @param enProfondeur  boolean permettant de provoquer une recuperation de la grappe d'objet en profondeur
+	 * @return l'objet, par type et id
+	 * @throws GetObjectException
+	 * @throws GetObjetEnProfondeurException
 	 */
-
 	public <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur) throws GetObjectException, GetObjetEnProfondeurException{
 		try{
 			if(id == null || clazz == null) 
@@ -224,6 +247,13 @@ public class GlobalObjectManager implements EntityManager {
 		}
 	}
 
+	/**
+	 * Charge un objet depuis le gisement ainsi que sa grappe entière d'objets fils.
+	 * Fonctionne en multi-threading : une thread est créé par appel au gisement.
+	 * 
+	 * @param obj
+	 * @throws GetObjetEnProfondeurException
+	 */
 	private void getObjetEnProfondeur(Object obj) throws GetObjetEnProfondeurException{
 		ManagerChargementEnProfondeur managerChargementEnProfondeur = new ManagerChargementEnProfondeur();
 		prendEnChargePourChargementEnProfondeur(obj, managerChargementEnProfondeur, false);
@@ -250,6 +280,15 @@ public class GlobalObjectManager implements EntityManager {
 		}
 	}
 
+	/**
+	 * Donne le résultat de la TâcheChargement d'un objet
+	 * 
+	 * @param obj l'objet racine du chargement
+	 * @param managerChargementEnProfondeur
+	 * @param future le Futur contenant la tâche de chargement à traiter
+	 * @throws GetObjetEnProfondeurException
+	 * @throws InterruptedException
+	 */
 	private void traiterTacheTerminee(Object obj, ManagerChargementEnProfondeur managerChargementEnProfondeur, Future<Object> future) throws GetObjetEnProfondeurException, InterruptedException {
 		try{
 			future.get();
@@ -259,6 +298,12 @@ public class GlobalObjectManager implements EntityManager {
 		}
 	}
 
+	/**
+	 * Vérifie que l'objet n'est ni déja chargé ni en train d'être chargé avant de lancer le chargement.
+	 * 
+	 * @param obj
+	 * @throws GetObjectException
+	 */
 	private <U> void nourritObjet(U obj) throws  GetObjectException{
 		if(gestionCache.estCharge(obj))
 			return;
@@ -276,10 +321,16 @@ public class GlobalObjectManager implements EntityManager {
 		}
 	}
 
+	/**
+	 * Lance le chargement d'un unique objet depuis le gisement BasicTravaux
+	 * 
+	 * @param obj
+	 * @throws GetObjectException
+	 */
 	private <U> void nourritEffectivementObjet(U obj) throws  GetObjectException {
 		ManagerChargementUnique managerChargementUnique= new ManagerChargementUnique();
 		try{
-			Future<Object> future = managerChargementUnique.submit(null,new TacheWebServiceGetObjet(obj, managerChargementUnique));
+			Future<Object> future = managerChargementUnique.submit(null,new TacheChargementUnique(obj, managerChargementUnique));
 			future.get();
 		}
 		catch( ExecutionException e1){ 
@@ -300,7 +351,7 @@ public class GlobalObjectManager implements EntityManager {
 		gestionCache.finitNourrir(obj);
 		if (isNetworkException(e1)){
 			try{
-				Future<Object> future = managerChargementUnique.submit(null,new TacheWebServiceGetObjet(obj, managerChargementUnique));
+				Future<Object> future = managerChargementUnique.submit(null,new TacheChargementUnique(obj, managerChargementUnique));
 				future.get();
 			}
 			catch( ExecutionException | InterruptedException e2){
@@ -328,7 +379,19 @@ public class GlobalObjectManager implements EntityManager {
 		}
 	}
 
-
+	/**
+	 * Charge l'objet depuis le gisement par appel au webService
+	 * 
+	 * @param obj
+	 * @param manager
+	 * @throws IOException
+	 * @throws RestException
+	 * @throws SAXException
+	 * @throws InstanciationException
+	 * @throws InterruptedException
+	 * @throws ParserConfigurationException
+	 * @throws ReflectiveOperationException
+	 */
 	private <U> void chargeObjetAppelWebService(U obj, ManagerChargementSDK manager) throws IOException, RestException, SAXException, InstanciationException, InterruptedException, ParserConfigurationException, ReflectiveOperationException {
 		if (gestionCache.estCharge(obj))
 			return;
@@ -347,6 +410,12 @@ public class GlobalObjectManager implements EntityManager {
 		}
 	}
 
+	/**
+	 * @param o l'objet à charger en profondeur
+	 * @param managerChargementEnProfondeur le ManagerChargementEnProfondeur
+	 * @param retry le boolean indiquant si on reessaye de charger l'objet o
+	 * @return boolean permettant de savoir si une tâche de chargement a été lancée
+	 */
 	boolean prendEnChargePourChargementEnProfondeur(Object o, ManagerChargementEnProfondeur managerChargementEnProfondeur, boolean retry) {
 		if(managerChargementEnProfondeur.createNewTacheChargementProfondeur(o, retry)){
 			managerChargementEnProfondeur.submit(o,new TacheChargementProfondeur(o, managerChargementEnProfondeur, this));
@@ -398,6 +467,11 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 	
+	/**
+	 * purge le cache si la variable boolean isCachePurgeAutomatiquementSiException est true
+	 * 
+	 * @return la valeur de la variable boolean isCachePurgeAutomatiquementSiException
+	 */
 	private boolean purgeCacheAutomatiquementSiException(){
 		if(isCachePurgeAutomatiquementSiException){
 			purgeCache();
@@ -431,14 +505,14 @@ public class GlobalObjectManager implements EntityManager {
 		gestionCache.setDureeCache(unite.toMillis(duree));
 	}
 
-
 	/**
 	 * Poste l'objet Requete au serveur et récupere l'objet Reponse
-	 *
-	 * @param Requete
+	 * 
+	 * @param request
 	 * @param enProfondeur true si l'on veut récuperer toute l'arborescence de la réponse
-	 * @throws GetObjetEnProfondeurException 
-	 * @throws GetObjectException 
+	 * @return la reponse correspondant à la requête
+	 * @throws GetObjetEnProfondeurException
+	 * @throws GetObjectException
 	 */
 	public Reponse getReponse(Requete request, boolean enProfondeur) throws GetObjetEnProfondeurException, GetObjectException  {
 		Reponse reponse;
@@ -462,9 +536,9 @@ public class GlobalObjectManager implements EntityManager {
 
 	/**
 	 * Gets the objet to save.
-	 * @param objetsASauvegarder 
-	 *
+	 * 
 	 * @param <U> the generic type
+	 * @param objetsASauvegarder 
 	 * @return the objet to save
 	 */
 	@SuppressWarnings("unchecked")
@@ -483,7 +557,6 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws IllegalAccessException 
 	 * @throws RestException 
 	 * @throws IOException 
-	 * @throws ClientProtocolException 
 	 */
 	private void save(Set<Object> objetsASauvegarder) throws IllegalAccessException, MarshallExeption, IOException, RestException{
 		Object obj = getObjetToSave(objetsASauvegarder);
@@ -497,14 +570,12 @@ public class GlobalObjectManager implements EntityManager {
 	 * Save.
 	 *
 	 * @param <U> the generic type
-	 * @param l the l
-	 * @param hasChanged the has changed
-	 * @return the int
+	 * @param l l'objet à sauvegarder
+	 * @param hasChanged 
 	 * @throws MarshallExeption 
 	 * @throws IllegalAccessException 
 	 * @throws RestException 
 	 * @throws IOException 
-	 * @throws ClientProtocolException 
 	 */
 	private <U> void save(final U l, final boolean hasChanged, Set<Object> objetsASauvegarder) throws IllegalAccessException, MarshallExeption, IOException, RestException {
 		if(this.isNew(l) || hasChanged){
@@ -526,17 +597,15 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 	/**
-	 * Sauvegarde les objets en tenant compte des relations de composition...
-	 *
-	 * @param <U> the generic type
+	 * Sauvergarde les objets en tenant compte des relations de composition
+	 * 
 	 * @param l l'objet à sauvegarder
 	 * @param relation le type de relation (composition, agregation, association)
-	 * @return the int
-	 * @throws IllegalAccessException 
-	 * @throws MarshallExeption 
-	 * @throws RestException 
-	 * @throws IOException 
-	 * @throws ClientProtocolException 
+	 * @param objetsASauvegarder le set d'objets à sauvergarder
+	 * @throws IllegalAccessException
+	 * @throws MarshallExeption
+	 * @throws IOException
+	 * @throws RestException
 	 */
 	private <U> void saveReferences(final U l, final TypeRelation relation, Set<Object> objetsASauvegarder) throws IllegalAccessException, MarshallExeption, IOException, RestException {
 		if(relation == TypeRelation.COMPOSITION){
@@ -573,7 +642,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * Verifie si un objet est nouveau (c'est à dire s'il a été fabriqué localement).
 	 *
 	 * @param <U> the generic type
-	 * @param obj the obj
+	 * @param obj l'objet
 	 * @return true, if is new
 	 */
 	public <U> boolean isNew(final U obj) {
@@ -583,13 +652,13 @@ public class GlobalObjectManager implements EntityManager {
 
 
 	/**
-	 * Méthode pour récupérer un objet ou creer depuis le cache du global object manager.
+	 * Méthode pour récupérer un objet du cache ou le creer s'in n'existe pas.
+	 * 
 	 * @param id
 	 * @param clazz
-	 * @return
+	 * @param fromExt true si l'objet désiré à une existence en dehors du cache local du GlobalObjectManager (ex: dans le gisement BasicTravaux)
+	 * @return l'objet
 	 * @throws InstanciationException 
-	 * @throws IllegalAccessException 
-	 * @throws InstantiationException 
 	 * @see giraudsa.marshall.deserialisation.EntityManager#findObjectOrCreate(java.lang.String, java.lang.Class, boolean )
 	 */
 	@Override
@@ -604,6 +673,12 @@ public class GlobalObjectManager implements EntityManager {
 		return obj;
 	}
 
+	/**
+	 * 
+	 * Appelle le webservice approprié pour charger l'objet demandé, et initie les tâches de chargement de ses objets fils direct.
+	 * S'exécute dans une thread distincte.
+	 *
+	 */
 	class TacheChargementProfondeur implements Callable<Object> {
 
 		private final Object objetATraiter;
@@ -627,11 +702,17 @@ public class GlobalObjectManager implements EntityManager {
 		}   
 	}
 
-	class TacheWebServiceGetObjet implements Callable<Object> {
+	/**
+	 * 
+	 * Appelle le webservice approprié pour charger l'objet demandé.
+	 * S'exécute dans une thread distincte.
+	 *
+	 */
+	class TacheChargementUnique implements Callable<Object> {
 
 		private final Object objetATraiter;
 		private ManagerChargementUnique managerChargementUnique;
-		public TacheWebServiceGetObjet(Object objetATraiter, ManagerChargementUnique managerChargementUnique) {
+		public TacheChargementUnique(Object objetATraiter, ManagerChargementUnique managerChargementUnique) {
 			super();
 			this.objetATraiter = objetATraiter;
 			this.managerChargementUnique=managerChargementUnique;
