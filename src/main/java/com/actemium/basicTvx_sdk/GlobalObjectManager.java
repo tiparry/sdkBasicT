@@ -131,7 +131,6 @@ public class GlobalObjectManager implements EntityManager {
 	/**
 	 * Sauvegarde ou update dans le gisement les objets nouveaux ou modifies.
 	 *
-	 * @param <U> the generic type
 	 * @throws SaveAllException 
 	 */
 	public synchronized void saveAll() throws SaveAllException {
