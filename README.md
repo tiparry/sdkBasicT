@@ -1,13 +1,13 @@
 ﻿1- Librairies à utiliser - Dependance maven
 -------------------------------------------------------------------------------------------------
 
-L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes dans votre projet:
+L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes dans votre projet (versions des dépendances à mettre à jour si besoin):
 
 	<!-- SDK basic Travaux-->
 	<dependency>
 			<groupId>com.actemium</groupId>
 	  		<artifactId>basicTvx_sdk</artifactId>
-	  		<version>0.0.1-SNAPSHOT</version>
+	  		<version>1.1.1</version>
 	</dependency>
 
 	<!-- Apache HTTP Client-->
@@ -21,45 +21,16 @@ L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes
 	<dependency>
 	  <groupId>com.rff</groupId>
 	  <artifactId>BasicTravaux</artifactId>
-	  <version>1.0-SNAPSHOT</version>
+	  <version>1.0.6</version>
 	</dependency>
 	
 	<!-- lib de serialisation-->
 	<dependency>
   		<groupId>com.actemium</groupId>
   		<artifactId>Marshalling</artifactId>
-  		<version>1.0.0-SNAPSHOT</version>
+  		<version>1.0.7</version>
 	</dependency>
-
-
-Il faudra au préalable ajouter les repository maven suivants dans votre projet : 
-	<repository>
-        	<id>actemium_nexus_release</id>
-            <name> Nexus Release Repository</name>
-            <url>http://46.105.48.117:8081/nexus/content/repositories/releases/</url>
-            <releases>
-		    	<enabled>true</enabled>
-		 	</releases>
-		 	<snapshots>
-		    	<enabled>false</enabled>
-		 	</snapshots>
-        </repository>  
-        
-        <repository>
-            <id>actemium_nexus_snapshot</id>
-            <name> Nexus Snapshot Repository</name>
-            <url>http://46.105.48.117:8081/nexus/content/repositories/snapshots/</url>
-            <releases>
-		    	<enabled>false</enabled>
-		 	</releases>
-		 	<snapshots>
-		    	<enabled>true</enabled>
-		    	<updatePolicy>always</updatePolicy>
-		    	<checksumPolicy>warn</checksumPolicy>
-		 	</snapshots>
-       </repository>
-
-
+	
 
 
 2- Usage de la librairie
@@ -72,10 +43,20 @@ Tous les objets doivent passer par l'instance singleton du GlobalObjectManager (
 
 Le GOM doit être instancié avant le premier usage de la manière suivante :
 
-	String login = "APP_CLIENT";
-	String pwd = "APP_PASSWORD";
+	String login = "LOGIN_BT";
+	String pwd = "PASSWORD_BT";
 	String baseUrl = "http://ip:port/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/";
 	GlobalObjectManager.init(login, pwd, baseUrl);
+	
+Une deuxième instantiation est possible. C'est celle conseillée : 
+
+	String login = "LOGIN_BT";
+	String pwd = "PASSWORD_BT";
+	String baseUrl = "http://ip:port/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/";
+	boolean isCachePurgeAutomatiquementSiException = true;
+	GlobalObjectManager.init(login, pwd, baseUrl, isCachePurgeAutomatiquementSiException);
+	
+Elle instancie le gom de telle manière qu'il se purge automatiquement en cas de certaines exceptions, pour se prémunir d'un état potentiellement incohérent, susceptible de générer des erreurs par la suite.
 
 Après cette phase d'initialisation, le GOM est disponible sur le simple appel suivant :
 
@@ -83,7 +64,7 @@ Après cette phase d'initialisation, le GOM est disponible sur le simple appel s
 	
 On peut demander au GOM de nourrir automatiquement les id Reseau lorsqu'on fait un appel en profondeur d'un objet en faisant des requetes au gisement GAIA. Il faut configurer le serveur de gisement Gaia.
 	
-	gom.nourrirIdReseau("https://int-ws-gaia.rff.ferre", "BASIC2T_2014", "!h=e3MpWmp");
+	gom.nourrirIdReseau("https://int-ws-gaia.rff.ferre", "loginGaia", "mdpGaia");
 	
 	2.2 - Gestion du cache
 	----------------------
@@ -100,7 +81,7 @@ Afin d'éviter au GOM d'occuper toujours plus de mémoire au fil du temps si la 
 	 * Purge le Cache du GOM pour éviter les fuites mémoires lorsqu'on a fini un traitement.
 	 *
 	 */
-	public void purgeCache()
+	public synchronized void purgeCache()
 	
 il est aussi possible de supprimer un objet du cache unitairement si par exemple il est créé en local et qu'on veut finalement ne pas le garder
 
@@ -117,22 +98,10 @@ il est aussi possible de supprimer un objet du cache unitairement si par exemple
 
 Voila la liste des autres méthodes publiques disponible dans le GOM : 
 
-
-
-     /**
-     * Sauvegarde ou update dans le gisement les objets nouveaux ou modifies.
-     *
-     * @param <U> the generic type
-     */
-    public <U> void saveAll()
-    
-     
-     /**
-     * Sauvegarde de l'objet avec sa grappe d'objet
-     * @param objet
-     */
-    public <U> void save(U objet) 
-
+!!!!!!!!!
+ATTENTION : lorsque les méthodes saveAll, save, getAllObject, getObject, getReponse génèrent leurs exceptions, le cache n'est pas par défaut purgé. Il est potentiellement dans un état incohérent. 
+			Le choix de la purge automatique est fortement conseillé, accessible en apellant la methode init() avec le paramètre boolean true.
+!!!!!!!!!
 
     /**
 	 * Creates the object.
@@ -142,9 +111,24 @@ Voila la liste des autres méthodes publiques disponible dans le GOM :
 	 * @param date the date
 	 * @return the u
 	 */
-	 public <U> U createObject(final Class<U> clazz, final Date date) 
+	 public synchronized <U> U createObject(final Class<U> clazz, final Date date) 
 	   
 	   
+	     /**
+     * Sauvegarde ou update dans le gisement les objets nouveaux ou modifies.
+     *
+     * @param <U> the generic type
+     */
+    public synchronized <U> void saveAll()
+    
+     
+     /**
+     * Sauvegarde de l'objet avec sa grappe d'objet
+     * @param objet
+     */
+    public synchronized <U> void save(U objet) 
+	   
+	    
 	   
 	/**
 	 * Retourne tous les objets présent dans le gisement pour le type U .
@@ -153,7 +137,7 @@ Voila la liste des autres méthodes publiques disponible dans le GOM :
 	 * @param clazz the clazz
 	 * @return the all object by type
 	 */
-	public <U> List<U> getAllObject(final Class<U> clazz)
+	public  <U> List<U> getAllObject(final Class<U> clazz)
 	
 	
 
@@ -165,26 +149,23 @@ Voila la liste des autres méthodes publiques disponible dans le GOM :
 	 * @param id the id
 	 * @param enProfondeur boolean permettant de provoquer une recuperation de la grappe d'objet en profondeur
 	 * @return the object by type and id
-	 * @throws InterruptedException
+	 * @throws InterruptedException 
 	 */
-	public <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur)
+	public  <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur)
 
 	 
-Dans le cas d'un usage en profondeur, voila comment gérer finement les Exceptions eventuelles remontées par cette méthode:
-		
-		MonObjet monObjet;
-		try {
-			monObjet = (MonObjet)getObject(MonObjet.class, uuid, true);
-		} catch (GetObjetEnProfondeurException e) {
-			
-			if(e.getInterruptedException() != null)
-				LOGGER.error(e.getInterruptedException().getMessage(), e.getInterruptedException());
-			monObjet= (MonObjet) e.getObjetRacine();
-		}
+	
+	/**
+	 * Poste l'objet Requete au serveur et récupere l'objet Reponse
+	 *
+	 * @param Requete
+	 * @param enProfondeur true si l'on veut récuperer toute la grappe de la réponse
+	 */
+	public  Reponse getReponse(Requete request, boolean enProfondeur)
 
-
-
-
+ 
+	 
+	 
 	 
 	 /**
      * Verifie si un objet est nouveau (c'est à dire s'il a été fabriqué localement).
@@ -204,27 +185,6 @@ Dans le cas d'un usage en profondeur, voila comment gérer finement les Exceptio
      public boolean hasChanged(final Object objet){
 	
 	
-	/**
-	 * Poste l'objet Requete au serveur et récupere l'objet Reponse
-	 *
-	 * @param Requete
-	 * @param enProfondeur true si l'on veut récuperer toute la grappe de la réponse
-	 */
-	public Reponse getReponse(Requete request, boolean enProfondeur)
-
-
-Dans le cas d'un usage en profondeur, voila comment gérer finement les Exceptions eventuelles remontées par cette méthode:
-		
-		MaReponse reponse;
-		try {
-			reponse = (MaReponse)getReponse(requete, true);
-		} catch (GetObjetEnProfondeurException e) {
-			
-			if(e.getInterruptedException() != null)
-				LOGGER.error(e.getInterruptedException().getMessage(), e.getInterruptedException());
-			reponse = (MaReponse) e.getObjetRacine();
-		}
-
 
 	
 3- Configuration des logs
@@ -247,6 +207,9 @@ Ajouter pour cela les categories suivantes à votre fichier log4j.xml
     <category name="giraudsa">
     	<priority value="debug"/>
 	</category>
+	
+	
+	
 	
 	
 	

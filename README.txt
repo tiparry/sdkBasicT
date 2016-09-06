@@ -7,7 +7,7 @@ L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes
 	<dependency>
 			<groupId>com.actemium</groupId>
 	  		<artifactId>basicTvx_sdk</artifactId>
-	  		<version>1.0.6</version>
+	  		<version>1.1.1</version>
 	</dependency>
 
 	<!-- Apache HTTP Client-->
@@ -42,15 +42,15 @@ Tous les objets doivent passer par l'instance singleton du GlobalObjectManager (
 
 Le GOM doit être instancié avant le premier usage de la manière suivante :
 
-	String login = "APP_CLIENT";
-	String pwd = "APP_PASSWORD";
+	String login = "LOGIN_BT";
+	String pwd = "PASSWORD_BT";
 	String baseUrl = "http://ip:port/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/";
 	GlobalObjectManager.init(login, pwd, baseUrl);
 	
-Une deuxième instantiation est possible. C'est celle conseillé : 
+Une deuxième instantiation est possible. C'est celle conseillée : 
 
-String login = "APP_CLIENT";
-	String pwd = "APP_PASSWORD";
+String login = "LOGIN_BT";
+	String pwd = "PASSWORD_BT";
 	String baseUrl = "http://ip:port/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/";
 	boolean isCachePurgeAutomatiquementSiException = true;
 	GlobalObjectManager.init(login, pwd, baseUrl, isCachePurgeAutomatiquementSiException);
@@ -63,7 +63,7 @@ Après cette phase d'initialisation, le GOM est disponible sur le simple appel s
 	
 On peut demander au GOM de nourrir automatiquement les id Reseau lorsqu'on fait un appel en profondeur d'un objet en faisant des requetes au gisement GAIA. Il faut configurer le serveur de gisement Gaia.
 	
-	gom.nourrirIdReseau("https://int-ws-gaia.rff.ferre", "BASIC2T_2014", "!h=e3MpWmp");
+	gom.nourrirIdReseau("https://int-ws-gaia.rff.ferre", "loginGaia", "mdpGaia");
 	
 	2.2 - Gestion du cache
 	----------------------
