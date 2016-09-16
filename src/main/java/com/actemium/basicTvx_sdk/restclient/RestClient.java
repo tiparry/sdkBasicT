@@ -221,6 +221,7 @@ public class RestClient {
 			return new StringReader("[]");
 		HttpGet request = new HttpGet(url);
 		addBasicAuthHeader(request, cred);
+		request.addHeader("Accept", Serialisation.JSON.getContentType());
 		int statusCode = 0;
 		try{
 			CloseableHttpResponse response = client.execute(request);
@@ -255,6 +256,7 @@ public class RestClient {
 		HttpPost post = new HttpPost(url);
 		addBasicAuthHeader(post, this.credentials);
 		post.addHeader(CONTENT_TYPE, serialisation.getContentType());
+		post.addHeader("Accept", serialisation.getContentType());
 		StringEntity entity = new StringEntity(message, UTF8);
 		entity.setContentEncoding(UTF8);
 	    post.setEntity(entity);
@@ -287,6 +289,7 @@ public class RestClient {
 			return "";
 		HttpPost post = new HttpPost(url);
 		post.addHeader(CONTENT_TYPE, serialisation.getContentType());
+		post.addHeader("Accept", Serialisation.JSON.getContentType());
 		addBasicAuthHeader(post, this.credentials);	
 		StringEntity entity = new StringEntity(content, UTF8);
 		entity.setContentEncoding(UTF8);
