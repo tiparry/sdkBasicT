@@ -331,6 +331,7 @@ public class RestClient {
 			return "";
 		HttpPut put = new HttpPut(url);
 		put.addHeader(CONTENT_TYPE, serialisation.getContentType());
+		put.addHeader("Accept", serialisation.getContentType());
 		addBasicAuthHeader(put, this.credentials);
 		
 		StringEntity entity = new StringEntity(content, UTF8);
