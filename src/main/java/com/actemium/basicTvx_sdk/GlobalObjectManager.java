@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
+import com.rff.basictravaux.model.bdd.ObjetPersistant;
 import utils.TypeExtension;
 import utils.champ.Champ;
 
@@ -648,7 +649,35 @@ public class GlobalObjectManager implements EntityManager {
 		return gestionCache.isNew(obj);
 	}
 
+	public synchronized void metEnCache(Object objetPere,boolean recursif, boolean isNew) throws IllegalAccessException{
+		if(objetPere instanceof ObjetPersistant)
+			this.gestionCache.metEnCache(((ObjetPersistant) objetPere).getId().toString(), objetPere, isNew);
+		if(objetPere instanceof ariane.modele.base.ObjetPersistant)
+			this.gestionCache.metEnCache(((ariane.modele.base.ObjetPersistant) objetPere).getId().toString(), objetPere, isNew);
+		if(!recursif){
+			return;
+		}
+		final List<Champ> champs = TypeExtension.getSerializableFields(objetPere.getClass());
+		for(final Champ champ : champs){
+			if (!champ.isSimple()){
+				final Class<?>  type = champ.getValueType();
+				if(Collection.class.isAssignableFrom(type)){
+					final Iterable<?> collection = (Iterable<?>) champ.get(objetPere);
+					if(collection != null){
+						for(final Object objet : collection) {
+							this.metEnCache(objet, recursif, isNew);
+						}
+					}
+				}else if (type.getPackage() == null || ! type.getPackage().getName().startsWith("System")) {//object
+					final Object objetFils = champ.get(objetPere);
+					if(objetFils!= null) {
+						this.metEnCache(objetFils, recursif, isNew);
+					}
+				}
 
+			}
+		}
+	}
 
 	/**
 	 * Méthode pour récupérer un objet du cache ou le creer s'in n'existe pas.
