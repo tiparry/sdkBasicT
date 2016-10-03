@@ -170,6 +170,13 @@ public class GestionCache {
 			return;
 		s.isNew = false;
 	}
+	
+	synchronized void setNew(Object obj) {
+		Stockage s = dejaCharge.get(obj);
+		if(s == null)
+			return;
+		s.isNew = true;
+	}
 
 	synchronized void remove(Object obj) {
 		if(obj == null) 

@@ -2,15 +2,26 @@ package com.actemium.basicTvx_sdk;
 
 import giraudsa.marshall.annotations.TypeRelation;
 import giraudsa.marshall.deserialisation.EntityManager;
+import giraudsa.marshall.deserialisation.text.json.JsonUnmarshaller;
 import giraudsa.marshall.exception.InstanciationException;
 import giraudsa.marshall.exception.MarshallExeption;
+import giraudsa.marshall.exception.UnmarshallExeption;
+import giraudsa.marshall.serialisation.text.json.JsonMarshaller;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -35,8 +46,10 @@ import com.actemium.basicTvx_sdk.exception.GetObjetEnProfondeurException;
 import com.actemium.basicTvx_sdk.exception.SaveAllException;
 import com.actemium.basicTvx_sdk.exception.SaveException;
 import com.actemium.basicTvx_sdk.restclient.RestException;
+import com.rff.basictravaux.model.AnnuaireWS;
 import com.rff.basictravaux.model.webservice.reponse.Reponse;
 import com.rff.basictravaux.model.webservice.requete.Requete;
+
 
 /**
  * Le manager global des objets communiquants avec basic travaux
@@ -692,13 +705,104 @@ public class GlobalObjectManager implements EntityManager {
 	@Override
 	public synchronized <U> U findObjectOrCreate(final String id, final Class<U> clazz, final boolean fromExt) throws InstanciationException {
 		U obj = gestionCache.getObject(clazz, id); //on regarde en cache
-		 if(obj == null){
+		if(obj == null){
 			obj = this.factory.newObjectById(clazz, id, gestionCache);
 		}
-		 if (obj!=null && fromExt){
-			 this.gestionCache.setNotNew(obj);
-		 }
+		if (obj!=null && fromExt){
+			this.gestionCache.setNotNew(obj);
+		}
 		return obj;
+	}
+
+
+
+	/**warning cette méthode va purger le cache; a ne pas utiliser si BDD large !
+	 * 
+	 * @throws ClassNotFoundException
+	 * @throws GetAllObjectException
+	 * @throws GetObjetEnProfondeurException 
+	 * @throws GetObjectException 
+	 * @throws MarshallExeption 
+	 * @throws IOException 
+	 */
+	public  void dumpGisementToJson() throws ClassNotFoundException, GetAllObjectException, GetObjectException, GetObjetEnProfondeurException, MarshallExeption, IOException{
+		AnnuaireWS annuaire = AnnuaireWS.getInstance();
+		Map<String, String> dicoClasseToPut = annuaire.getDicoClasseToPutUrl();
+		Set<Class<?>> classes = new HashSet<>();
+		for (String nomClasse : dicoClasseToPut.keySet()){
+			classes.add(Class.forName(nomClasse));
+		}
+		this.purgeCache(); //peut etre pas necessaire
+		List<Object>  objetsToSave = new ArrayList<>();
+		for(Class<?> clazz : classes){
+			objetsToSave.addAll(getAllEnProfondeur(clazz));
+		}
+		File dump = new File("dump_BasicTravaux");
+		try {
+			PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(dump)));
+			for(Object objetToWrite : objetsToSave){
+				pw.println(JsonMarshaller.toJson(objetToWrite));
+
+			}
+			pw.close();
+		}
+		catch(IOException e){
+			LOGGER.error("Erreur lors de l'écriture: "+e.getMessage());
+			throw e;
+		}
+	}
+
+	public void saveFromJsonFileToGisement() throws IOException, UnmarshallExeption, SaveAllException{
+		File dump = new File("dump_BasicTravaux");
+		try{
+			BufferedReader br = new BufferedReader(new FileReader(dump));
+			this.purgeCache();
+			try{
+				String objetJson = br.readLine();
+				while(objetJson!=null){
+					Object objet = JsonUnmarshaller.fromJson(objetJson,this);
+					gestionCache.setNew(objet);
+					objetJson = br.readLine();
+				}
+				br.close();
+			}
+			catch(IOException e){
+				LOGGER.error("erreur de lecture du fichier: "+e.getMessage());
+				throw e;
+			}
+		}
+		catch(FileNotFoundException e){
+			LOGGER.error("le fichier de dump n'a pas été trouvé");
+			throw e;
+		}
+		this.saveAll(); 
+	}
+
+		
+	private <U> List<Object> getAllEnProfondeur(Class<U> classe) throws GetAllObjectException, GetObjectException, GetObjetEnProfondeurException{
+		String typeObjet="autre";
+		List<Object> objetsComplets = new ArrayList<>();
+		List<U> liste = getAllObject(classe);
+		if (ariane.modele.base.ObjetPersistant.class.isAssignableFrom(classe)){
+			typeObjet="ariane";
+		}
+		if (ObjetPersistant.class.isAssignableFrom(classe)){
+			typeObjet="basictravaux";
+		}
+		switch (typeObjet){
+		case "basictravaux":
+			for(U objet : liste){
+					objetsComplets.add(getObject(classe, ((ObjetPersistant)objet).getId().toString(), true));
+			}
+			break;
+		case "ariane":
+			for(U objet : liste){
+				objetsComplets.add(getObject(classe, ((ariane.modele.base.ObjetPersistant)objet).getId().toString(), true));
+			}
+			break;
+		default:;
+		}
+		return objetsComplets;
 	}
 
 	/**
