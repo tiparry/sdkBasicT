@@ -209,7 +209,15 @@ public class RestClient {
                 .build();
         return context;
     }
-	
+	/**
+	 * methode utilisée comme hack : pour ne pas mettre de header dans les requetes http
+	 *  destinées aux anciennes versions du gisement 
+	 * @param url
+	 * @return
+	 */
+	private boolean isURlversionV1(String url){
+		return url.contains("Maintenance/GisementDeDonneeMaintenance/v1");
+	}
 	
 	public Reader getReader(String url) throws RestException{
 		return getReader(url, this.credentials);
@@ -221,13 +229,15 @@ public class RestClient {
 			return new StringReader("[]");
 		HttpGet request = new HttpGet(url);
 		addBasicAuthHeader(request, cred);
-		request.addHeader("Accept", Serialisation.JSON.getContentType());
+		if (isURlversionV1(url)){
+			request.addHeader("Accept", Serialisation.JSON.getContentType());
+		}
 		int statusCode = 0;
 		try{
 			CloseableHttpResponse response = client.execute(request);
 			statusCode = response.getStatusLine().getStatusCode();
 			if (statusCode < 200 || statusCode >= 300) {
-				consumeAndClose(response, statusCode, url, null);
+				consumeAndClose(response, statusCode, null, url);
 			}
 
 			HttpEntity entity = response.getEntity();
@@ -256,7 +266,9 @@ public class RestClient {
 		HttpPost post = new HttpPost(url);
 		addBasicAuthHeader(post, this.credentials);
 		post.addHeader(CONTENT_TYPE, serialisation.getContentType());
-		post.addHeader("Accept", serialisation.getContentType());
+		if (isURlversionV1(url)){
+			post.addHeader("Accept", serialisation.getContentType());
+		}
 		StringEntity entity = new StringEntity(message, UTF8);
 		entity.setContentEncoding(UTF8);
 	    post.setEntity(entity);
@@ -289,7 +301,9 @@ public class RestClient {
 			return "";
 		HttpPost post = new HttpPost(url);
 		post.addHeader(CONTENT_TYPE, serialisation.getContentType());
-		post.addHeader("Accept", Serialisation.JSON.getContentType());
+		if (isURlversionV1(url)){
+			post.addHeader("Accept", Serialisation.JSON.getContentType());
+		}
 		addBasicAuthHeader(post, this.credentials);	
 		StringEntity entity = new StringEntity(content, UTF8);
 		entity.setContentEncoding(UTF8);
@@ -331,7 +345,9 @@ public class RestClient {
 			return "";
 		HttpPut put = new HttpPut(url);
 		put.addHeader(CONTENT_TYPE, serialisation.getContentType());
-		put.addHeader("Accept", serialisation.getContentType());
+		if(isURlversionV1(url)){
+			put.addHeader("Accept", serialisation.getContentType());
+		}
 		addBasicAuthHeader(put, this.credentials);
 		
 		StringEntity entity = new StringEntity(content, UTF8);
