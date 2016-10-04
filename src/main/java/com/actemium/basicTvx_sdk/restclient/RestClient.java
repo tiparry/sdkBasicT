@@ -229,7 +229,7 @@ public class RestClient {
 			return new StringReader("[]");
 		HttpGet request = new HttpGet(url);
 		addBasicAuthHeader(request, cred);
-		if (isURlversionV1(url)){
+		if (!isURlversionV1(url)){
 			request.addHeader("Accept", Serialisation.JSON.getContentType());
 		}
 		int statusCode = 0;
@@ -266,7 +266,7 @@ public class RestClient {
 		HttpPost post = new HttpPost(url);
 		addBasicAuthHeader(post, this.credentials);
 		post.addHeader(CONTENT_TYPE, serialisation.getContentType());
-		if (isURlversionV1(url)){
+		if (!isURlversionV1(url)){
 			post.addHeader("Accept", serialisation.getContentType());
 		}
 		StringEntity entity = new StringEntity(message, UTF8);
@@ -301,7 +301,7 @@ public class RestClient {
 			return "";
 		HttpPost post = new HttpPost(url);
 		post.addHeader(CONTENT_TYPE, serialisation.getContentType());
-		if (isURlversionV1(url)){
+		if (!isURlversionV1(url)){
 			post.addHeader("Accept", Serialisation.JSON.getContentType());
 		}
 		addBasicAuthHeader(post, this.credentials);	
@@ -345,7 +345,7 @@ public class RestClient {
 			return "";
 		HttpPut put = new HttpPut(url);
 		put.addHeader(CONTENT_TYPE, serialisation.getContentType());
-		if(isURlversionV1(url)){
+		if(!isURlversionV1(url)){
 			put.addHeader("Accept", serialisation.getContentType());
 		}
 		addBasicAuthHeader(put, this.credentials);
