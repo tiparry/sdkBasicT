@@ -16,6 +16,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -754,6 +755,33 @@ public class GlobalObjectManager implements EntityManager {
 			throw e;
 		}
 	}
+	
+	/**sauvegarde tous les objets du cache dans un fichier json
+	 * 
+	 */
+	@SuppressWarnings("unchecked")
+	public  void dumpCacheToJson(String pathFile) throws  MarshallExeption, IOException, NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException{
+		File dump = new File(pathFile);
+		try {
+			PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(dump)));
+			Field objetsCacheField = this.gestionCache.getClass().getDeclaredField("dejaCharge");
+			objetsCacheField.setAccessible(true);
+			Map<Object, ?> objetsCache = (Map<Object, ?>)objetsCacheField.get(this.gestionCache);
+			for(Object objetToWrite : objetsCache.keySet()){
+				pw.println(JsonMarshaller.toJson(objetToWrite));
+
+			}
+			pw.close();
+		}
+		catch( NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e){
+			LOGGER.error("Erreur lors de la reflection: "+e.getMessage());
+			throw e;
+		}
+		catch(IOException e){
+			LOGGER.error("Erreur lors de l'écriture: "+e.getMessage());
+			throw e;
+		}
+	}
 
 	/**charge les objets à partir du fichier json, puis les sauvegarde sur le gisement
 	 * 
@@ -764,7 +792,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws UnmarshallExeption
 	 * @throws SaveAllException
 	 */
-	public void saveFromJsonFileToGisement(String pathFile) throws IOException, UnmarshallExeption, SaveAllException{
+	public void saveToGisementFromJsonFile(String pathFile) throws IOException, UnmarshallExeption, SaveAllException{
 		File dump = new File(pathFile);
 		try{
 			BufferedReader br = new BufferedReader(new FileReader(dump));
