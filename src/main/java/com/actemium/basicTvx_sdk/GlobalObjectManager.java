@@ -716,7 +716,10 @@ public class GlobalObjectManager implements EntityManager {
 
 
 
-	/**warning cette méthode va purger le cache; a ne pas utiliser si BDD large !
+	/**sauvegarde l'ensemble des objets du gisement dans un fichier, au format sérialisé json
+	 * 
+	 * warning 1 cette méthode va purger le cache avant de se lancer; 
+	 * warning 2 : dangereux (temps d'exécution + mémoire + espace de stockage) si BDD large !
 	 * 
 	 * @throws ClassNotFoundException
 	 * @throws GetAllObjectException
@@ -725,7 +728,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws MarshallExeption 
 	 * @throws IOException 
 	 */
-	public  void dumpGisementToJson() throws ClassNotFoundException, GetAllObjectException, GetObjectException, GetObjetEnProfondeurException, MarshallExeption, IOException{
+	public  void dumpGisementToJson(String pathFile) throws ClassNotFoundException, GetAllObjectException, GetObjectException, GetObjetEnProfondeurException, MarshallExeption, IOException{
 		AnnuaireWS annuaire = AnnuaireWS.getInstance();
 		Map<String, String> dicoClasseToPut = annuaire.getDicoClasseToPutUrl();
 		Set<Class<?>> classes = new HashSet<>();
@@ -735,9 +738,9 @@ public class GlobalObjectManager implements EntityManager {
 		this.purgeCache(); //peut etre pas necessaire
 		List<Object>  objetsToSave = new ArrayList<>();
 		for(Class<?> clazz : classes){
-			objetsToSave.addAll(getAllEnProfondeur(clazz));
+			objetsToSave.addAll(getAllEnProfondeur(clazz,false));
 		}
-		File dump = new File("dump_BasicTravaux");
+		File dump = new File(pathFile);
 		try {
 			PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(dump)));
 			for(Object objetToWrite : objetsToSave){
@@ -752,8 +755,17 @@ public class GlobalObjectManager implements EntityManager {
 		}
 	}
 
-	public void saveFromJsonFileToGisement() throws IOException, UnmarshallExeption, SaveAllException{
-		File dump = new File("dump_BasicTravaux");
+	/**charge les objets à partir du fichier json, puis les sauvegarde sur le gisement
+	 * 
+	 *
+	 * warning, cette méthode purge le cache avant de se lancer
+	 * 
+	 * @throws IOException
+	 * @throws UnmarshallExeption
+	 * @throws SaveAllException
+	 */
+	public void saveFromJsonFileToGisement(String pathFile) throws IOException, UnmarshallExeption, SaveAllException{
+		File dump = new File(pathFile);
 		try{
 			BufferedReader br = new BufferedReader(new FileReader(dump));
 			this.purgeCache();
@@ -779,7 +791,7 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 		
-	private <U> List<Object> getAllEnProfondeur(Class<U> classe) throws GetAllObjectException, GetObjectException, GetObjetEnProfondeurException{
+	private <U> List<Object> getAllEnProfondeur(Class<U> classe, boolean enProfondeur) throws GetAllObjectException, GetObjectException, GetObjetEnProfondeurException{
 		String typeObjet="autre";
 		List<Object> objetsComplets = new ArrayList<>();
 		List<U> liste = getAllObject(classe);
@@ -792,12 +804,12 @@ public class GlobalObjectManager implements EntityManager {
 		switch (typeObjet){
 		case "basictravaux":
 			for(U objet : liste){
-					objetsComplets.add(getObject(classe, ((ObjetPersistant)objet).getId().toString(), true));
+					objetsComplets.add(getObject(classe, ((ObjetPersistant)objet).getId().toString(), enProfondeur));
 			}
 			break;
 		case "ariane":
 			for(U objet : liste){
-				objetsComplets.add(getObject(classe, ((ariane.modele.base.ObjetPersistant)objet).getId().toString(), true));
+				objetsComplets.add(getObject(classe, ((ariane.modele.base.ObjetPersistant)objet).getId().toString(), enProfondeur));
 			}
 			break;
 		default:;
