@@ -27,7 +27,7 @@
   </build>
   <groupId>com.actemium</groupId>
   <artifactId>basicTvx_sdk</artifactId>
-  <version>1.1.1.a1</version>
+  <version>1.1.1.a2</version>
   <packaging>jar</packaging>
 
   <name>basicTvx_sdk</name>
@@ -120,7 +120,7 @@
 	<dependency>
 	  <groupId>com.rff</groupId>
 	  <artifactId>BasicTravaux</artifactId>
-	  <version>1.0.7.a1</version>
+	  <version>1.0.7.a2</version>
 	</dependency>
 	
 	<!-- lib de sérialisation-->
