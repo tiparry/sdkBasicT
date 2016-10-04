@@ -14,14 +14,14 @@ L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes
 	<dependency>
 		<groupId>org.apache.httpcomponents</groupId>
 		<artifactId>httpclient</artifactId>
-		<version>4.4</version>
+		<version>4.4.1</version>
 	</dependency>		
     
     <!-- Model basic travaux -->
 	<dependency>
 	  <groupId>com.rff</groupId>
 	  <artifactId>BasicTravaux</artifactId>
-	  <version>1.0.6</version>
+	  <version>1.0.7</version>
 	</dependency>
 	
 	<!-- lib de serialisation-->
@@ -30,6 +30,20 @@ L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes
   		<artifactId>Marshalling</artifactId>
   		<version>1.0.7</version>
 	</dependency>
+	
+	<!-- logs-->
+	<dependency>
+	    <groupId>org.slf4j</groupId>
+	    <artifactId>slf4j-api</artifactId>
+           <version>1.7.5</version>
+      </dependency>
+
+	<dependency>
+	   <groupId>org.slf4j</groupId>
+	   <artifactId>slf4j-log4j12</artifactId>
+	   <version>1.7.5</version>
+	</dependency>
+	
 
 
 2- Usage de la librairie
