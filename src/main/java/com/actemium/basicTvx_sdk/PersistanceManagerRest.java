@@ -10,6 +10,7 @@ import utils.ConfigurationMarshalling;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.lang.reflect.Field;
 import java.util.List;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
@@ -161,7 +162,14 @@ import org.xml.sax.ext.DefaultHandler2;
 		if(br == null) 
 			return null;
 		ret = entityManager.findObjectOrCreate(id, clazz, true);
-		((RessourceAbstraite)ret).setIdReseau(getIdReseau(br));
+		Long idReseau = getIdReseau(br);
+		try{
+			Field idReseauFields = RessourceAbstraite.class.getField("idReseau");
+			idReseauFields.setAccessible(true);
+			idReseauFields.set(ret, idReseau);
+		}catch(NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e){
+			throw new InstanciationException("impossible d'affecter " + idReseau + " dans idReseau de " + ret.getClass().toString(), e);
+		}
 		br.close();
 		return ret;
 	}
