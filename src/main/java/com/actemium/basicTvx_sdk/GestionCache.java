@@ -85,7 +85,11 @@ public class GestionCache {
 		if (obj == null || id == null || id.length() == 0)
 			return;
 		Class<?> clazz = obj.getClass();
-		classAndIdToObject.put(clazz, id, obj);
+		Object previous =classAndIdToObject.get(clazz, id);
+		if(previous!=obj){
+			dejaCharge.remove(previous);
+			classAndIdToObject.put(clazz, id, obj);
+		}
 		if(!dejaCharge.containsKey(obj)){
 			Stockage s = new Stockage(obj, id);
 			s.isNew = estNouveau;
