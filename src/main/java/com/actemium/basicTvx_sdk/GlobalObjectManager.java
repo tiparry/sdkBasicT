@@ -247,7 +247,7 @@ public class GlobalObjectManager implements EntityManager {
 			if(enProfondeur) 
 				getObjetEnProfondeur(obj);
 			else nourritObjet(obj);
-			return obj;
+			return isNew(obj) ? factory.newObjectAndId(clazz, id, gestionCache) : obj;
 		}catch(InstanciationException e){
 			LOGGER.error("impossible de récupérer l'objet", e);
 			if (purgeCacheAutomatiquementSiException())
@@ -509,6 +509,7 @@ public class GlobalObjectManager implements EntityManager {
 	public void remove(Object obj){
 		gestionCache.remove(obj);
 	}
+	
 
 	/**
 	 * permet de définir à partir de combien de temps apres le chargement un objet est considéré comme obsolète
@@ -663,12 +664,12 @@ public class GlobalObjectManager implements EntityManager {
 		return gestionCache.isNew(obj);
 	}
 
-	public synchronized void metEnCache(Object objetPere,boolean recursif, boolean isNew) throws IllegalAccessException{
+	public synchronized void metEnCache(Object objetPere,boolean enProfondeur, boolean isNew) throws IllegalAccessException{
 		if(objetPere instanceof ObjetPersistant)
 			this.gestionCache.metEnCache(((ObjetPersistant) objetPere).getId().toString(), objetPere, isNew);
 		if(objetPere instanceof ariane.modele.base.ObjetPersistant)
 			this.gestionCache.metEnCache(((ariane.modele.base.ObjetPersistant) objetPere).getId().toString(), objetPere, isNew);
-		if(!recursif){
+		if(!enProfondeur){
 			return;
 		}
 		final List<Champ> champs = TypeExtension.getSerializableFields(objetPere.getClass());
@@ -679,13 +680,13 @@ public class GlobalObjectManager implements EntityManager {
 					final Iterable<?> collection = (Iterable<?>) champ.get(objetPere);
 					if(collection != null){
 						for(final Object objet : collection) {
-							this.metEnCache(objet, recursif, isNew);
+							this.metEnCache(objet, enProfondeur, isNew);
 						}
 					}
 				}else if (type.getPackage() == null || ! type.getPackage().getName().startsWith("System")) {//object
 					final Object objetFils = champ.get(objetPere);
 					if(objetFils!= null) {
-						this.metEnCache(objetFils, recursif, isNew);
+						this.metEnCache(objetFils, enProfondeur, isNew);
 					}
 				}
 
@@ -707,7 +708,7 @@ public class GlobalObjectManager implements EntityManager {
 	public synchronized <U> U findObjectOrCreate(final String id, final Class<U> clazz, final boolean fromExt) throws InstanciationException {
 		U obj = gestionCache.getObject(clazz, id); //on regarde en cache
 		if(obj == null){
-			obj = this.factory.newObjectById(clazz, id, gestionCache);
+			obj = this.factory.newObjectWithOnlyId(clazz, id, gestionCache);
 		}
 		if (obj!=null && fromExt){
 			this.gestionCache.setNotNew(obj);

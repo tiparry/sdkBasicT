@@ -19,7 +19,7 @@ import utils.Constants;
 	private static final Logger LOGGER = LoggerFactory.getLogger(ObjectFactory.class);
 	private Fabrique constructeur;
 	
-	public ObjectFactory() {
+	protected ObjectFactory() {
 		try {
 			constructeur = Fabrique.getInstance();
 		} catch (FabriqueInstantiationException e) {
@@ -53,17 +53,16 @@ import utils.Constants;
 		return res;
 	}
 
-	<U> U newObjectById(Class<U> clazz, String id, GestionCache cache) throws InstanciationException{
-		U ret = null;
-		ret = newInstance(clazz);
-		setId(ret, UUID.fromString(id));
-		cache.metEnCache(id, ret, true);
-		return ret;
+	protected <U> U newObjectWithOnlyId(Class<U> clazz, String id, GestionCache cache) throws InstanciationException{
+		return newObjectById(clazz, id, cache, true);
 	}
-
-
-	<U> U newObject(Class<U> clazz, Date date, GestionCache cache) throws InstanciationException {
-		U ret = newInstance(clazz);
+	
+	protected <U> U newObjectAndId(Class<U> clazz, String id, GestionCache cache) throws InstanciationException{
+		return newObjectById(clazz, id, cache, false);
+	}
+	
+	protected <U> U newObject(Class<U> clazz, Date date, GestionCache cache) throws InstanciationException {
+		U ret = newInstanceConstructeur(clazz);
 		UUID id = newUuid();
 		setId(ret, id);
 		setDateCration(ret, date);
@@ -71,20 +70,26 @@ import utils.Constants;
 		return ret;
 	}
 	
-	@SuppressWarnings("unchecked")
-	private <U> U newInstance(Class<U> clazz) throws InstanciationException{
-		if(constructeur != null)
-			return constructeur.newObject(clazz);
-		U ret;
-		Constructor<?> constr;
+	private <U> U newObjectById(Class<U> clazz, String id, GestionCache cache, boolean onlyId) throws InstanciationException{
+		U ret = null;
+		ret = onlyId ? newInstanceBasNiveau(clazz) : newInstanceConstructeur(clazz);
+		setId(ret, UUID.fromString(id));
+		cache.metEnCache(id, ret, true);
+		return ret;
+	}
+
+	private <U> U newInstanceConstructeur(Class<U> clazz) throws InstanciationException{
 		try {
-			constr = clazz.getDeclaredConstructor(Constants.getClassVide());
+			Constructor<U> constr = clazz.getDeclaredConstructor(Constants.getClassVide());
 			constr.setAccessible(true);
-			ret = (U) constr.newInstance(Constants.getNullArgument());
+			return (U) constr.newInstance(Constants.getNullArgument());
 		} catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e1) {
 			LOGGER.debug("impossible d'instancier la classe " + clazz.getName(), e1);
 			throw new InstanciationException("impossible d'instancier la classe " + clazz.getName(), e1);
 		}
-		return ret;
+	}
+
+	private <U> U newInstanceBasNiveau(Class<U> clazz) throws InstanciationException{
+		return constructeur.newObject(clazz);
 	}
 }
