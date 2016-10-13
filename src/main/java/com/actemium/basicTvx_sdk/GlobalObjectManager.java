@@ -11,10 +11,15 @@ import giraudsa.marshall.serialisation.text.json.JsonMarshaller;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -740,7 +745,7 @@ public class GlobalObjectManager implements EntityManager {
 		this.purgeCache(); //peut etre pas necessaire
 		List<Object>  objetsToSave = new ArrayList<>();
 		for(Class<?> clazz : classes){
-			objetsToSave.addAll(getAllEnProfondeur(clazz,false));
+			objetsToSave.addAll(getAllObject(clazz));
 		}
 		File dump = new File(pathFile);
 		try {
@@ -764,15 +769,19 @@ public class GlobalObjectManager implements EntityManager {
 	public  void dumpCacheToJson(String pathFile) throws  MarshallExeption, IOException, NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException{
 		File dump = new File(pathFile);
 		try {
-			PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(dump)));
+			OutputStreamWriter fileWriter = new OutputStreamWriter(new FileOutputStream(dump),"UTF-8");
+			
 			Field objetsCacheField = this.gestionCache.getClass().getDeclaredField("dejaCharge");
 			objetsCacheField.setAccessible(true);
 			Map<Object, ?> objetsCache = (Map<Object, ?>)objetsCacheField.get(this.gestionCache);
+			List<Object> listeObjetsCache = new ArrayList<>();
 			for(Object objetToWrite : objetsCache.keySet()){
-				pw.println(JsonMarshaller.toJson(objetToWrite));
+				listeObjetsCache.add(objetToWrite);
 
 			}
-			pw.close();
+			JsonMarshaller.toJson(listeObjetsCache, fileWriter);
+			fileWriter.close();
+			
 		}
 		catch( NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e){
 			LOGGER.error("Erreur lors de la reflection: "+e.getMessage());
@@ -796,55 +805,21 @@ public class GlobalObjectManager implements EntityManager {
 	public void saveToGisementFromJsonFile(String pathFile) throws IOException, UnmarshallExeption, SaveAllException{
 		File dump = new File(pathFile);
 		try{
-			BufferedReader br = new BufferedReader(new FileReader(dump));
+			InputStreamReader fileReader = new InputStreamReader(new FileInputStream(dump),"UTF-8");
 			this.purgeCache();
-			try{
-				String objetJson = br.readLine();
-				while(objetJson!=null){
-					Object objet = JsonUnmarshaller.fromJson(objetJson,this);
-					gestionCache.setNew(objet);
-					objetJson = br.readLine();
-				}
-				br.close();
-			}
-			catch(IOException e){
-				LOGGER.error("erreur de lecture du fichier: "+e.getMessage());
-				throw e;
+			List<Object> listeObjets = JsonUnmarshaller.fromJson(fileReader,this); 
+			fileReader.close();
+			for(Object objet : listeObjets){
+				gestionCache.setNew(objet);
 			}
 		}
-		catch(FileNotFoundException e){
-			LOGGER.error("le fichier de dump n'a pas été trouvé");
+		catch(IOException e){
+			LOGGER.error("erreur de lecture du fichier: "+e.getMessage());
 			throw e;
 		}
 		this.saveAll(); 
 	}
 
-		
-	private <U> List<Object> getAllEnProfondeur(Class<U> classe, boolean enProfondeur) throws GetAllObjectException, GetObjectException, GetObjetEnProfondeurException{
-		String typeObjet="autre";
-		List<Object> objetsComplets = new ArrayList<>();
-		List<U> liste = getAllObject(classe);
-		if (ariane.modele.base.ObjetPersistant.class.isAssignableFrom(classe)){
-			typeObjet="ariane";
-		}
-		if (ObjetPersistant.class.isAssignableFrom(classe)){
-			typeObjet="basictravaux";
-		}
-		switch (typeObjet){
-		case "basictravaux":
-			for(U objet : liste){
-					objetsComplets.add(getObject(classe, ((ObjetPersistant)objet).getId().toString(), enProfondeur));
-			}
-			break;
-		case "ariane":
-			for(U objet : liste){
-				objetsComplets.add(getObject(classe, ((ariane.modele.base.ObjetPersistant)objet).getId().toString(), enProfondeur));
-			}
-			break;
-		default:;
-		}
-		return objetsComplets;
-	}
 
 	/**
 	 * 
