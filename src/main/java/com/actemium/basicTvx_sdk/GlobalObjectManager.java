@@ -805,6 +805,20 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws SaveAllException
 	 */
 	public void saveToGisementFromJsonFile(String pathFile) throws IOException, UnmarshallExeption, SaveAllException{
+		loadJsonFile(pathFile);
+		this.saveAll(); 
+	}
+	
+	/**charge les objets à partir du fichier json,
+	 * 
+	 *
+	 * warning, cette méthode purge le cache avant de se lancer
+	 * 
+	 * @throws IOException
+	 * @throws UnmarshallExeption
+	 * @throws SaveAllException
+	 */
+	public void loadJsonFile(String pathFile) throws IOException, UnmarshallExeption, SaveAllException{
 		File dump = new File(pathFile);
 		try{
 			Reader reader = new BufferedReader(new InputStreamReader(new FileInputStream(dump),"UTF-8"));
@@ -818,8 +832,7 @@ public class GlobalObjectManager implements EntityManager {
 		catch(IOException e){
 			LOGGER.error("erreur de lecture du fichier: "+e.getMessage());
 			throw e;
-		}
-		this.saveAll(); 
+		} 
 	}
 
 
