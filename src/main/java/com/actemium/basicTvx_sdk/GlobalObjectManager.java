@@ -21,6 +21,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.io.Reader;
+import java.io.Writer;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -749,12 +751,12 @@ public class GlobalObjectManager implements EntityManager {
 		}
 		File dump = new File(pathFile);
 		try {
-			PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(dump)));
+			Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(dump),"UTF-8"));
 			for(Object objetToWrite : objetsToSave){
-				pw.println(JsonMarshaller.toJson(objetToWrite));
+				JsonMarshaller.toJson(objetToWrite,writer);
 
 			}
-			pw.close();
+			writer.close();
 		}
 		catch(IOException e){
 			LOGGER.error("Erreur lors de l'écriture: "+e.getMessage());
@@ -769,7 +771,7 @@ public class GlobalObjectManager implements EntityManager {
 	public  void dumpCacheToJson(String pathFile) throws  MarshallExeption, IOException, NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException{
 		File dump = new File(pathFile);
 		try {
-			OutputStreamWriter fileWriter = new OutputStreamWriter(new FileOutputStream(dump),"UTF-8");
+			Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(dump),"UTF-8"));
 			
 			Field objetsCacheField = this.gestionCache.getClass().getDeclaredField("dejaCharge");
 			objetsCacheField.setAccessible(true);
@@ -779,8 +781,8 @@ public class GlobalObjectManager implements EntityManager {
 				listeObjetsCache.add(objetToWrite);
 
 			}
-			JsonMarshaller.toJson(listeObjetsCache, fileWriter);
-			fileWriter.close();
+			JsonMarshaller.toJson(listeObjetsCache, writer);
+			writer.close();
 			
 		}
 		catch( NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e){
@@ -805,10 +807,10 @@ public class GlobalObjectManager implements EntityManager {
 	public void saveToGisementFromJsonFile(String pathFile) throws IOException, UnmarshallExeption, SaveAllException{
 		File dump = new File(pathFile);
 		try{
-			InputStreamReader fileReader = new InputStreamReader(new FileInputStream(dump),"UTF-8");
+			Reader reader = new BufferedReader(new InputStreamReader(new FileInputStream(dump),"UTF-8"));
 			this.purgeCache();
-			List<Object> listeObjets = JsonUnmarshaller.fromJson(fileReader,this); 
-			fileReader.close();
+			List<Object> listeObjets = JsonUnmarshaller.fromJson(reader,this); 
+			reader.close();
 			for(Object objet : listeObjets){
 				gestionCache.setNew(objet);
 			}
