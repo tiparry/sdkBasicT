@@ -120,7 +120,7 @@
 	<dependency>
 	  <groupId>com.rff</groupId>
 	  <artifactId>BasicTravaux</artifactId>
-	  <version>1.0.7.a2</version>
+	  <version>1.0.7.a3</version>
 	</dependency>
 	
 	<!-- lib de sérialisation-->
