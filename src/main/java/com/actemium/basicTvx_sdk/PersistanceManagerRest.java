@@ -64,7 +64,8 @@ import org.xml.sax.ext.DefaultHandler2;
 	Reponse getReponse(Requete requete, EntityManager entityManager) throws MarshallExeption, RestException, IOException{
 		String urn = annuaire.getRequestUrl(requete.getClass());
 		if (urn == null) {
-			return null;
+			LOGGER.error("la requete " + requete.getClass() + " n'est pas dans l'annuaire");
+			throw new RestException(0, "la requete " + requete.getClass() + " n'est pas dans l'annuaire");
 		}
 		String uri = gisementTravauxBaseUrl + urn;
 		String message = toJson(requete);
@@ -164,7 +165,7 @@ import org.xml.sax.ext.DefaultHandler2;
 		ret = entityManager.findObjectOrCreate(id, clazz, true);
 		Long idReseau = getIdReseau(br);
 		try{
-			Field idReseauFields = RessourceAbstraite.class.getDeclaredField("idReseau");
+			Field idReseauFields = RessourceAbstraite.class.getField("idReseau");
 			idReseauFields.setAccessible(true);
 			idReseauFields.set(ret, idReseau);
 		}catch(NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e){
