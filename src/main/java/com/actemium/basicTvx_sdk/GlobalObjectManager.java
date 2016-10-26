@@ -736,8 +736,26 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws GetObjectException 
 	 * @throws MarshallExeption 
 	 * @throws IOException 
+	 * @throws IllegalAccessException 
+	 * @throws IllegalArgumentException 
+	 * @throws SecurityException 
+	 * @throws NoSuchFieldException 
 	 */
-	public  void dumpGisementToJson(String pathFile) throws ClassNotFoundException, GetAllObjectException, GetObjectException, GetObjetEnProfondeurException, MarshallExeption, IOException{
+	public  void dumpGisementToJson(String pathFile) throws ClassNotFoundException, GetAllObjectException, GetObjectException, GetObjetEnProfondeurException, MarshallExeption, IOException, NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException{
+		loadGisementInCache();
+		dumpCacheToJson(pathFile);
+	}
+	
+	/**charge l'ensemble des objets du gisement dans le gom
+	 * 
+	 * warning 1 cette méthode va purger le cache avant de se lancer; 
+	 * warning 2 : dangereux (temps d'exécution + mémoire ) si BDD large !
+	 * 
+	 * @throws ClassNotFoundException
+	 * @throws GetAllObjectException
+	 */
+	public void loadGisementInCache() throws ClassNotFoundException, GetAllObjectException{
+		this.purgeCache();
 		AnnuaireWS annuaire = AnnuaireWS.getInstance();
 		Map<String, String> dicoClasseToPut = annuaire.getDicoClasseToPutUrl();
 		Set<Class<?>> classes = new HashSet<>();
@@ -745,22 +763,8 @@ public class GlobalObjectManager implements EntityManager {
 			classes.add(Class.forName(nomClasse));
 		}
 		this.purgeCache(); //peut etre pas necessaire
-		List<Object>  objetsToSave = new ArrayList<>();
 		for(Class<?> clazz : classes){
-			objetsToSave.addAll(getAllObject(clazz));
-		}
-		File dump = new File(pathFile);
-		try {
-			Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(dump),"UTF-8"));
-			for(Object objetToWrite : objetsToSave){
-				JsonMarshaller.toJson(objetToWrite,writer);
-
-			}
-			writer.close();
-		}
-		catch(IOException e){
-			LOGGER.error("Erreur lors de l'écriture: "+e.getMessage());
-			throw e;
+			getAllObject(clazz);
 		}
 	}
 	
@@ -776,12 +780,10 @@ public class GlobalObjectManager implements EntityManager {
 			Field objetsCacheField = this.gestionCache.getClass().getDeclaredField("dejaCharge");
 			objetsCacheField.setAccessible(true);
 			Map<Object, ?> objetsCache = (Map<Object, ?>)objetsCacheField.get(this.gestionCache);
-			List<Object> listeObjetsCache = new ArrayList<>();
 			for(Object objetToWrite : objetsCache.keySet()){
-				listeObjetsCache.add(objetToWrite);
+				JsonMarshaller.toJson(objetToWrite, writer);
 
 			}
-			JsonMarshaller.toJson(listeObjetsCache, writer);
 			writer.close();
 			
 		}
@@ -803,8 +805,12 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws IOException
 	 * @throws UnmarshallExeption
 	 * @throws SaveAllException
+	 * @throws IllegalAccessException 
+	 * @throws IllegalArgumentException 
+	 * @throws SecurityException 
+	 * @throws NoSuchFieldException 
 	 */
-	public void saveToGisementFromJsonFile(String pathFile) throws IOException, UnmarshallExeption, SaveAllException{
+	public void saveToGisementFromJsonFile(String pathFile) throws IOException, UnmarshallExeption, SaveAllException, NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException{
 		loadJsonFile(pathFile);
 		this.saveAll(); 
 	}
@@ -817,17 +823,29 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws IOException
 	 * @throws UnmarshallExeption
 	 * @throws SaveAllException
+	 * @throws SecurityException 
+	 * @throws NoSuchFieldException 
+	 * @throws IllegalAccessException 
+	 * @throws IllegalArgumentException 
 	 */
-	public void loadJsonFile(String pathFile) throws IOException, UnmarshallExeption, SaveAllException{
+	@SuppressWarnings("unchecked")
+	public void loadJsonFile(String pathFile) throws IOException, UnmarshallExeption, SaveAllException, NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException{
 		File dump = new File(pathFile);
 		try{
 			Reader reader = new BufferedReader(new InputStreamReader(new FileInputStream(dump),"UTF-8"));
 			this.purgeCache();
-			List<Object> listeObjets = JsonUnmarshaller.fromJson(reader,this); 
+			JsonUnmarshaller.fromJson(reader,this); 
 			reader.close();
-			for(Object objet : listeObjets){
-				gestionCache.setNew(objet);
+			Field objetsCacheField = this.gestionCache.getClass().getDeclaredField("dejaCharge");
+			objetsCacheField.setAccessible(true);
+			Map<Object, ?> objetsCache = (Map<Object, ?>)objetsCacheField.get(this.gestionCache);
+			for(Object objetToWrite : objetsCache.keySet()){
+				gestionCache.setNew(objetToWrite);
 			}
+		}
+		catch( NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e){
+			LOGGER.error("Erreur lors de la reflection: "+e.getMessage());
+			throw e;
 		}
 		catch(IOException e){
 			LOGGER.error("erreur de lecture du fichier: "+e.getMessage());
