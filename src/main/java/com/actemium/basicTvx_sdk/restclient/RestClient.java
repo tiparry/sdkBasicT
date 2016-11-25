@@ -17,9 +17,11 @@ import java.security.cert.X509Certificate;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLContext;
+
 import org.apache.http.HttpEntity;
 import org.apache.http.auth.AuthenticationException;
 import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
@@ -53,6 +55,9 @@ public class RestClient {
 	private static final String UTF8 = "UTF-8";
 	private static final int HTTP_CLIENT_MAX_POOL_SIZE = 25;
 	private static final int HTTP_CLIENT_MAX_POOL_PER_ROOT = 25;
+	private static final int CONNECT_TIMEOUT = 10000;
+	private static final int SOCKET_TIMEOUT = 60000;
+	
 	private static boolean bouchon = false;
 	
 	private CloseableHttpClient client;
@@ -100,10 +105,15 @@ public class RestClient {
 	        //cm.setValidateAfterInactivity(1); // essai pour resoudre java.net.SocketException: Software caused connection abort: recv failed
 	        
 		
-		client = HttpClientBuilder.create()
+	        RequestConfig requestConfig = RequestConfig.custom()
+	                .setConnectTimeout(CONNECT_TIMEOUT)
+	                .setSocketTimeout(SOCKET_TIMEOUT).build();
+	        
+	        client = HttpClientBuilder.create()
 				//.setDefaultCredentialsProvider(provider)
 				//.setSslcontext(sslContext)
 				//.setSSLSocketFactory(sslsf)
+				.setDefaultRequestConfig(requestConfig)
 				.setConnectionManager(cm)
 				.evictExpiredConnections()
 				.evictIdleConnections(5L,TimeUnit.SECONDS).build();
@@ -165,11 +175,15 @@ public class RestClient {
 	        //cm.setDefaultSocketConfig( SocketConfig.custom().setSoKeepAlive( true ).setSoReuseAddress( true ).setSoTimeout( 3000 ).build() 
 	        //cm.setValidateAfterInactivity(1); // essai pour resoudre java.net.SocketException: Software caused connection abort: recv failed
 	        
-		
+	        RequestConfig requestConfig = RequestConfig.custom()
+	                .setConnectTimeout(CONNECT_TIMEOUT)
+	                .setSocketTimeout(SOCKET_TIMEOUT).build();
+	        
 		client = HttpClientBuilder.create()
 				//.setDefaultCredentialsProvider(provider)
 				//.setSslcontext(sslContext)
 				//.setSSLSocketFactory(sslsf)
+				.setDefaultRequestConfig(requestConfig)
 				.setConnectionManager(cm)
 				.evictExpiredConnections()
 				.evictIdleConnections(5L,TimeUnit.SECONDS).build();
@@ -452,6 +466,24 @@ public class RestClient {
 			}
 		}
 	}
+	
+	
+	public static void main(String[] args) {
+		try{
+			RestClient restClient = new RestClient("APP_CLIENT","APP_PASSWORD");
+			Reader reader = restClient.getReader("http://localhost:8080/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/annuaire/get_annuaire/json");
+			int intValueOfChar;
+		    String targetString = "";
+		    while ((intValueOfChar = reader.read()) != -1) {
+		        targetString += (char) intValueOfChar;
+		    }
+		    reader.close();
+		    System.out.println(targetString);
+		} catch (Exception ex){
+			ex.printStackTrace();
+		}
+	}
+	
 
 	
 }
