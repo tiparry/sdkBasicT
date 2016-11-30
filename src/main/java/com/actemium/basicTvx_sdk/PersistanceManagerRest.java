@@ -41,13 +41,14 @@ import org.xml.sax.ext.DefaultHandler2;
 
 	private AnnuaireWS annuaire;
 
-	PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl) {
+	PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl, int connectTimeout, int socketTimeout) {
 		super();
-		restClient = new RestClient(httpLogin, httpPwd);
+		restClient = new RestClient(httpLogin, httpPwd, connectTimeout, socketTimeout);
 		gisementTravauxBaseUrl = gisementBaseUrl;
 		annuaire = AnnuaireWS.getInstance();
 		ConfigurationMarshalling.setIdUniversel();
 	}
+	
 
 
 	@Override

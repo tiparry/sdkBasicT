@@ -55,8 +55,7 @@ public class RestClient {
 	private static final String UTF8 = "UTF-8";
 	private static final int HTTP_CLIENT_MAX_POOL_SIZE = 25;
 	private static final int HTTP_CLIENT_MAX_POOL_PER_ROOT = 25;
-	private static final int CONNECT_TIMEOUT = 10000;
-	private static final int SOCKET_TIMEOUT = 60000;
+	
 	
 	private static boolean bouchon = false;
 	
@@ -70,7 +69,7 @@ public class RestClient {
 	 * certifs du trustore. On peut jouer sur la TrustStrategie et sur le hostnameverifier du SSLConnectionSocketFactory
 	 * 
 	 */
-	private RestClient(String login, String pwd, boolean test) {
+	private RestClient(String login, String pwd, int connectTimeout, int socketTimeout, boolean test) {
 		//CredentialsProvider provider = new BasicCredentialsProvider();
 		UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(login,pwd);
 		//provider.setCredentials(AuthScope.ANY, credentials);
@@ -105,16 +104,16 @@ public class RestClient {
 	        //cm.setValidateAfterInactivity(1); // essai pour resoudre java.net.SocketException: Software caused connection abort: recv failed
 	        
 		
-	        RequestConfig requestConfig = RequestConfig.custom()
-	                .setConnectTimeout(CONNECT_TIMEOUT)
-	                .setSocketTimeout(SOCKET_TIMEOUT).build();
+	        RequestConfig requestConfig = null;
+	        RequestConfig.Builder rcb = RequestConfig.custom();
+	        if (connectTimeout!=-1) rcb.setConnectTimeout(connectTimeout);
+	        if (socketTimeout!=-1) rcb.setSocketTimeout(socketTimeout);
+	        if (connectTimeout!=-1 || socketTimeout!=-1) requestConfig = rcb.build();
 	        
-	        client = HttpClientBuilder.create()
-				//.setDefaultCredentialsProvider(provider)
-				//.setSslcontext(sslContext)
-				//.setSSLSocketFactory(sslsf)
-				.setDefaultRequestConfig(requestConfig)
-				.setConnectionManager(cm)
+	        HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
+				
+	        if (requestConfig!=null)httpClientBuilder.setDefaultRequestConfig(requestConfig);
+	        client=httpClientBuilder.setConnectionManager(cm)
 				.evictExpiredConnections()
 				.evictIdleConnections(5L,TimeUnit.SECONDS).build();
 		
@@ -136,7 +135,11 @@ public class RestClient {
 	}
 
 
-	public RestClient(String login, String pwd) {
+	/*
+	 * connectTimeout =-1 => pas de timeout
+	 * socketTimeout = -1 => pas de timeout
+	 */
+	public RestClient(String login, String pwd, int connectTimeout, int socketTimeout) {
 		UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(login,pwd);
 		this.credentials = credentials;
 		    
@@ -175,16 +178,16 @@ public class RestClient {
 	        //cm.setDefaultSocketConfig( SocketConfig.custom().setSoKeepAlive( true ).setSoReuseAddress( true ).setSoTimeout( 3000 ).build() 
 	        //cm.setValidateAfterInactivity(1); // essai pour resoudre java.net.SocketException: Software caused connection abort: recv failed
 	        
-	        RequestConfig requestConfig = RequestConfig.custom()
-	                .setConnectTimeout(CONNECT_TIMEOUT)
-	                .setSocketTimeout(SOCKET_TIMEOUT).build();
+	        RequestConfig requestConfig = null;
+	        RequestConfig.Builder rcb = RequestConfig.custom();
+	        if (connectTimeout!=-1) rcb.setConnectTimeout(connectTimeout);
+	        if (socketTimeout!=-1) rcb.setSocketTimeout(socketTimeout);
+	        if (connectTimeout!=-1 || socketTimeout!=-1) requestConfig = rcb.build();
 	        
-		client = HttpClientBuilder.create()
-				//.setDefaultCredentialsProvider(provider)
-				//.setSslcontext(sslContext)
-				//.setSSLSocketFactory(sslsf)
-				.setDefaultRequestConfig(requestConfig)
-				.setConnectionManager(cm)
+	        HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
+				
+	        if (requestConfig!=null)httpClientBuilder.setDefaultRequestConfig(requestConfig);
+	        client=httpClientBuilder.setConnectionManager(cm)
 				.evictExpiredConnections()
 				.evictIdleConnections(5L,TimeUnit.SECONDS).build();
 		
@@ -470,7 +473,7 @@ public class RestClient {
 	
 	public static void main(String[] args) {
 		try{
-			RestClient restClient = new RestClient("APP_CLIENT","APP_PASSWORD");
+			RestClient restClient = new RestClient("APP_CLIENT","APP_PASSWORD", -1, -1);
 			Reader reader = restClient.getReader("http://localhost:8080/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/annuaire/get_annuaire/json");
 			int intValueOfChar;
 		    String targetString = "";

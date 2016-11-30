@@ -59,13 +59,15 @@ Le GOM doit être instancié avant le premier usage de la manière suivante :
 	String baseUrl = "http://ip:port/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/";
 	GlobalObjectManager.init(login, pwd, baseUrl);
 	
-Une deuxième instantiation est possible. C'est celle conseillée : 
+Une deuxième instantiation est possible. Elle permet de mieux préciser le comportement du GOM. C'est celle conseillée : 
 
 	String login = "LOGIN_BT";
 	String pwd = "PASSWORD_BT";
 	String baseUrl = "http://ip:port/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/";
 	boolean isCachePurgeAutomatiquementSiException = true;
-	GlobalObjectManager.init(login, pwd, baseUrl, isCachePurgeAutomatiquementSiException);
+	int connectTimeout=10000; // la valeur -1 correspond a un timeout infini
+	int socketTimeout=60000; // la valeur -1 correspond a un timeout infini
+	GlobalObjectManager.init(login, pwd, baseUrl, isCachePurgeAutomatiquementSiException, connectTimeout, socketTimeout);
 	
 Elle instancie le gom de telle manière qu'il se purge automatiquement en cas de certaines exceptions, pour se prémunir d'un état potentiellement incohérent, susceptible de générer des erreurs par la suite.
 

@@ -12,15 +12,10 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.lang.reflect.Field;
@@ -39,12 +34,10 @@ import java.util.concurrent.TimeUnit;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.http.ParseException;
-import org.apache.http.client.ClientProtocolException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
-import com.rff.basictravaux.model.bdd.ObjetPersistant;
 import utils.TypeExtension;
 import utils.champ.Champ;
 
@@ -55,6 +48,7 @@ import com.actemium.basicTvx_sdk.exception.SaveAllException;
 import com.actemium.basicTvx_sdk.exception.SaveException;
 import com.actemium.basicTvx_sdk.restclient.RestException;
 import com.rff.basictravaux.model.AnnuaireWS;
+import com.rff.basictravaux.model.bdd.ObjetPersistant;
 import com.rff.basictravaux.model.webservice.reponse.Reponse;
 import com.rff.basictravaux.model.webservice.requete.Requete;
 
@@ -99,9 +93,9 @@ public class GlobalObjectManager implements EntityManager {
 	 * Instantiates a new global object manager.
 	 * @param remplirIdReseau 
 	 */
-	private GlobalObjectManager(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException){
+	private GlobalObjectManager(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException, int connectTimeout, int socketTimeout){
 		this.factory = new ObjectFactory();
-		this.persistanceManager = new PersistanceManagerRest(httpLogin,  httpPwd, gisementBaseUrl);
+		this.persistanceManager = new PersistanceManagerRest(httpLogin,  httpPwd, gisementBaseUrl, connectTimeout, socketTimeout);
 		this.gestionCache = new GestionCache();
 		this.isCachePurgeAutomatiquementSiException=isCachePurgeAutomatiquementSiException;
 	}
@@ -117,14 +111,15 @@ public class GlobalObjectManager implements EntityManager {
 
 
 	/**
-	 * methode d'initialisation du GlobalObjectManager. La purge automatique du cache en cas d'exception est désactivée. 
+	 * methode d'initialisation du GlobalObjectManager. La purge automatique du cache en cas d'exception est desactivee.
+	 * Les timeout HTTP par defaut sont de connecttimeout->10s et sockettimeout->60s 
 	 * 
 	 * @param httpLogin le login http
 	 * @param httpPwd le mot de pase http
 	 * @param gisementBaseUrl l'adresse url du gisement BasicTravaux auquel on veut se connecter
 	 */
 	public static void init(String httpLogin, String httpPwd, String gisementBaseUrl){
-		instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl, false);
+		instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl, false, 10000, 60000);
 	}
 	
 	/**
@@ -134,9 +129,11 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param httpPwd le mot de passe BasicTravaux
 	 * @param gisementBaseUrl l'adresse url du gisement BasicTravaux auquel on veut se connecter
 	 * @param isCachePurgeAutomatiquementSiException le boolean pour decider de la purge automatique du cache en cas d'exception
+	 * @param connectTimeout timeout en ms de l'etablissement de la connection HTTP (vaut -1 si pas de timeout)
+	 * @param socketTimeout timeout d'inactivite en ms de la socket de reponse HTTP (vaut -1 si pas de timeout)
 	 */
-	public static void init(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException){
-		instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl, isCachePurgeAutomatiquementSiException);
+	public static void init(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException, int connectTimeout, int socketTimeout){
+		instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl, isCachePurgeAutomatiquementSiException, connectTimeout, socketTimeout);
 	}
 
 	/**
@@ -150,6 +147,8 @@ public class GlobalObjectManager implements EntityManager {
 		((PersistanceManagerRest)persistanceManager).setConfigAriane(host, username, password);
 	}
 
+	
+	
 	/**
 	 * Sauvegarde ou update dans le gisement les objets nouveaux ou modifies.
 	 *
