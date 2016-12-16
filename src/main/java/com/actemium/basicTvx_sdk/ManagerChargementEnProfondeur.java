@@ -1,41 +1,79 @@
 package com.actemium.basicTvx_sdk;
 
+import static com.actemium.basicTvx_sdk.Helper.isNetworkException;
 
+import java.util.Collection;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
+import java.util.Map.Entry;
 import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import com.actemium.basicTvx_sdk.exception.GetObjectException;
+import com.actemium.basicTvx_sdk.exception.GetObjetEnProfondeurException;
 
-public class ManagerChargementEnProfondeur implements ManagerChargementSDK {
+import utils.TypeExtension;
+import utils.champ.Champ;
+
+
+public class ManagerChargementEnProfondeur extends ManagerChargementSDK {
 
 	static final int WEB_SERVICE_REQUEST_TIME = 50000;
 	static final int LOAD_OBJECT_TIME = 5000;
 	static final int RATIO_WORK = WEB_SERVICE_REQUEST_TIME/LOAD_OBJECT_TIME;
 
-	private Map<Object,Integer> dejaVu = new IdentityHashMap<>();
-	private Map<Future<Object>, Object> mapFutureToObject = new IdentityHashMap<>();
-	private Map<Object, Future<Object>> mapObjectToFuture = new IdentityHashMap<>();
-	private CompletionService<Object> completion;
-	private ExecutorService executor;	
-	private CompteurdeTaches compteurdeTaches = new CompteurdeTaches();
 
-	public ManagerChargementEnProfondeur(){
-		executor = Executors.newFixedThreadPool(determinePoolSize());
-		completion = new ExecutorCompletionService<>(executor);
-	}
-
-	private int determinePoolSize(){
+	private static int determinePoolSize(){
 		int numberCores = Runtime.getRuntime().availableProcessors();
 		return Math.max(1, numberCores/2*(1+RATIO_WORK));
 	}
 
+	private final Map<Object,Integer> dejaVu = new IdentityHashMap<>();
+	private final Map<Future<Object>, Object> mapFutureToObject = new IdentityHashMap<>();
+	private final CompletionService<Object> completion;
+	private final CompteurdeTaches compteurdeTaches = new CompteurdeTaches();
 
-	public synchronized boolean createNewTacheChargementProfondeur(Object o, boolean retry){
+	ManagerChargementEnProfondeur(GlobalObjectManager gom, Object objetRacine){
+		super(gom, objetRacine, Executors.newFixedThreadPool(determinePoolSize()));
+		completion = new ExecutorCompletionService<>(getExecutor());
+	}
+
+	@Override
+	protected void execute() throws GetObjetEnProfondeurException{
+		prendEnChargePourChargementEnProfondeur(getObjetRacine(), false);
+		try{
+			while(!isAllCompleted()){
+				Future<Object> future = null;
+				try {
+					future = waitForATaskToComplete();
+					Object aInspecter = traiterTacheTerminee(future);
+					if(aInspecter != null)
+						addSousObject(aInspecter);
+				}
+				catch (InterruptedException e) { 
+					Thread.currentThread().interrupt();					
+					throw new GetObjetEnProfondeurException(getObjetRacine(), e);
+				}
+				catch (IllegalArgumentException | IllegalAccessException e){
+					throw new GetObjetEnProfondeurException(getObjetRacine(), e);
+				}
+				finally{
+					Object objetInterrompu = getObjectFromFutur(future);
+					getGom().interromptChargement(objetInterrompu);
+					oneTaskCompleted(); 
+				}
+			}
+		}
+		finally{
+				chargementTermineAndShutdownNow();
+		}
+	}
+
+	private synchronized boolean createNewTacheChargementProfondeur(Object o, boolean retry){
 		if (isChargementTermine())
 			return false;
 		if(retry)
@@ -56,55 +94,33 @@ public class ManagerChargementEnProfondeur implements ManagerChargementSDK {
 	}
 	
 	@Override
-	public synchronized Future<Object> submit(Object o, Callable<Object> task){
+	protected Future<Object> submit(Object o) {
 		compteurdeTaches.beforeSubmitTask();
-		Future<Object> future = completion.submit(task);
+		Future<Object> future = getGom().createFuture(getExecutor(), o);
 		mapFutureToObject.put(future, o);
-		mapObjectToFuture.put(o, future); //on peut remplacer l'ancien future : pour un meme manager, les taches sur un meme objet s'effectuent sequentiellement de toute facon, 
 		return future;
 	}
-
-	public Future<Object> waitForATaskToComplete() throws InterruptedException{
+	
+	private Future<Object> waitForATaskToComplete() throws InterruptedException{
 		return completion.take();
 	}
 
-	public boolean isAllCompleted(){
+	private boolean isAllCompleted(){
 		return compteurdeTaches.isAllCompleted();
 	}
 
-	public void oneTaskCompleted(){
+	private void oneTaskCompleted(){
 		compteurdeTaches.oneTaskCompleted();
 	}
 
 
-	public synchronized Object getObjectFromFutur(Future<Object> future){
+	private synchronized Object getObjectFromFutur(Future<Object> future){
 		if (mapFutureToObject.containsKey(future))
 			return mapFutureToObject.get(future);
 		return null;
 	}
 
-	@Override
-	public synchronized Future<Object> getFuturFromObject(Object o){
-		if (mapObjectToFuture.containsKey(o))
-			return mapObjectToFuture.get(o);
-		return null;
-	}
 
-	@Override
-	public synchronized  void chargementTermineAndShutdownNow() {
-		synchronized(executor){
-			executor.shutdownNow();
-		}
-		//TODO gestionCache.finitnourrir sur tous les objets du manager ?
-		// comment reperer ceux sur lesquels d'autres potentiels manager travaillent encore ?
-	}
-
-	@Override
-	public boolean isChargementTermine(){
-		synchronized(executor){
-			return executor.isShutdown();
-		}
-	}
 
 	private void add(Object o){
 		int nombreEssais = dejaVu.containsKey(o)? dejaVu.get(o) + 1 : 1;
@@ -118,19 +134,103 @@ public class ManagerChargementEnProfondeur implements ManagerChargementSDK {
 	private int nombreEssais(Object o){
 		return dejaVu.containsKey(o)? dejaVu.get(o) : 0;
 	}
+	
+	/**
+	 * @param o l'objet à charger en profondeur
+	 * @param managerChargementEnProfondeur le ManagerChargementEnProfondeur
+	 * @param retry le boolean indiquant si on reessaye de charger l'objet o
+	 * @return boolean permettant de savoir si une tâche de chargement a été lancée
+	 */
+	private boolean prendEnChargePourChargementEnProfondeur(Object o, boolean retry) {
+		if(createNewTacheChargementProfondeur(o, retry)){
+			submit(o);
+			return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Donne le résultat de la TâcheChargement d'un objet
+	 * 
+	 * @param obj l'objet racine du chargement
+	 * @param managerChargementEnProfondeur
+	 * @param future le Futur contenant la tâche de chargement à traiter
+	 * @throws GetObjetEnProfondeurException
+	 * @throws InterruptedException
+	 */
+	private Object traiterTacheTerminee(Future<Object> future) throws GetObjetEnProfondeurException, InterruptedException {
+		try{
+			return future.get();
+		}
+		catch( ExecutionException e){ 
+			gererExecutionExceptionEnProfondeur(getObjetRacine(), future, e);
+			return null;
+		}
+	}
+	
+	/**
+	 * gestion des exceptions lors d'un chargement en profondeur.
+	 * 
+	 * @param obj
+	 * @param managerChargementEnProfondeur
+	 * @param future
+	 * @param e
+	 * @throws GetObjetEnProfondeurException
+	 */
 
-
-	public class CompteurdeTaches{
+	private void gererExecutionExceptionEnProfondeur(Object obj, Future<Object> future,ExecutionException e) throws GetObjetEnProfondeurException{
+		boolean retry = false;
+		Object objectToRecharge = getObjectFromFutur(future);
+		getGom().interromptChargement(objectToRecharge);
+		if (isNetworkException(e)){
+			retry = prendEnChargePourChargementEnProfondeur(objectToRecharge, true);
+		}
+		if(!retry) {
+			GetObjectException objectException = new GetObjectException(getGom().getId(objectToRecharge), objectToRecharge.getClass(), e);
+			throw new GetObjetEnProfondeurException(obj, objectException);
+		}	
+	}
+	
+	@SuppressWarnings("rawtypes")
+	 private void addSousObject(Object obj) throws IllegalArgumentException, IllegalAccessException {
+		List<Champ> champs = TypeExtension.getSerializableFields(obj.getClass());
+		for(Champ champ : champs){
+			Object value = champ.get(obj);
+			if(!champ.isSimple() && value != null){
+				Class<?> type = value.getClass();
+				if(Collection.class.isAssignableFrom(type)){
+					for(Object o : (Collection)value){
+						if(o != null && !TypeExtension.isSimple(o.getClass()))
+							prendEnChargePourChargementEnProfondeur(o, false);
+					}
+				}else if(Map.class.isAssignableFrom(type)){
+					Map<?,?> map = (Map<?,?>)value;
+					for(Entry<?,?> entry : map.entrySet()){
+						Object k = entry.getKey();
+						Object v = entry.getValue();
+						if(k != null && !TypeExtension.isSimple(k.getClass()))
+							prendEnChargePourChargementEnProfondeur(entry.getKey(), false);
+						if(v != null && !TypeExtension.isSimple(v.getClass()))						
+							prendEnChargePourChargementEnProfondeur(entry.getValue(), false);
+					}
+				}else{ //objet
+					prendEnChargePourChargementEnProfondeur(value, false);
+				}
+			}
+		}
+	}
+	
+	private class CompteurdeTaches{
 		private int value = 0;
 		private Object lock = new Object();
 
-		public void beforeSubmitTask() {
+		private void beforeSubmitTask() {
 			synchronized(lock) {
 				value++;
 			}
 		}
 
-		public void oneTaskCompleted() {
+		private void oneTaskCompleted() {
 			synchronized(lock) {
 				value--;
 			}
@@ -144,4 +244,5 @@ public class ManagerChargementEnProfondeur implements ManagerChargementSDK {
 			}
 		}
 	}
+
 }

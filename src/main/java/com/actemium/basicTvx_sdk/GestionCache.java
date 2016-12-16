@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 import com.actemium.basicTvx_sdk.util.BiHashMap;
@@ -48,6 +49,13 @@ public class GestionCache {
 		s.setEstCharge();
 	}
 	
+	synchronized Future<Object> getOrCreateFuture(GlobalObjectManager gom, ExecutorService executor, Object obj) {
+		Stockage s = dejaCharge.get(obj);
+		if(s == null)
+			return null;
+		return s.getOrCreateFuture(gom, executor);
+	}
+	
 	synchronized Future<Object> getChargement(Object obj){
 		Stockage s = dejaCharge.get(obj);
 		if(s == null)
@@ -55,29 +63,18 @@ public class GestionCache {
 		return s.getChargement();
 	}
 	
-	synchronized boolean setEnTrainDeNourrir(Object obj, ManagerChargementSDK manager){
+	synchronized void setEnTrainDeNourrir(Object obj, Future<Object> future){
 		Stockage s = dejaCharge.get(obj);
 		if(s == null)
-			return false ;
-		if (s.setEnTrainDeNourrir()){
-			s.setChargement(manager.getFuturFromObject(obj));
-			return true;
-		}
-		return false;
-	}
-
-	synchronized boolean isEnTrainDeNourrir(Object obj){
-		Stockage s = dejaCharge.get(obj);
-		if(s == null) 
-			return false ;
-		return s.estEnTrainDeNourrir;
+			return;
+		s.setEnTrainDeNourrir(future);
 	}
 		
-	synchronized boolean finitNourrir(Object obj){
+	synchronized boolean interromptChargement(Object obj){
 		Stockage s = dejaCharge.get(obj);
 		if(s == null)
 			return false ;
-		s.finitNourrir();
+		s.interromptChargement();
 		return true;
 	}
 	
@@ -209,6 +206,8 @@ public class GestionCache {
 		return ret;
 	}
 	
+
+	
 	
 	private class Stockage{
 		private Object obj;
@@ -216,7 +215,6 @@ public class GestionCache {
 		private String hash;
 		private boolean isNew = false;
 		private boolean estCharge = false;
-		private boolean estEnTrainDeNourrir = false;
 		private long dateChargement = 0;
 		private Future<Object> future = null;
 
@@ -225,36 +223,33 @@ public class GestionCache {
 			this.obj = obj;
 			this.id = id;
 		}
+		private Future<Object> getOrCreateFuture(GlobalObjectManager gom, ExecutorService executor) {
+			if(future != null)
+				return executor.submit(new TacheAttenteWebService(future));
+			if (estCharge())
+				return executor.submit(new TacheRetourneObjet(obj));
+			return future = executor.submit(new TacheChargementWebService(obj, gom));
+		}
 		private boolean estCharge(){
 			return isObsolete()? false: estCharge;
 		}
-		private void setChargement(Future<Object> future){
-			this.future=future;
-		}
 	
-		private void finitNourrir(){
-			estEnTrainDeNourrir = false;
+		private void interromptChargement(){
+			future = null;
 		}
 		
-		private boolean setEnTrainDeNourrir(){
-			if (estEnTrainDeNourrir)
-				return false;
-			else {
-				estEnTrainDeNourrir=true;
-				return true;
-			}
+		private void setEnTrainDeNourrir(Future<Object> future){
+			this.future = future;
 		}
 		
 		private Future<Object> getChargement(){
-			if (future == null)
-				return null;
-			else return future;
+			return future;
 		}
 		private void setEstCharge(){
 			dateChargement = System.currentTimeMillis();
 			estCharge = true;
 			hash = calculHash();
-			finitNourrir();
+			future = null;
 		}
 		
 		private boolean isObsolete(){

@@ -1,7 +1,5 @@
 package com.actemium.basicTvx_sdk.exception;
 
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Lorsque cette exception est générée, le cache est potentiellement dans un état incohérent pouvant mener à des erreurs par la suite. 
@@ -13,33 +11,13 @@ public class GetObjetEnProfondeurException extends Exception{
 	
 	private static final long serialVersionUID = -6480142152730314695L;
 	
-	private GetObjectException cause;
-	private InterruptedException interruptedException;
 	
-	public GetObjetEnProfondeurException(Object obj, GetObjectException e) {
-		this.cause = e;
-	}
-	
-	
-	public GetObjetEnProfondeurException(Object objetRacine, InterruptedException interruptedException) {
-		super();
+	public GetObjetEnProfondeurException(Object objetRacine, Exception cause) {
+		super(cause);
 		this.objetRacine = objetRacine;
-		this.interruptedException = interruptedException;
 	}
 
 
-	public GetObjectException getCause(){
-		return cause;
-	}
-	
-	public InterruptedException getInterruptedException(){
-		return interruptedException;
-	}
-
-	@Override
-	public String toString() {
-		return cause.toString();
-	}
 
 	public Object getObjetRacine() {
 		return objetRacine;

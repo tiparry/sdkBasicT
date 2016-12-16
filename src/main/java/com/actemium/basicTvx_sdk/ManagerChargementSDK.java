@@ -1,11 +1,42 @@
 package com.actemium.basicTvx_sdk;
 
-import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
-public interface ManagerChargementSDK {
-	public Future<Object> getFuturFromObject(Object o);
-	public Future<Object> submit(Object o, Callable<Object> task);
-	public void chargementTermineAndShutdownNow() ;
-	public boolean isChargementTermine();
+import com.actemium.basicTvx_sdk.exception.GetObjectException;
+import com.actemium.basicTvx_sdk.exception.GetObjetEnProfondeurException;
+
+public abstract class ManagerChargementSDK {
+	private final Object objetRacine;
+	private final GlobalObjectManager gom;
+	private final ExecutorService executor;
+	
+	protected ManagerChargementSDK(GlobalObjectManager gom, Object objetRacine, ExecutorService executor) {
+		this.objetRacine = objetRacine;
+		this.gom = gom;
+		this.executor = executor;
+	}
+	protected void chargementTermineAndShutdownNow() {
+		synchronized(getExecutor()){
+			getExecutor().shutdownNow();
+		}
+	}
+	protected boolean isChargementTermine(){
+		synchronized(executor){
+			return executor.isShutdown();
+		}
+	}
+	protected abstract Future<Object> submit(Object o);
+	protected abstract void execute() throws GetObjetEnProfondeurException, GetObjectException;
+	
+	protected Object getObjetRacine(){
+		return objetRacine;
+	}
+	
+	protected GlobalObjectManager getGom(){
+		return gom;
+	}
+	protected ExecutorService getExecutor(){
+		return executor;
+	}
 }

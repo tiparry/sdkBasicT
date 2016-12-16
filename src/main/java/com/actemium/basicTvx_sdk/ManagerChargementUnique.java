@@ -1,40 +1,59 @@
 package com.actemium.basicTvx_sdk;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
+import static com.actemium.basicTvx_sdk.Helper.*;
+
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-public class ManagerChargementUnique implements ManagerChargementSDK {
-	Future<Object> future;
-	ExecutorService executor;
+import com.actemium.basicTvx_sdk.exception.GetObjectException;
+
+public class ManagerChargementUnique extends ManagerChargementSDK {
+	private Future<Object> future;
 	
-	public ManagerChargementUnique(){
-		executor = Executors.newSingleThreadExecutor();
+	
+	ManagerChargementUnique(GlobalObjectManager gom, Object objetRacine){
+		super(gom, objetRacine, Executors.newSingleThreadExecutor());
 	}
 	
 	@Override
-	public synchronized Future<Object> submit(Object o, Callable<Object> task){
-		future= executor.submit(task);
+	protected Future<Object> submit(Object o){
+		future = getGom().createFuture(getExecutor(), o);
 		return future;
 	}
-	
-	@Override
-	public synchronized Future<Object> getFuturFromObject(Object o) {
-			return future;
-	}
 
 	@Override
-	public void chargementTermineAndShutdownNow() {
-		synchronized(executor){
-			executor.shutdownNow();
+	protected void execute() throws GetObjectException {
+		try{
+			Future<Object> future = submit(getObjetRacine());
+			future.get();
+		}
+		catch(ExecutionException e1){ 
+			gererExecutionExceptionUnique(getObjetRacine(), e1);
+		}
+		catch(InterruptedException ie){
+			unwrappExceptionInGetObjectException(getGom().getId(getObjetRacine()), getObjetRacine(), ie);
+		}
+		finally{
+			getGom().interromptChargement(getObjetRacine());//chargement fini de toute facon.
+			chargementTermineAndShutdownNow();
 		}
 	}
-
-	@Override
-	public boolean isChargementTermine(){
-		synchronized(executor){
-			return executor.isShutdown();
+	
+	private <U> void gererExecutionExceptionUnique(U obj, ExecutionException e1) throws 
+	GetObjectException {
+		getGom().interromptChargement(obj);
+		if (isNetworkException(e1)){
+			try{
+				Future<Object> future = submit(obj);
+				future.get();
+			}
+			catch( ExecutionException | InterruptedException e2){
+				unwrappExceptionInGetObjectException(getGom().getId(obj), obj, e2);
+			}
+		}
+		else{
+			unwrappExceptionInGetObjectException(getGom().getId(obj), obj, e1);
 		}
 	}
 	
