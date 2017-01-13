@@ -465,15 +465,15 @@ public class GlobalObjectManager implements EntityManager {
 				JsonMarshaller.toJson(objetToWrite, writer);	
 		}
 		catch( NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e){
-			LOGGER.error("Erreur lors de la reflection: "+e.getMessage());
+			LOGGER.error("Erreur lors de la reflection: ", e);
 			throw new DumpException("Erreur lors de la reflection", e);
 		}
 		catch(IOException e){
-			LOGGER.error("Erreur lors de l'écriture: "+e.getMessage());
+			LOGGER.error("Erreur lors de l'écriture: ", e);
 			throw new DumpException("Erreur lors de la reflection", e);
 		}
 		catch(MarshallExeption e){
-			LOGGER.error("Erreur lors de la sérialisation: "+e.getMessage());
+			LOGGER.error("Erreur lors de la sérialisation: ", e);
 			throw new DumpException("Erreur lors de la sérialisation", e);
 		}
 	}
@@ -523,11 +523,11 @@ public class GlobalObjectManager implements EntityManager {
 			}
 		}
 		catch( NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e){
-			LOGGER.error("Erreur lors de la reflection: "+e.getMessage());
+			LOGGER.error("Erreur lors de la reflection: ", e);
 			throw new DumpException("erreur de la reflection", e);
 		}
 		catch(IOException e){
-			LOGGER.error("erreur de lecture du fichier: "+e.getMessage());
+			LOGGER.error("erreur de lecture du fichier: ", e);
 			throw new DumpException("erreur de lecture du fichier", e);
 		} catch (UnmarshallExeption e) {
 			LOGGER.error("Erreur lors de la désérialisation ", e);
