@@ -5,7 +5,7 @@ public class RestException extends Exception{
 	 * 
 	 */
 	private static final long serialVersionUID = -2876474690720809161L;
-	private int statusCodeHttp;
+	private final int statusCodeHttp;
 	public RestException(int statusCodeHttp) {
 		this.statusCodeHttp = statusCodeHttp;
 	}

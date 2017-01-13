@@ -13,4 +13,8 @@ public class GetAllObjectException extends Exception {
 		super(e);
 	}
 	
+	public GetAllObjectException(String message, Exception e) {
+		super(message, e);
+	}
+	
 }

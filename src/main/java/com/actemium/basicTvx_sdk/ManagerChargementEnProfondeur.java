@@ -27,11 +27,6 @@ public class ManagerChargementEnProfondeur extends ManagerChargementSDK {
 	static final int RATIO_WORK = WEB_SERVICE_REQUEST_TIME/LOAD_OBJECT_TIME;
 
 
-	private static int determinePoolSize(){
-		int numberCores = Runtime.getRuntime().availableProcessors();
-		return Math.max(1, numberCores/2*(1+RATIO_WORK));
-	}
-
 	private final Map<Object,Integer> dejaVu = new IdentityHashMap<>();
 	private final Map<Future<Object>, Object> mapFutureToObject = new IdentityHashMap<>();
 	private final CompletionService<Object> completion;
@@ -40,6 +35,11 @@ public class ManagerChargementEnProfondeur extends ManagerChargementSDK {
 	ManagerChargementEnProfondeur(GlobalObjectManager gom, Object objetRacine){
 		super(gom, objetRacine, Executors.newFixedThreadPool(determinePoolSize()));
 		completion = new ExecutorCompletionService<>(getExecutor());
+	}
+
+	private static int determinePoolSize(){
+		int numberCores = Runtime.getRuntime().availableProcessors();
+		return Math.max(1, numberCores/2*(1+RATIO_WORK));
 	}
 
 	@Override
@@ -51,8 +51,7 @@ public class ManagerChargementEnProfondeur extends ManagerChargementSDK {
 				try {
 					future = waitForATaskToComplete();
 					Object aInspecter = traiterTacheTerminee(future);
-					if(aInspecter != null)
-						addSousObject(aInspecter);
+					addSousObject(aInspecter);
 				}
 				catch (InterruptedException e) { 
 					Thread.currentThread().interrupt();					
@@ -69,7 +68,7 @@ public class ManagerChargementEnProfondeur extends ManagerChargementSDK {
 			}
 		}
 		finally{
-				chargementTermineAndShutdownNow();
+			chargementTermineAndShutdownNow();
 		}
 	}
 
@@ -92,7 +91,7 @@ public class ManagerChargementEnProfondeur extends ManagerChargementSDK {
 		}
 		return false;
 	}
-	
+
 	@Override
 	protected Future<Object> submit(Object o) {
 		compteurdeTaches.beforeSubmitTask();
@@ -100,7 +99,7 @@ public class ManagerChargementEnProfondeur extends ManagerChargementSDK {
 		mapFutureToObject.put(future, o);
 		return future;
 	}
-	
+
 	private Future<Object> waitForATaskToComplete() throws InterruptedException{
 		return completion.take();
 	}
@@ -134,7 +133,7 @@ public class ManagerChargementEnProfondeur extends ManagerChargementSDK {
 	private int nombreEssais(Object o){
 		return dejaVu.containsKey(o)? dejaVu.get(o) : 0;
 	}
-	
+
 	/**
 	 * @param o l'objet à charger en profondeur
 	 * @param managerChargementEnProfondeur le ManagerChargementEnProfondeur
@@ -148,7 +147,7 @@ public class ManagerChargementEnProfondeur extends ManagerChargementSDK {
 		}
 		return false;
 	}
-	
+
 	/**
 	 * Donne le résultat de la TâcheChargement d'un objet
 	 * 
@@ -167,7 +166,7 @@ public class ManagerChargementEnProfondeur extends ManagerChargementSDK {
 			return null;
 		}
 	}
-	
+
 	/**
 	 * gestion des exceptions lors d'un chargement en profondeur.
 	 * 
@@ -186,40 +185,47 @@ public class ManagerChargementEnProfondeur extends ManagerChargementSDK {
 			retry = prendEnChargePourChargementEnProfondeur(objectToRecharge, true);
 		}
 		if(!retry) {
-			GetObjectException objectException = new GetObjectException(getGom().getId(objectToRecharge), objectToRecharge.getClass(), e);
+			Class<?> type = objectToRecharge == null ? void.class : objectToRecharge.getClass();
+			GetObjectException objectException = new GetObjectException(getGom().getId(objectToRecharge), type, e);
 			throw new GetObjetEnProfondeurException(obj, objectException);
 		}	
 	}
-	
-	@SuppressWarnings("rawtypes")
-	 private void addSousObject(Object obj) throws IllegalArgumentException, IllegalAccessException {
+
+	private void addSousObject(Object obj) throws IllegalAccessException {
+		if(obj == null)
+			return;
 		List<Champ> champs = TypeExtension.getSerializableFields(obj.getClass());
 		for(Champ champ : champs){
 			Object value = champ.get(obj);
 			if(!champ.isSimple() && value != null){
-				Class<?> type = value.getClass();
-				if(Collection.class.isAssignableFrom(type)){
-					for(Object o : (Collection)value){
-						if(o != null && !TypeExtension.isSimple(o.getClass()))
-							prendEnChargePourChargementEnProfondeur(o, false);
-					}
-				}else if(Map.class.isAssignableFrom(type)){
-					Map<?,?> map = (Map<?,?>)value;
-					for(Entry<?,?> entry : map.entrySet()){
-						Object k = entry.getKey();
-						Object v = entry.getValue();
-						if(k != null && !TypeExtension.isSimple(k.getClass()))
-							prendEnChargePourChargementEnProfondeur(entry.getKey(), false);
-						if(v != null && !TypeExtension.isSimple(v.getClass()))						
-							prendEnChargePourChargementEnProfondeur(entry.getValue(), false);
-					}
-				}else{ //objet
+				if(value instanceof Collection<?>)
+					traiteCollection((Collection<?>)value);
+				else if(value instanceof Map<?,?>)
+					traiteMap((Map<?,?>)value);
+				else //objet
 					prendEnChargePourChargementEnProfondeur(value, false);
-				}
 			}
 		}
 	}
-	
+
+	private void traiteMap(Map<?, ?> map) {
+		for(Entry<?,?> entry : map.entrySet()){
+			Object k = entry.getKey();
+			Object v = entry.getValue();
+			if(k != null && !TypeExtension.isSimple(k.getClass()))
+				prendEnChargePourChargementEnProfondeur(entry.getKey(), false);
+			if(v != null && !TypeExtension.isSimple(v.getClass()))						
+				prendEnChargePourChargementEnProfondeur(entry.getValue(), false);
+		}
+	}
+
+	private void traiteCollection(Collection<?> value) {
+		for(Object o : value){
+			if(o != null && !TypeExtension.isSimple(o.getClass()))
+				prendEnChargePourChargementEnProfondeur(o, false);
+		}
+	}
+
 	private class CompteurdeTaches{
 		private int value = 0;
 		private Object lock = new Object();

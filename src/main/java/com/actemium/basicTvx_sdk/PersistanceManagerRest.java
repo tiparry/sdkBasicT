@@ -37,6 +37,16 @@ import org.xml.sax.ext.DefaultHandler2;
 	private RestClient restClient;
 	private AnnuaireWS annuaire;
 
+	
+////////////////Hack pour CORTE qui veut les idReseau dans les objets Ariane
+	private String gaiaUrl = null;
+	private UsernamePasswordCredentials credentialsGaia;
+	private static final String RESSOURCEABSTRAITEGAIA = "/referentiel/infrastructure/gaia/v2/RA/{id}/xml";
+////////////////Hack pour CORTE qui veut les idReseau dans les objets Ariane
+	
+	
+	
+	
 	PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl, int connectTimeout, int socketTimeout) {
 		super();
 		restClient = new RestClient(httpLogin, httpPwd, connectTimeout, socketTimeout);
@@ -134,13 +144,11 @@ import org.xml.sax.ext.DefaultHandler2;
 	
 	////////////////Hack pour CORTE qui veut les idReseau dans les objets Ariane
 	
-	private String gaiaUrl = null;
-	private UsernamePasswordCredentials credentialsGaia;
-	private static final String ressourceAbstraiteGaia = "/referentiel/infrastructure/gaia/v2/RA/{id}/xml";
+	
 	
 	public void setConfigAriane(String host, String username, String password){
 		 UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(username, password);
-		gaiaUrl = host + ressourceAbstraiteGaia;
+		gaiaUrl = host + RESSOURCEABSTRAITEGAIA;
 		this.credentialsGaia = credentials;
 	}
 	
@@ -197,6 +205,7 @@ import org.xml.sax.ext.DefaultHandler2;
 
 		private String idExterne = null;
 		
+		
 		public Long getIdExterne(){
 			if(idExterne == null) 
 				return null;
@@ -206,7 +215,7 @@ import org.xml.sax.ext.DefaultHandler2;
 		@Override 
 		public void endElement(String uri, String localName, String qName) throws SAXException {
 			--niveau;
-		};
+		}
 		
 		
 		@Override
@@ -226,9 +235,6 @@ import org.xml.sax.ext.DefaultHandler2;
 	        	idExterne = value;
 	        	isIdExterne=false;
 	        }
-		}
-		
-		public RessourceAbstraiteArianeHandler() {
 		}
 
 	}

@@ -1,6 +1,7 @@
 package com.actemium.basicTvx_sdk.restclient;
 
 import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -47,76 +48,41 @@ import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.actemium.basicTvx_sdk.exception.ExceptionNonAtteinte;
 
 
-public class RestClient {
+
+public class RestClient implements Closeable{
 	private static final Logger LOGGER = LoggerFactory.getLogger(RestClient.class);
 	private static final String CONTENT_TYPE = "Content-Type";
 	private static final String UTF8 = "UTF-8";
 	private static final int HTTP_CLIENT_MAX_POOL_SIZE = 25;
 	private static final int HTTP_CLIENT_MAX_POOL_PER_ROOT = 25;
-	
-	
+	private static final String ACCEPT = "Accept";
+	private static final String RETOUR_SERVEUR = "retour serveur : ";
+	private static final String SUR = " sur ";
+
+
 	private static boolean bouchon = false;
-	
+
 	private CloseableHttpClient client;
 	private UsernamePasswordCredentials credentials;
-	
-	
+
+
 	/* Constructeur temporaire -- en cours de dev-- pour forcer les controles SSL sur les certificats 
 	 * a partir de certificat charges dans le trustore dans getSSLContext
 	 * Je n'ai pas encore trouve le bon code pour accepter a la fois les certif autosignes et uniquement les
 	 * certifs du trustore. On peut jouer sur la TrustStrategie et sur le hostnameverifier du SSLConnectionSocketFactory
 	 * 
 	 */
-	private RestClient(String login, String pwd, int connectTimeout, int socketTimeout, boolean test) {
-		//CredentialsProvider provider = new BasicCredentialsProvider();
-		UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(login,pwd);
-		//provider.setCredentials(AuthScope.ANY, credentials);
+	protected RestClient(UsernamePasswordCredentials credentials, int connectTimeout, int socketTimeout) {
 		this.credentials = credentials;
-		    
-	    
-	 // Trust own CA and all self-signed certs
-	    SSLContext sslContext;
+
+
+		// Trust own CA and all self-signed certs
+		SSLContext sslContext = null;
 		try {
 			sslContext = getSSLContext();
-			
-			 // Allow TLSv1 protocol only
-	        SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(
-	        		sslContext,
-	                new String[] { "TLSv1" },
-	                null,
-	                //new NoopHostnameVerifier());
-	                SSLConnectionSocketFactory.getDefaultHostnameVerifier());
-			
-	        Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
-	                .register("http", PlainConnectionSocketFactory.getSocketFactory())
-	                .register("https", sslsf)
-	                .build();
-	        
-	        // Create an HttpClient with the ThreadSafeClientConnManager.
-	        // This connection manager must be used if more than one thread will
-	        // be using the HttpClient.
-	        PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
-	        cm.setMaxTotal(HTTP_CLIENT_MAX_POOL_SIZE);
-	        cm.setDefaultMaxPerRoute(HTTP_CLIENT_MAX_POOL_PER_ROOT);
-	        //cm.setDefaultSocketConfig( SocketConfig.custom().setSoKeepAlive( true ).setSoReuseAddress( true ).setSoTimeout( 3000 ).build() 
-	        //cm.setValidateAfterInactivity(1); // essai pour resoudre java.net.SocketException: Software caused connection abort: recv failed
-	        
-		
-	        RequestConfig requestConfig = null;
-	        RequestConfig.Builder rcb = RequestConfig.custom();
-	        if (connectTimeout!=-1) rcb.setConnectTimeout(connectTimeout);
-	        if (socketTimeout!=-1) rcb.setSocketTimeout(socketTimeout);
-	        if (connectTimeout!=-1 || socketTimeout!=-1) requestConfig = rcb.build();
-	        
-	        HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
-				
-	        if (requestConfig!=null)httpClientBuilder.setDefaultRequestConfig(requestConfig);
-	        client=httpClientBuilder.setConnectionManager(cm)
-				.evictExpiredConnections()
-				.evictIdleConnections(5L,TimeUnit.SECONDS).build();
-		
 		} catch (KeyManagementException e) {
 			LOGGER.error("KeyManagementException", e);
 		} catch (NoSuchAlgorithmException e) {
@@ -130,8 +96,48 @@ public class RestClient {
 		} catch (URISyntaxException e) {
 			LOGGER.error("URISyntaxException", e);
 		}
-		
-		
+		// Allow TLSv1 protocol only
+		SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(
+				sslContext,
+				new String[] { "TLSv1" },
+				null,
+				SSLConnectionSocketFactory.getDefaultHostnameVerifier());
+
+		Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
+				.register("http", PlainConnectionSocketFactory.getSocketFactory())
+				.register("https", sslsf)
+				.build();
+
+		// Create an HttpClient with the ThreadSafeClientConnManager.
+		// This connection manager must be used if more than one thread will
+		// be using the HttpClient.
+		PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+		cm.setMaxTotal(HTTP_CLIENT_MAX_POOL_SIZE);
+		cm.setDefaultMaxPerRoute(HTTP_CLIENT_MAX_POOL_PER_ROOT);
+		//cm.setDefaultSocketConfig( SocketConfig.custom().setSoKeepAlive( true ).setSoReuseAddress( true ).setSoTimeout( 3000 ).build() 
+		//cm.setValidateAfterInactivity(1); // essai pour resoudre java.net.SocketException: Software caused connection abort: recv failed
+
+
+		RequestConfig requestConfig = null;
+		RequestConfig.Builder rcb = RequestConfig.custom();
+		if (connectTimeout!=-1)
+			rcb.setConnectTimeout(connectTimeout);
+		if (socketTimeout!=-1)
+			rcb.setSocketTimeout(socketTimeout);
+		if (connectTimeout!=-1 || socketTimeout!=-1)
+			requestConfig = rcb.build();
+
+		HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
+
+		if (requestConfig!=null)
+			httpClientBuilder.setDefaultRequestConfig(requestConfig);
+		client=httpClientBuilder.setConnectionManager(cm)
+				.evictExpiredConnections()
+				.evictIdleConnections(5L,TimeUnit.SECONDS).build();
+
+
+
+
 	}
 
 
@@ -140,92 +146,96 @@ public class RestClient {
 	 * socketTimeout = -1 => pas de timeout
 	 */
 	public RestClient(String login, String pwd, int connectTimeout, int socketTimeout) {
-		UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(login,pwd);
-		this.credentials = credentials;
-		    
-	    
-	 // Trust own CA and all self-signed certs
-	    SSLContext sslcontext;
+		this.credentials = new UsernamePasswordCredentials(login,pwd);
+
+
+		// Trust own CA and all self-signed certs
+		SSLContext sslContext = null;
 		try {
-			SSLContext sslContext = SSLContexts.custom()
-			        .loadTrustMaterial(null, new TrustStrategy() {
-	
-			            @Override
-			            public boolean isTrusted(final X509Certificate[] chain,  String authType) throws CertificateException {
-			                return true;
-			            }
-			        })
-			        .build();
-			
-			 // Allow TLSv1 protocol only
-	        SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(
-	        		sslContext,
-	                new String[] { "TLSv1" },
-	                null,
-	                new NoopHostnameVerifier());
-			
-	        Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
-	                .register("http", PlainConnectionSocketFactory.getSocketFactory())
-	                .register("https", sslsf)
-	                .build();
-	        
-	        // Create an HttpClient with the ThreadSafeClientConnManager.
-	        // This connection manager must be used if more than one thread will
-	        // be using the HttpClient.
-	        PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
-	        cm.setMaxTotal(HTTP_CLIENT_MAX_POOL_SIZE);
-	        cm.setDefaultMaxPerRoute(HTTP_CLIENT_MAX_POOL_PER_ROOT);
-	        //cm.setDefaultSocketConfig( SocketConfig.custom().setSoKeepAlive( true ).setSoReuseAddress( true ).setSoTimeout( 3000 ).build() 
-	        //cm.setValidateAfterInactivity(1); // essai pour resoudre java.net.SocketException: Software caused connection abort: recv failed
-	        
-	        RequestConfig requestConfig = null;
-	        RequestConfig.Builder rcb = RequestConfig.custom();
-	        if (connectTimeout!=-1) rcb.setConnectTimeout(connectTimeout);
-	        if (socketTimeout!=-1) rcb.setSocketTimeout(socketTimeout);
-	        if (connectTimeout!=-1 || socketTimeout!=-1) requestConfig = rcb.build();
-	        
-	        HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
-				
-	        if (requestConfig!=null)httpClientBuilder.setDefaultRequestConfig(requestConfig);
-	        client=httpClientBuilder.setConnectionManager(cm)
-				.evictExpiredConnections()
-				.evictIdleConnections(5L,TimeUnit.SECONDS).build();
-		
-		} catch (KeyManagementException e) {
+			sslContext = SSLContexts.custom()
+					.loadTrustMaterial(null, new TrustStrategy() {
+
+						@Override
+						public boolean isTrusted(final X509Certificate[] chain,  String authType) throws CertificateException {
+							return true;
+						}
+					})
+					.build();
+		}
+		catch (KeyManagementException e) {
 			LOGGER.error("KeyManagementException", e);
 		} catch (NoSuchAlgorithmException e) {
 			LOGGER.error("NoSuchAlgorithmException", e);
 		} catch (KeyStoreException e) {
 			LOGGER.error("KeyStoreException", e);
 		}
-		
-		
+
+		// Allow TLSv1 protocol only
+		SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(
+				sslContext,
+				new String[] { "TLSv1" },
+				null,
+				new NoopHostnameVerifier());
+
+		Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
+				.register("http", PlainConnectionSocketFactory.getSocketFactory())
+				.register("https", sslsf)
+				.build();
+
+		// Create an HttpClient with the ThreadSafeClientConnManager.
+		// This connection manager must be used if more than one thread will
+		// be using the HttpClient.
+		PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+		cm.setMaxTotal(HTTP_CLIENT_MAX_POOL_SIZE);
+		cm.setDefaultMaxPerRoute(HTTP_CLIENT_MAX_POOL_PER_ROOT);
+		//cm.setDefaultSocketConfig( SocketConfig.custom().setSoKeepAlive( true ).setSoReuseAddress( true ).setSoTimeout( 3000 ).build() 
+		//cm.setValidateAfterInactivity(1); // essai pour resoudre java.net.SocketException: Software caused connection abort: recv failed
+
+		RequestConfig requestConfig = null;
+		RequestConfig.Builder rcb = RequestConfig.custom();
+		if (connectTimeout!=-1) 
+			rcb.setConnectTimeout(connectTimeout);
+		if (socketTimeout!=-1)
+			rcb.setSocketTimeout(socketTimeout);
+		if (connectTimeout!=-1 || socketTimeout!=-1)
+			requestConfig = rcb.build();
+
+		HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
+
+		if (requestConfig!=null)
+			httpClientBuilder.setDefaultRequestConfig(requestConfig);
+		client=httpClientBuilder.setConnectionManager(cm)
+				.evictExpiredConnections()
+				.evictIdleConnections(5L,TimeUnit.SECONDS).build();
+
+
+
+
 	}
 
 
 	private SSLContext getSSLContext() throws KeyStoreException, 
-    NoSuchAlgorithmException, CertificateException, IOException, KeyManagementException, URISyntaxException {
-        KeyStore trustStore  = KeyStore.getInstance("jks");
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+	NoSuchAlgorithmException, CertificateException, IOException, KeyManagementException, URISyntaxException {
+		KeyStore trustStore  = KeyStore.getInstance("jks");
+		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
 
-        if (classLoader == null) {
-            classLoader = Class.class.getClassLoader();
-        }
-        
-        InputStream instream = classLoader.getResourceAsStream("myTrustStore");
-        try {
-            trustStore.load(instream, "basictravaux".toCharArray());
-        } finally {
-            instream.close();
-        }
-        
-       
-        
-        SSLContext context =  SSLContexts.custom()
-                .loadTrustMaterial(trustStore, new TrustSelfSignedStrategy())
-                .build();
-        return context;
-    }
+		if (classLoader == null) {
+			classLoader = Class.class.getClassLoader();
+		}
+
+		InputStream instream = classLoader.getResourceAsStream("myTrustStore");
+		try {
+			trustStore.load(instream, "basictravaux".toCharArray());
+		} finally {
+			instream.close();
+		}
+
+
+
+		return  SSLContexts.custom()
+				.loadTrustMaterial(trustStore, new TrustSelfSignedStrategy())
+				.build();
+	}
 	/**
 	 * methode utilisée comme hack : pour ne pas mettre de header dans les requetes http
 	 *  destinées aux anciennes versions du gisement 
@@ -235,11 +245,11 @@ public class RestClient {
 	private boolean isURlversionV1(String url){
 		return url.contains("Maintenance/GisementDeDonneeMaintenance/v1");
 	}
-	
+
 	public Reader getReader(String url) throws RestException{
 		return getReader(url, this.credentials);
 	}
-	
+
 	public Reader getReader(String url, UsernamePasswordCredentials cred) throws RestException{
 		LOGGER.debug("Appel gisement GET " + url);
 		if(bouchon)
@@ -247,7 +257,7 @@ public class RestClient {
 		HttpGet request = new HttpGet(url);
 		addBasicAuthHeader(request, cred);
 		if (!isURlversionV1(url)){
-			request.addHeader("Accept", Serialisation.JSON.getContentType());
+			request.addHeader(ACCEPT, Serialisation.JSON.getContentType());
 		}
 		int statusCode = 0;
 		try{
@@ -269,29 +279,29 @@ public class RestClient {
 			throw new RestException(statusCode,"probleme de connexion getReader " + url, e);
 		}
 	}
-	
-	
+
+
 	public Reader postReader(String url, String message) throws RestException{
 		return postReader(url, message, Serialisation.XML);
 	}
-	
+
 	public Reader postReader(String url, String message, Serialisation serialisation) throws RestException {
 		LOGGER.debug("Appel gisement POST " + url);
-		
+
 		if(bouchon) 
 			return null;
 		HttpPost post = new HttpPost(url);
 		addBasicAuthHeader(post, this.credentials);
 		post.addHeader(CONTENT_TYPE, serialisation.getContentType());
 		if (!isURlversionV1(url)){
-			post.addHeader("Accept", serialisation.getContentType());
+			post.addHeader(ACCEPT, serialisation.getContentType());
 		}
 		StringEntity entity = new StringEntity(message, UTF8);
 		entity.setContentEncoding(UTF8);
-	    post.setEntity(entity);
-	    int statusCode = 0;
+		post.setEntity(entity);
+		int statusCode = 0;
 		try{
-		    CloseableHttpResponse response = client.execute(post);
+			CloseableHttpResponse response = client.execute(post);
 			statusCode = response.getStatusLine().getStatusCode();
 			if (statusCode < 200 || statusCode >= 300) {
 				consumeAndClose(response, statusCode, message, url);
@@ -308,7 +318,7 @@ public class RestClient {
 			throw new RestException(statusCode,"probleme de connexion postReader " + url + System.lineSeparator() + message, e);
 		}
 	}
-	
+
 	public String post(String url, String message) throws RestException{
 		return post(url, message, Serialisation.XML);
 	}
@@ -319,43 +329,43 @@ public class RestClient {
 		HttpPost post = new HttpPost(url);
 		post.addHeader(CONTENT_TYPE, serialisation.getContentType());
 		if (!isURlversionV1(url)){
-			post.addHeader("Accept", Serialisation.JSON.getContentType());
+			post.addHeader(ACCEPT, Serialisation.JSON.getContentType());
 		}
 		addBasicAuthHeader(post, this.credentials);	
 		StringEntity entity = new StringEntity(content, UTF8);
 		entity.setContentEncoding(UTF8);
-	    post.setEntity(entity);
-	    int statusCode = 0;
-	    CloseableHttpResponse  response = null;
+		post.setEntity(entity);
+		int statusCode = 0;
+		CloseableHttpResponse  response = null;
 		try{
 			response = client.execute(post);
 			statusCode = response.getStatusLine().getStatusCode();
-	
-	        HttpEntity res = response.getEntity();
-	        String message = null;
-	        if (res != null) {
-	            message = EntityUtils.toString(res, UTF8);
-	        } else {
-	        	message = "pas de message";
-	        }
-	        if (statusCode < 200 || statusCode >= 300 || res == null) {
-	        	throw new RestException(statusCode, "retour serveur : " + message +
-	            		System.lineSeparator() + "Probleme de connexion post " + content + " sur "  + url);
-	        }
-	        return message;
+
+			HttpEntity res = response.getEntity();
+			String message = null;
+			if (res != null) {
+				message = EntityUtils.toString(res, UTF8);
+			} else {
+				message = "pas de message";
+			}
+			if (statusCode < 200 || statusCode >= 300 || res == null) {
+				throw new RestException(statusCode, RETOUR_SERVEUR + message +
+						System.lineSeparator() + "Probleme de connexion post " + content + SUR  + url);
+			}
+			return message;
 		} catch (IOException e) {
 			LOGGER.error("probleme de connexion post", e);
-			throw new RestException(statusCode, "probleme de connexion post " + content + " sur "  + url, e);
+			throw new RestException(statusCode, "probleme de connexion post " + content + SUR  + url, e);
 		} finally {
 			HttpClientUtils.closeQuietly(response);
-	    }
-		
+		}
+
 	}
-	
+
 	public String put(String url, String message) throws RestException{
 		return put(url, message, Serialisation.XML);
 	}
-	
+
 	public String put(String url, String content, Serialisation serialisation) throws RestException{
 		LOGGER.debug("Appel gisement PUT " + url);
 		if(bouchon) 
@@ -363,39 +373,39 @@ public class RestClient {
 		HttpPut put = new HttpPut(url);
 		put.addHeader(CONTENT_TYPE, serialisation.getContentType());
 		if(!isURlversionV1(url)){
-			put.addHeader("Accept", serialisation.getContentType());
+			put.addHeader(ACCEPT, serialisation.getContentType());
 		}
 		addBasicAuthHeader(put, this.credentials);
-		
+
 		StringEntity entity = new StringEntity(content, UTF8);
 		entity.setContentEncoding(UTF8);
-	    put.setEntity(entity);
-	    int statusCode = 0;
-	    CloseableHttpResponse response = null;
-	    try{
-	    	response = client.execute(put);
+		put.setEntity(entity);
+		int statusCode = 0;
+		CloseableHttpResponse response = null;
+		try{
+			response = client.execute(put);
 			statusCode = response.getStatusLine().getStatusCode();
 			HttpEntity res = response.getEntity();
 			String message = null;
-		    if (res != null) {
-		       message = EntityUtils.toString(res, UTF8);
-		    } else {
-		      message = "";
-		    }
-		    if (statusCode < 200 || statusCode >= 300 || res == null)
-	            throw new RestException(statusCode, "retour serveur : " + message +
-	            		System.lineSeparator() + "Probleme de connexion put " + content + " sur "  + url);
-	        return message;
-	    } catch (IOException e) {
-	    	LOGGER.error("probleme de connexion put", e);
-			throw new RestException(statusCode, "probleme de connexion put " + content + " sur "  + url, e);
+			if (res != null) {
+				message = EntityUtils.toString(res, UTF8);
+			} else {
+				message = "";
+			}
+			if (statusCode < 200 || statusCode >= 300 || res == null)
+				throw new RestException(statusCode, RETOUR_SERVEUR + message +
+						System.lineSeparator() + "Probleme de connexion put " + content + SUR  + url);
+			return message;
+		} catch (IOException e) {
+			LOGGER.error("probleme de connexion put", e);
+			throw new RestException(statusCode, "probleme de connexion put " + content + SUR  + url, e);
 		} finally {
-	    	HttpClientUtils.closeQuietly(response);
-	    }
+			HttpClientUtils.closeQuietly(response);
+		}
 	}
-	
-	
-	
+
+
+
 	public String delete(String url) throws RestException{
 		if(bouchon) 
 			return "";
@@ -406,32 +416,25 @@ public class RestClient {
 		try{
 			response = client.execute(del);
 			statusCode = response.getStatusLine().getStatusCode();
-			
-			 
-	
-	        HttpEntity entity = response.getEntity();
-	        String message = null;
-	        if (entity != null) {
-	            message = EntityUtils.toString(entity, Charset.forName(UTF8));
-	        } else {
-	        	 message = "";
-	        }
-	        if (statusCode < 200 || statusCode >= 300 || entity == null)
-	            throw new RestException(statusCode, message);
-	        return message;
+
+
+
+			HttpEntity entity = response.getEntity();
+			String message = null;
+			if (entity != null) {
+				message = EntityUtils.toString(entity, Charset.forName(UTF8));
+			} else {
+				message = "";
+			}
+			if (statusCode < 200 || statusCode >= 300 || entity == null)
+				throw new RestException(statusCode, message);
+			return message;
 		} catch (IOException e) {
 			LOGGER.error("probleme de connexion delete", e);
 			throw new RestException(statusCode, "probleme de connexion delete", e);
 		} finally {
-	    	HttpClientUtils.closeQuietly(response);
-	    }
-	}
-
-	@Override
-	protected void finalize() throws Throwable {
-		super.finalize();
-		client.close();
-		
+			HttpClientUtils.closeQuietly(response);
+		}
 	}
 
 
@@ -443,50 +446,39 @@ public class RestClient {
 		// by the connection manager. 
 		String message = null;
 		try {
-		    HttpEntity entity = response.getEntity();
-		    // do something useful with the response body
-		    // and ensure it is fully consumed²
-		    message = EntityUtils.toString(entity, Charset.forName(UTF8));
-		    throw new RestException(statusCode, "retour serveur : " + message +
-            		System.lineSeparator() + "Probleme de connexion " + (data == null ? "getReader" : "postReader " + data) + " sur "  + url);
+			HttpEntity entity = response.getEntity();
+			// do something useful with the response body
+			// and ensure it is fully consumed²
+			message = EntityUtils.toString(entity, Charset.forName(UTF8));
+			throw new RestException(statusCode, RETOUR_SERVEUR + message +
+					System.lineSeparator() + "Probleme de connexion " + (data == null ? "getReader" : "postReader " + data) + SUR  + url);
 		} catch (IOException e) {
 			message = "impossible de consommer le CloseableHttpResponse";
 			LOGGER.error(message, e);			
-			throw new RestException(statusCode, "retour serveur : " + message +
-            		System.lineSeparator() + "Probleme de connexion " + (data == null ? "getReader" : "postReader " + data) + " sur "  + url, e);
+			throw new RestException(statusCode, RETOUR_SERVEUR + message +
+					System.lineSeparator() + "Probleme de connexion " + (data == null ? "getReader" : "postReader " + data) + SUR  + url, e);
 		} finally {
 			HttpClientUtils.closeQuietly(response);
 		}
 	}
-	
+
 	private void addBasicAuthHeader(HttpRequestBase request, UsernamePasswordCredentials cred){
 		if (cred.getUserName()!=null && cred.getPassword()!=null){
 			try {
 				request.addHeader(new BasicScheme().authenticate(cred, request, null));
 			} catch (AuthenticationException e) {
-				//n'est jamais atteind avec un BasicScheme.
+				LOGGER.error("n'est jamais atteind avec un BasicScheme.");
+				throw new ExceptionNonAtteinte("n'est jamais atteind avec un BasicScheme.", e);
 				//http://stackoverflow.com/questions/2014700/preemptive-basic-authentication-with-apache-httpclient-4
 			}
 		}
 	}
-	
-	
-	public static void main(String[] args) {
-		try{
-			RestClient restClient = new RestClient("APP_CLIENT","APP_PASSWORD", -1, -1);
-			Reader reader = restClient.getReader("http://localhost:8080/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/annuaire/get_annuaire/json");
-			int intValueOfChar;
-		    String targetString = "";
-		    while ((intValueOfChar = reader.read()) != -1) {
-		        targetString += (char) intValueOfChar;
-		    }
-		    reader.close();
-		    System.out.println(targetString);
-		} catch (Exception ex){
-			ex.printStackTrace();
-		}
-	}
-	
 
-	
+	@Override
+	public void close() throws IOException {
+		client.close();
+	}
+
+
+
 }
