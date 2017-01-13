@@ -12,6 +12,9 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.actemium.basicTvx_sdk.util.BiHashMap;
 
 import giraudsa.marshall.exception.MarshallExeption;
@@ -21,15 +24,16 @@ import giraudsa.marshall.serialisation.text.json.JsonMarshaller;
  * le gestionnaire des objets du cache.
  */
 public class GestionCache {
-	private final static long tempsDeCacheMinimum = 1000 * 60; //une minute 
-	private long tempsDeCache = 1000 * 60 * 60; //une heure 
-	private BiHashMap<Class<?>, String, Object> classAndIdToObject = new BiHashMap<Class<?>, String, Object>();
+	private static final Logger LOGGER = LoggerFactory.getLogger(GestionCache.class);
+	private static final long TEMPS_DE_CACHE_MINIMUM = 1000L * 60L; //une minute 
+	private long tempsDeCache = 1000L * 60L * 60L; //une heure 
+	private BiHashMap<Class<?>, String, Object> classAndIdToObject = new BiHashMap<>();
 	private final Map<Object, Stockage> dejaCharge = new IdentityHashMap<>();
-	private Map<Class<?>, Stockage> dicoClasseDejaChargee = new HashMap<Class<?>, Stockage>();
+	private Map<Class<?>, Stockage> dicoClasseDejaChargee = new HashMap<>();
 	
 	synchronized boolean setDureeCache(long nouveauTempsDeCache) {
-		if (nouveauTempsDeCache < tempsDeCacheMinimum){
-			tempsDeCache = tempsDeCacheMinimum;
+		if (nouveauTempsDeCache < TEMPS_DE_CACHE_MINIMUM){
+			tempsDeCache = TEMPS_DE_CACHE_MINIMUM;
 			return false;
 		}
 		tempsDeCache = nouveauTempsDeCache;
@@ -228,7 +232,8 @@ public class GestionCache {
 				return executor.submit(new TacheAttenteWebService(future));
 			if (estCharge())
 				return executor.submit(new TacheRetourneObjet(obj));
-			return future = executor.submit(new TacheChargementWebService(obj, gom));
+			future = executor.submit(new TacheChargementWebService(obj, gom));
+			return future;
 		}
 		private boolean estCharge(){
 			return isObsolete()? false: estCharge;
@@ -263,6 +268,7 @@ public class GestionCache {
 			try {
 				ret = JsonMarshaller.toJson(obj);
 			} catch (MarshallExeption e) {
+				LOGGER.info("pour info", e);
 				ret = UUID.randomUUID().toString(); //on n'arrive pas a creer un id, donc il sera sauvegardé automatiquement
 			}
 			return ret;

@@ -7,7 +7,7 @@ package com.actemium.basicTvx_sdk.exception;
  *  */
 public class GetObjetEnProfondeurException extends Exception{
 
-	private Object objetRacine;
+	private final transient Object objetRacine;
 	
 	private static final long serialVersionUID = -6480142152730314695L;
 	
@@ -22,5 +22,6 @@ public class GetObjetEnProfondeurException extends Exception{
 	public Object getObjetRacine() {
 		return objetRacine;
 	}
-
+	
+	
 }

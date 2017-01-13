@@ -14,7 +14,7 @@ public class BiHashMap<K1, K2, V> extends ConcurrentHashMap<Pair<K1, K2>, V> {
 		remove(key(key1, key2));
 	}
 	private Pair<K1, K2> key(K1 key1, K2 key2) {
-		return new Pair<K1, K2>(key1, key2);
+		return new Pair<>(key1, key2);
 	}
 	
 }

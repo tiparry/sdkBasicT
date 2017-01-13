@@ -9,7 +9,6 @@ import java.util.concurrent.Future;
 import com.actemium.basicTvx_sdk.exception.GetObjectException;
 
 public class ManagerChargementUnique extends ManagerChargementSDK {
-	private Future<Object> future;
 	
 	
 	ManagerChargementUnique(GlobalObjectManager gom, Object objetRacine){
@@ -18,8 +17,7 @@ public class ManagerChargementUnique extends ManagerChargementSDK {
 	
 	@Override
 	protected Future<Object> submit(Object o){
-		future = getGom().createFuture(getExecutor(), o);
-		return future;
+		return getGom().createFuture(getExecutor(), o);
 	}
 
 	@Override
@@ -32,6 +30,7 @@ public class ManagerChargementUnique extends ManagerChargementSDK {
 			gererExecutionExceptionUnique(getObjetRacine(), e1);
 		}
 		catch(InterruptedException ie){
+			Thread.currentThread().interrupt();
 			unwrappExceptionInGetObjectException(getGom().getId(getObjetRacine()), getObjetRacine(), ie);
 		}
 		finally{
