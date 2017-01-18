@@ -2,17 +2,13 @@ package com.actemium.basicTvx_sdk;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Date;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import giraudsa.marshall.deserialisation.Fabrique;
 import giraudsa.marshall.exception.FabriqueInstantiationException;
 import giraudsa.marshall.exception.InstanciationException;
-import giraudsa.marshall.exception.SetValueException;
 import utils.Constants;
-import utils.TypeExtension;
-import utils.champ.FieldInformations;
 
  class ObjectFactory<I> {
 	private static final Logger LOGGER = LoggerFactory.getLogger(ObjectFactory.class);
@@ -27,21 +23,7 @@ import utils.champ.FieldInformations;
 			LOGGER.info("on ne va pas passer par la fabrique du Marshaller pour instancier les objets", e);
 		}
 	}
-	
-	private <U> void setDateCration(U ret, Date date) {
-		FieldInformations dateChamp = TypeExtension.getChampByName(ret.getClass(), "dateCreation");
-		if(dateChamp != null){
-			try {
-				dateChamp.set(ret, date, null);
-			} catch (SetValueException e) {
-				LOGGER.error("impossible d'affecter la date " + date.toString() + " dans dateCreation.", e);
-			}
-		}
-	}
-	
-	
-	
-	
+
 
 	protected <U> U newObjectWithOnlyId(Class<U> clazz, String id, GestionCache cache) throws InstanciationException{
 		return newObjectById(clazz, id, cache, true);
@@ -51,14 +33,6 @@ import utils.champ.FieldInformations;
 		return newObjectById(clazz, id, cache, false);
 	}
 	
-	protected <U> U newObject(Class<U> clazz, Date date, GestionCache cache) throws InstanciationException {
-		U ret = newInstanceConstructeur(clazz);
-		I id = idHelper.getNewId();
-		idHelper.setId(ret, id);
-		setDateCration(ret, date);
-		cache.metEnCache(id.toString(), ret, true);
-		return ret;
-	}
 	
 	private <U> U newObjectById(Class<U> clazz, String id, GestionCache cache, boolean onlyId) throws InstanciationException{
 		U ret;

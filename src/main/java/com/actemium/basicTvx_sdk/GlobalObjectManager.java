@@ -214,18 +214,6 @@ public class GlobalObjectManager implements EntityManager {
 		}
 	}
 
-	/**
-	 * Creates the object.
-	 *
-	 * @param <U> le type generique
-	 * @param clazz la classe de type U
-	 * @param date the date
-	 * @return  l'objet crée
-	 * @throws InstanciationException 
-	 */
-	public synchronized <U> U createObject(final Class<U> clazz, final Date date) throws InstanciationException {
-		return factory.newObject(clazz, date, gestionCache);
-	}
 
 	/**
 	 * Gets  all object by type.
