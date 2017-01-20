@@ -21,7 +21,6 @@ import org.apache.http.auth.UsernamePasswordCredentials;
 import com.actemium.basicTvx_sdk.restclient.RestClient;
 import com.actemium.basicTvx_sdk.restclient.RestException;
 import com.actemium.basicTvx_sdk.restclient.Serialisation;
-import com.rff.basictravaux.model.AnnuaireWS;
 import com.rff.basictravaux.model.webservice.reponse.Reponse;
 import com.rff.basictravaux.model.webservice.requete.Requete;
 
@@ -36,15 +35,12 @@ import org.xml.sax.ext.DefaultHandler2;
  class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	private static final Logger LOGGER = LoggerFactory.getLogger(PersistanceManagerRest.class);
 	private RestClient restClient;
-	
-	private String gisementTravauxBaseUrl;
-
 	private AnnuaireWS annuaire;
 
 	PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl, int connectTimeout, int socketTimeout) {
 		super();
 		restClient = new RestClient(httpLogin, httpPwd, connectTimeout, socketTimeout);
-		gisementTravauxBaseUrl = gisementBaseUrl;
+		AnnuaireWS.init(restClient, gisementBaseUrl);
 		annuaire = AnnuaireWS.getInstance();
 		ConfigurationMarshalling.setIdUniversel();
 	}
@@ -52,25 +48,24 @@ import org.xml.sax.ext.DefaultHandler2;
 
 
 	@Override
-	 <U> void save(U obj) throws MarshallExeption, RestException {
+	 <U> void save(U obj) throws MarshallExeption, RestException, IOException {
 		String dataToSend = toJson(obj);
-		String constante = annuaire.putUrlExtension(obj.getClass());
-		if (constante == null) {
+		String url = annuaire.getUrl(obj.getClass());
+		if (url == null) {
 			return;
 		}
-		restClient.put(gisementTravauxBaseUrl + constante, dataToSend, Serialisation.JSON);
+		restClient.put(url, dataToSend, Serialisation.JSON);
 	}
 	
 	@Override
 	Reponse getReponse(Requete requete, EntityManager entityManager) throws MarshallExeption, RestException, IOException{
-		String urn = annuaire.getRequestUrl(requete.getClass());
-		if (urn == null) {
+		String url = annuaire.getUrl(requete.getClass());
+		if (url == null) {
 			LOGGER.error("la requete " + requete.getClass() + " n'est pas dans l'annuaire");
 			throw new RestException(0, "la requete " + requete.getClass() + " n'est pas dans l'annuaire");
 		}
-		String uri = gisementTravauxBaseUrl + urn;
 		String message = toJson(requete);
-		Reader br = restClient.postReader(uri, message, Serialisation.JSON);
+		Reader br = restClient.postReader(url, message, Serialisation.JSON);
 		Reponse reponse = null;
 		if (br != null) {
 			reponse = fromJson(br, entityManager);
@@ -81,11 +76,11 @@ import org.xml.sax.ext.DefaultHandler2;
 
 	@Override
 	<U> U getObjectById(Class<U> clazz, String id, EntityManager entityManager) throws IOException, RestException, SAXException, InstanciationException{
-		String urn = annuaire.getUrlExtension(clazz);
+		String urn = annuaire.getUrl(clazz);
 		if (urn == null) {
 			return chargeIdReseau(clazz, id, entityManager);
 		}
-		String url = gisementTravauxBaseUrl + String.format(urn, id);
+		String url = urn+"/"+id;
 		try{
 			Reader br = restClient.getReader(url);
 			U obj = null;
@@ -105,11 +100,10 @@ import org.xml.sax.ext.DefaultHandler2;
 
 	@Override
 	<U> boolean getAllObject(Class<U> clazz, EntityManager entityManager, List<U> listeARemplir) throws RestException, IOException{
-		String urn = annuaire.getAllUrlExtension(clazz);
-		if (urn == null) {
+		String url = annuaire.getUrl(clazz);
+		if (url == null) {
 			return false;
 		}
-		String url = gisementTravauxBaseUrl + urn;
 		Reader br = restClient.getReader(url);
 		List<U> lObj = null;
 		if (br != null) {
