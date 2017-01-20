@@ -43,7 +43,6 @@ import com.actemium.basicTvx_sdk.exception.GetObjetEnProfondeurException;
 import com.actemium.basicTvx_sdk.exception.SaveAllException;
 import com.actemium.basicTvx_sdk.exception.SaveException;
 import com.actemium.basicTvx_sdk.restclient.RestException;
-import com.rff.basictravaux.model.AnnuaireWS;
 import com.rff.basictravaux.model.webservice.reponse.Reponse;
 import com.rff.basictravaux.model.webservice.requete.Requete;
 
@@ -432,7 +431,13 @@ public class GlobalObjectManager implements EntityManager {
 	public void loadGisementInCache() throws GetAllObjectException{
 		this.purgeCache();
 		AnnuaireWS annuaire = AnnuaireWS.getInstance();
-		Map<String, String> dicoClasseToPut = annuaire.getDicoClasseToPutUrl();
+		Map<String, String> dicoClasseToPut;
+		try {
+			dicoClasseToPut = annuaire.getDicoNomClasseToUrl();
+		} catch (RestException | IOException e1) {
+			LOGGER.error("probleme de connexion au gisement pour charger l'annuaire " , e1);
+			throw new GetAllObjectException("probleme de connexion au gisement pour charger l'annuaire ", e1);
+		}
 		Set<Class<?>> classes = new HashSet<>();
 		for (String nomClasse : dicoClasseToPut.keySet()){
 			try {

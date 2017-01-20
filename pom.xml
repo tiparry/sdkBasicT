@@ -116,11 +116,11 @@
 		<version>4.4.1</version>
 	</dependency>		
     
-    <!-- Model basic travaux -->
+    <!--classes BasicTravaux nécessaires pour le sdk -->
 	<dependency>
-	  <groupId>com.rff</groupId>
-	  <artifactId>BasicTravaux</artifactId>
-	  <version>1.0.7</version>
+	  <groupId>com.actemium</groupId>
+	  <artifactId>BTForSDK</artifactId>
+	  <version>1.0.0</version>
 	</dependency>
 	
 	<!-- lib de sérialisation-->

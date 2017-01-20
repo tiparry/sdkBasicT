@@ -37,13 +37,18 @@ public class AnnuaireWS {
 		return instance;
 	}
 
-	public String getUrl(Class<?> clazz) throws RestException, IOException{
+	public Map<String, String> getDicoNomClasseToUrl() throws RestException, IOException{
 		if(dicoNomClasseToUrl==null){
 			loadDicoNomClasseToUrl(WS_CLASSE_BT_TO_URL);
 		}
 		if(dicoNomClasseToUrl==null)
 			return null;
-		String urn = dicoNomClasseToUrl.get(clazz.getCanonicalName());
+		return dicoNomClasseToUrl;
+	}
+	
+	public String getUrl(Class<?> clazz) throws RestException, IOException{
+		Map<String, String> dico = getDicoNomClasseToUrl();
+		String urn = dico.get(clazz.getCanonicalName());
 		if (urn==null)
 			return null;
 		return (gisementTravauxBaseUrl+urn);
