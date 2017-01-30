@@ -165,7 +165,7 @@ import org.xml.sax.ext.DefaultHandler2;
 		Reader br = restClient.getReader(url, credentialsGaia);
 		if(br == null) 
 			return null;
-		ret = entityManager.findObjectOrCreate(id, clazz, true);
+		ret = entityManager.findObjectOrCreate(id, clazz);
 		Long idReseau = getIdReseau(br);
 		try{
 			Field idReseauFields = RessourceAbstraite.class.getDeclaredField("idReseau");

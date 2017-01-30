@@ -419,6 +419,18 @@ public class GlobalObjectManager implements EntityManager {
 			}
 		}
 	}
+	
+	
+	protected synchronized <U> U findObjectOrCreate(final String id, final Class<U> clazz, final boolean fromExt) throws InstanciationException {
+		U obj = gestionCache.getObject(clazz, id); //on regarde en cache
+		if(obj == null){
+			obj = this.factory.newObjectWithOnlyId(clazz, id, gestionCache);
+		}
+		if (obj!=null && fromExt){
+			this.gestionCache.setNotNew(obj);
+		}
+		return obj;
+	}
 
 
 	/**
@@ -432,15 +444,9 @@ public class GlobalObjectManager implements EntityManager {
 	 * @see giraudsa.marshall.deserialisation.EntityManager#findObjectOrCreate(java.lang.String, java.lang.Class, boolean )
 	 */
 	@Override
-	public synchronized <U> U findObjectOrCreate(final String id, final Class<U> clazz, final boolean fromExt) throws InstanciationException {
-		U obj = gestionCache.getObject(clazz, id); //on regarde en cache
-		if(obj == null){
-			obj = this.factory.newObjectWithOnlyId(clazz, id, gestionCache);
-		}
-		if (obj!=null && fromExt){
-			this.gestionCache.setNotNew(obj);
-		}
-		return obj;
+	public synchronized <U> U findObjectOrCreate(final String id, final Class<U> clazz) throws InstanciationException {
+		return findObjectOrCreate(id, clazz, true);
+		
 	}
 
 
