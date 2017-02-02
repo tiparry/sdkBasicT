@@ -1,5 +1,33 @@
 package com.actemium.basicTvx_sdk;
 
+import java.io.IOException;
+import java.io.Reader;
+import java.lang.reflect.Field;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+
+import org.apache.http.HttpStatus;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xml.sax.Attributes;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.xml.sax.ext.DefaultHandler2;
+
+import com.actemium.basicTvx_sdk.exception.GetAllObjectException;
+import com.actemium.basicTvx_sdk.restclient.RestClient;
+import com.actemium.basicTvx_sdk.restclient.RestException;
+import com.actemium.basicTvx_sdk.restclient.Serialisation;
+import com.rff.basictravaux.model.webservice.reponse.Reponse;
+import com.rff.basictravaux.model.webservice.requete.Requete;
+
+import ariane.modele.ressource.RessourceAbstraite;
 import giraudsa.marshall.deserialisation.EntityManager;
 import giraudsa.marshall.deserialisation.text.json.JsonUnmarshaller;
 import giraudsa.marshall.exception.InstanciationException;
@@ -8,34 +36,10 @@ import giraudsa.marshall.exception.UnmarshallExeption;
 import giraudsa.marshall.serialisation.text.json.JsonMarshaller;
 import utils.ConfigurationMarshalling;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.lang.reflect.Field;
-import java.util.List;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
-
-import org.apache.http.HttpStatus;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import com.actemium.basicTvx_sdk.restclient.RestClient;
-import com.actemium.basicTvx_sdk.restclient.RestException;
-import com.actemium.basicTvx_sdk.restclient.Serialisation;
-import com.rff.basictravaux.model.webservice.reponse.Reponse;
-import com.rff.basictravaux.model.webservice.requete.Requete;
-
-import ariane.modele.ressource.RessourceAbstraite;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.xml.sax.Attributes;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
-import org.xml.sax.ext.DefaultHandler2;
-
  class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	private static final Logger LOGGER = LoggerFactory.getLogger(PersistanceManagerRest.class);
 	private RestClient restClient;
-	private AnnuaireWS annuaire;
+	private AnnuaireWS annuaireWS;
 
 	
 ////////////////Hack pour CORTE qui veut les idReseau dans les objets Ariane
@@ -47,11 +51,17 @@ import org.xml.sax.ext.DefaultHandler2;
 	
 	
 	
-	PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl, int connectTimeout, int socketTimeout) {
+	PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl, int connectTimeout, int socketTimeout, String... annuaires) {
 		super();
 		restClient = new RestClient(httpLogin, httpPwd, connectTimeout, socketTimeout);
-		AnnuaireWS.init(restClient, gisementBaseUrl);
-		annuaire = AnnuaireWS.getInstance();
+		annuaireWS = new AnnuaireWS(gisementBaseUrl);
+		for (String annuaire : annuaires) {
+			try {
+				annuaireWS.loadAnnuaire(restClient, annuaire);
+			} catch (RestException e) {
+				LOGGER.error("Erreur lors de la récupération de l'annuaire : " + annuaire, e);
+			}
+		}
 		ConfigurationMarshalling.setIdUniversel();
 	}
 	
@@ -60,7 +70,7 @@ import org.xml.sax.ext.DefaultHandler2;
 	@Override
 	 <U> void save(U obj) throws MarshallExeption, RestException, IOException {
 		String dataToSend = toJson(obj);
-		String url = annuaire.getUrl(obj.getClass());
+		String url = annuaireWS.getUrl(obj.getClass());
 		if (url == null) {
 			return;
 		}
@@ -69,7 +79,7 @@ import org.xml.sax.ext.DefaultHandler2;
 	
 	@Override
 	Reponse getReponse(Requete requete, EntityManager entityManager) throws MarshallExeption, RestException, IOException{
-		String url = annuaire.getUrl(requete.getClass());
+		String url = annuaireWS.getUrl(requete.getClass());
 		if (url == null) {
 			LOGGER.error("la requete " + requete.getClass() + " n'est pas dans l'annuaire");
 			throw new RestException(0, "la requete " + requete.getClass() + " n'est pas dans l'annuaire");
@@ -86,7 +96,7 @@ import org.xml.sax.ext.DefaultHandler2;
 
 	@Override
 	<U> U getObjectById(Class<U> clazz, String id, EntityManager entityManager) throws IOException, RestException, SAXException, InstanciationException{
-		String urn = annuaire.getUrl(clazz);
+		String urn = annuaireWS.getUrl(clazz);
 		if (urn == null) {
 			return chargeIdReseau(clazz, id, entityManager);
 		}
@@ -110,7 +120,7 @@ import org.xml.sax.ext.DefaultHandler2;
 
 	@Override
 	<U> boolean getAllObject(Class<U> clazz, EntityManager entityManager, List<U> listeARemplir) throws RestException, IOException{
-		String url = annuaire.getUrl(clazz);
+		String url = annuaireWS.getUrl(clazz);
 		if (url == null) {
 			return false;
 		}
@@ -126,6 +136,20 @@ import org.xml.sax.ext.DefaultHandler2;
 		}
 		return true;
 
+	}
+	
+	@Override
+	Set<Class<?>> getAllClasses() throws GetAllObjectException {
+		Set<Class<?>> classes = new HashSet<>();
+		for (String nomClasse : annuaireWS.getDicoNomClasseToUrl().keySet()){
+			try {
+				classes.add(Class.forName(nomClasse));
+			} catch (ClassNotFoundException e) {
+				LOGGER.error("Impossible de trouver la classe " + nomClasse + " dans le classloader", e);
+				throw new GetAllObjectException("Impossible de trouver la classe " + nomClasse + " dans le classloader", e);
+			}
+		}
+		return classes;
 	}
 
 	private <U> U fromJson(Reader br, EntityManager entityManager){
@@ -194,7 +218,6 @@ import org.xml.sax.ext.DefaultHandler2;
 		}
 	}
 	
-	
 	class RessourceAbstraiteArianeHandler extends DefaultHandler2 {
 		
 		private static final String ID_EXTERNE_TAG = "idReseau";
@@ -238,5 +261,4 @@ import org.xml.sax.ext.DefaultHandler2;
 		}
 
 	}
-
 }

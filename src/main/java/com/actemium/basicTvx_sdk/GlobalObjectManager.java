@@ -94,7 +94,7 @@ public class GlobalObjectManager implements EntityManager {
 	private GlobalObjectManager(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException, int connectTimeout, int socketTimeout, IdHelper<?> idHelper){
 		this.idHelper = idHelper;
 		this.factory = new ObjectFactory<>(idHelper);
-		this.persistanceManager = new PersistanceManagerRest(httpLogin,  httpPwd, gisementBaseUrl, connectTimeout, socketTimeout);
+		this.persistanceManager = new PersistanceManagerRest(httpLogin,  httpPwd, gisementBaseUrl, connectTimeout, socketTimeout, "annuaire", "annuaireTraitement");
 		this.gestionCache = new GestionCache();
 		this.isCachePurgeAutomatiquementSiException=isCachePurgeAutomatiquementSiException;
 	}
@@ -472,28 +472,11 @@ public class GlobalObjectManager implements EntityManager {
 	 * warning 1 cette méthode va purger le cache avant de se lancer; 
 	 * warning 2 : dangereux (temps d'exécution + mémoire ) si BDD large !
 	 * 
-	 * @throws ClassNotFoundException
 	 * @throws GetAllObjectException
 	 */
 	public void loadGisementInCache() throws GetAllObjectException{
 		this.purgeCache();
-		AnnuaireWS annuaire = AnnuaireWS.getInstance();
-		Map<String, String> dicoClasseToPut;
-		try {
-			dicoClasseToPut = annuaire.getDicoNomClasseToUrl();
-		} catch (RestException | IOException e1) {
-			LOGGER.error("probleme de connexion au gisement pour charger l'annuaire " , e1);
-			throw new GetAllObjectException("probleme de connexion au gisement pour charger l'annuaire ", e1);
-		}
-		Set<Class<?>> classes = new HashSet<>();
-		for (String nomClasse : dicoClasseToPut.keySet()){
-			try {
-				classes.add(Class.forName(nomClasse));
-			} catch (ClassNotFoundException e) {
-				LOGGER.error("Impossible de trouver la classe " + nomClasse + " dans le classloader", e);
-				throw new GetAllObjectException("Impossible de trouver la classe " + nomClasse + " dans le classloader", e);
-			}
-		}
+		Set<Class<?>> classes = persistanceManager.getAllClasses();
 		this.purgeCache(); //peut etre pas necessaire
 		for(Class<?> clazz : classes){
 			getAllObject(clazz);
