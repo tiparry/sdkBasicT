@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import giraudsa.marshall.deserialisation.Fabrique;
+import giraudsa.marshall.exception.ChampNotFound;
 import giraudsa.marshall.exception.FabriqueInstantiationException;
 import giraudsa.marshall.exception.InstanciationException;
 import giraudsa.marshall.exception.SetValueException;
@@ -29,16 +30,15 @@ import utils.champ.FieldInformations;
 	}
 	
 	private <U> void setDateCration(U ret, Date date) {
-		FieldInformations dateChamp = TypeExtension.getChampByName(ret.getClass(), "dateCreation");
-		if(dateChamp != null){
-			try {
-				dateChamp.set(ret, date, null);
-			} catch (SetValueException e) {
-				LOGGER.error("impossible d'affecter la date " + date.toString() + " dans dateCreation.", e);
-			}
+		if (date == null)
+			return;
+		try {
+			FieldInformations dateChamp = TypeExtension.getChampByName(ret.getClass(), "dateCreation");
+			dateChamp.set(ret, date, null);
+		} catch (SetValueException | ChampNotFound e) {
+			LOGGER.error("impossible d'affecter la date " + date.toString() + " dans dateCreation.", e);
 		}
 	}
-	
 	
 	
 	
