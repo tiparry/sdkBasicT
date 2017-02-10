@@ -33,8 +33,8 @@ import com.actemium.basicTvx_sdk.exception.GetObjetEnProfondeurException;
 import com.actemium.basicTvx_sdk.exception.SaveAllException;
 import com.actemium.basicTvx_sdk.exception.SaveException;
 import com.actemium.basicTvx_sdk.restclient.RestException;
-import com.rff.basictravaux.model.webservice.reponse.Reponse;
-import com.rff.basictravaux.model.webservice.requete.Requete;
+import com.rff.wstools.Reponse;
+import com.rff.wstools.Requete;
 
 import giraudsa.marshall.annotations.TypeRelation;
 import giraudsa.marshall.deserialisation.EntityManager;

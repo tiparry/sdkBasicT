@@ -11,8 +11,8 @@ import org.xml.sax.SAXException;
 
 import com.actemium.basicTvx_sdk.exception.GetAllObjectException;
 import com.actemium.basicTvx_sdk.restclient.RestException;
-import com.rff.basictravaux.model.webservice.reponse.Reponse;
-import com.rff.basictravaux.model.webservice.requete.Requete;
+import com.rff.wstools.Reponse;
+import com.rff.wstools.Requete;
 
 
  abstract class PersistanceManagerAbstrait {
