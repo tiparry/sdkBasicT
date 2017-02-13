@@ -47,7 +47,6 @@ import com.actemium.sdk.exception.SaveException;
 import com.actemium.sdk.restclient.RestException;
 import com.actemium.sdk.runtimeaspect.LoadAgent;
 import com.actemium.sdk.runtimeaspect.Transformer;
-import com.rff.basictravaux.administration.model.traitement.GestionTraitement;
 import com.rff.basictravaux.model.webservice.reponse.Reponse;
 import com.rff.basictravaux.model.webservice.requete.Requete;
 
@@ -193,35 +192,15 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 
-
 	/**
 	 * Sauvegarde ou update dans le gisement les objets nouveaux ou modifies.
 	 *
 	 * @throws SaveAllException 
 	 */
-	public synchronized void saveAll() throws SaveAllException {
-		saveAll(null);
-	}
-	/**
-	 * Sauvegarde de l'objet avec sa grappe d'objet
-	 * 
-	 * @param <U> le type generique
-	 * @param  objet l'objet de type U
-	 * @throws SaveException
-	 */
-	public synchronized <U> void save(U objet) throws SaveException{
-		save(objet, null);
-	}
-	
-	/**
-	 * Sauvegarde ou update dans le gisement les objets nouveaux ou modifies.
-	 *
-	 * @throws SaveAllException 
-	 */
-	public synchronized void saveAll(GestionTraitement gestionTraitement) throws SaveAllException {
+	public synchronized void saveAll(CallBack... callbacks) throws SaveAllException {
 		try{
 			Set<Object> objetsASauvegarder = gestionCache.objetsModifiesDepuisChargementOuNouveau();
-			save(objetsASauvegarder, gestionTraitement);
+			save(objetsASauvegarder, callbacks);
 		}catch(MarshallExeption | IllegalAccessException | IOException | RestException e){
 			LOGGER.error(IMPOSSIBLE_DE_SAUVEGARDER, e);
 			if (purgeCacheAutomatiquementSiException())
@@ -237,7 +216,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param  objet l'objet de type U
 	 * @throws SaveException
 	 */
-	public synchronized <U> void save(U objet, GestionTraitement gestionTraitement) throws SaveException{
+	public synchronized <U> void save(U objet, CallBack... callbacks) throws SaveException{
 		if (objet == null)
 			return;
 		if (!isNew(objet) && !hasChanged(objet)) 
@@ -245,7 +224,7 @@ public class GlobalObjectManager implements EntityManager {
 		try{
 			Set<Object> objetsASauvegarder = new HashSet<>();
 			objetsASauvegarder.add(objet);
-			save(objetsASauvegarder, gestionTraitement);
+			save(objetsASauvegarder, callbacks);
 		}catch(MarshallExeption | IllegalAccessException | IOException | RestException e){
 			LOGGER.error(IMPOSSIBLE_DE_SAUVEGARDER, e);
 			if (purgeCacheAutomatiquementSiException())
@@ -495,26 +474,16 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws IOException 
 	 * 
 	 */
-	@SuppressWarnings("unchecked")
 	private  void dumpCacheToJson(String pathFile) throws DumpException{
 		File dump = new File(pathFile);
 		try (FileOutputStream file = new FileOutputStream(dump);
 				Writer writer = new BufferedWriter(new OutputStreamWriter(file,"UTF-8"))){
-			Field objetsCacheField = this.gestionCache.getClass().getDeclaredField("dejaCharge");
-			objetsCacheField.setAccessible(true);
-			Map<Object, ?> objetsCache = (Map<Object, ?>)objetsCacheField.get(this.gestionCache);
-			for(Object objetToWrite : objetsCache.keySet())
+			for(Object objetToWrite : gestionCache)
 				JsonMarshaller.toJson(objetToWrite, writer);	
-		}
-		catch( NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e){
-			LOGGER.error("Erreur lors de la reflection: ", e);
-			throw new DumpException("Erreur lors de la reflection", e);
-		}
-		catch(IOException e){
+		}catch(IOException e){
 			LOGGER.error("Erreur lors de l'écriture: ", e);
-			throw new DumpException("Erreur lors de la reflection", e);
-		}
-		catch(MarshallExeption e){
+			throw new DumpException("Erreur lors de l'écriture", e);
+		}catch(MarshallExeption e){
 			LOGGER.error("Erreur lors de la sérialisation: ", e);
 			throw new DumpException("Erreur lors de la sérialisation", e);
 		}
@@ -610,10 +579,10 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws RestException 
 	 * @throws IOException 
 	 */
-	private void save(Set<Object> objetsASauvegarder, GestionTraitement gestionTraitement) throws IllegalAccessException, MarshallExeption, IOException, RestException{
+	private void save(Set<Object> objetsASauvegarder, CallBack... callbacks) throws IllegalAccessException, MarshallExeption, IOException, RestException{
 		Object obj = getObjetToSave(objetsASauvegarder);
 		while(obj != null){
-			this.save(obj, this.hasChanged(obj), objetsASauvegarder, gestionTraitement);
+			this.save(obj, this.hasChanged(obj), objetsASauvegarder, callbacks);
 			obj = this.getObjetToSave(objetsASauvegarder);
 		}
 	}
@@ -629,24 +598,24 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws RestException 
 	 * @throws IOException 
 	 */
-	private <U> void save(final U l, final boolean hasChanged, Set<Object> objetsASauvegarder, GestionTraitement gestionTraitement) throws IllegalAccessException, MarshallExeption, IOException, RestException {
+	private <U> void save(final U l, final boolean hasChanged, Set<Object> objetsASauvegarder, CallBack... callbacks) throws IllegalAccessException, MarshallExeption, IOException, RestException {
 		if(this.isNew(l) || hasChanged){
 			boolean wasNew = isNew(l);
 			String ancienHash = gestionCache.getHash(l);
 			boolean wasCharge= gestionCache.estCharge(l);
 			gestionCache.setEstEnregistreDansGisement(l);
 			objetsASauvegarder.remove(l);
-			this.saveReferences(l, TypeRelation.COMPOSITION, objetsASauvegarder, gestionTraitement);
+			this.saveReferences(l, TypeRelation.COMPOSITION, objetsASauvegarder, callbacks);
 			try {
 				this.persistanceManager.save(l);
-				if(gestionTraitement!=null){
-					gestionTraitement.objetEnSucces(l, wasNew);
+				for(CallBack cb : callbacks){
+					cb.objetEnSucces(l, wasNew);
 				}
 			} catch (MarshallExeption | IOException | RestException e) {
 				LOGGER.error("impossible d'enregistrer " + gestionCache.getId(l) + " de type " + l.getClass().getName());
 				gestionCache.setNEstPasEnregistreDansGisement(l, wasNew, ancienHash,wasCharge);
-				if(gestionTraitement!=null){
-					gestionTraitement.objetEnErreur(l, e);
+				for(CallBack cb : callbacks){
+					cb.objetEnErreur(l, e);
 				}
 				throw e;
 			}
@@ -666,23 +635,23 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws RestException
 	 */
 	@SuppressWarnings("unchecked")
-	private <U> void saveReferences(final U l, final TypeRelation relation, Set<Object> objetsASauvegarder, GestionTraitement gestionTraitement) throws IllegalAccessException, MarshallExeption, IOException, RestException {
+	private <U> void saveReferences(final U l, final TypeRelation relation, Set<Object> objetsASauvegarder, CallBack... callbacks) throws IllegalAccessException, MarshallExeption, IOException, RestException {
 		Class<U> type = (Class<U>) l.getClass();
 		if(type.getPackage() != null && type.getPackage().getName().startsWith("System"))
 			return;
 		else if(l instanceof Collection<?>){
 			for(final Object objet : (Collection<?>)l) {
-				this.saveReferences(objet, relation, objetsASauvegarder, gestionTraitement);
+				this.saveReferences(objet, relation, objetsASauvegarder, callbacks);
 			}
 		}else if(relation == TypeRelation.COMPOSITION){
 			final List<Champ> champs = TypeExtension.getSerializableFields(l.getClass());
 			for(final Champ champ : champs){
 				final Object toSave = champ.get(l);
 				if (!champ.isSimple() && toSave != null)
-					this.saveReferences(toSave, champ.getRelation(), objetsASauvegarder, gestionTraitement);
+					this.saveReferences(toSave, champ.getRelation(), objetsASauvegarder, callbacks);
 			}
 		}else{
-			this.save(l, this.hasChanged(l), objetsASauvegarder, gestionTraitement);
+			this.save(l, this.hasChanged(l), objetsASauvegarder, callbacks);
 		}
 	}
 

@@ -212,7 +212,14 @@ public class GestionCache implements Iterable<Object>{
 	
 
 	
-	
+	@Override
+	public Iterator<Object> iterator() {
+		return dejaCharge.keySet().iterator();
+	}
+
+
+
+
 	private class Stockage{
 		private Object obj;
 		private String id;
@@ -280,13 +287,5 @@ public class GestionCache implements Iterable<Object>{
 			}
 			return true;
 		}
-	}
-
-
-
-
-	@Override
-	public Iterator<Object> iterator() {
-		return dejaCharge.keySet().iterator();
 	}
 }
