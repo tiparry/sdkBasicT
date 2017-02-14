@@ -27,7 +27,7 @@
   </build>
   <groupId>com.actemium</groupId>
   <artifactId>basicTvx_sdk</artifactId>
-  <version>2.0.0.a</version>
+  <version>2.0.0.c</version>
   <packaging>jar</packaging>
 
   <name>basicTvx_sdk</name>
@@ -111,6 +111,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+	    <groupId>org.springframework</groupId>
+ 	   <artifactId>spring-core</artifactId>
+ 	   <version>4.3.6.RELEASE</version>
+	</dependency>
+    <dependency>
 		<groupId>org.apache.httpcomponents</groupId>
 		<artifactId>httpclient</artifactId>
 		<version>4.4.1</version>
@@ -143,12 +148,6 @@
 			<artifactId>slf4j-log4j12</artifactId>
 			<version>${slf4j.version}</version>
 			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-aop</artifactId>
-			<version>4.3.5.RELEASE</version>
 		</dependency>
 		
 		<dependency>

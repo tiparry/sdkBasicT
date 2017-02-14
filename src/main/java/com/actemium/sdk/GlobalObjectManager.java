@@ -45,6 +45,7 @@ import com.actemium.sdk.exception.GetObjetEnProfondeurException;
 import com.actemium.sdk.exception.SaveAllException;
 import com.actemium.sdk.exception.SaveException;
 import com.actemium.sdk.restclient.RestException;
+import com.actemium.sdk.runtimeaspect.AspectException;
 import com.actemium.sdk.runtimeaspect.LoadAgent;
 import com.actemium.sdk.runtimeaspect.Transformer;
 import com.rff.basictravaux.model.webservice.reponse.Reponse;
@@ -165,8 +166,8 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param socketTimeout timeout d'inactivite en ms de la socket de reponse HTTP (vaut -1 si pas de timeout)
 	 * @throws FabriqueInstantiationException 
 	 */
-	public static void init(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException, int connectTimeout, int socketTimeout, IdHelper<?> uuidFactory, Collection<Class<?>> aGererDansCache) throws FabriqueInstantiationException{
-		instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl, isCachePurgeAutomatiquementSiException, connectTimeout, socketTimeout, uuidFactory, aGererDansCache);
+	public static void init(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException, int connectTimeout, int socketTimeout, IdHelper<?> idHelper, Collection<Class<?>> aGererDansCache) throws FabriqueInstantiationException{
+		instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl, isCachePurgeAutomatiquementSiException, connectTimeout, socketTimeout, idHelper, aGererDansCache);
 	}
 
 	/**

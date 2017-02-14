@@ -19,14 +19,16 @@ public class Transformer {
 		if(classesDejaTransformees.contains(clazz))
 			return;
 		classesDejaTransformees.add(clazz);
-		PatchConstructor dt = new PatchConstructor(clazz);
-		instrumentation.addTransformer(dt, true);
+		PatchConstructor patch = new PatchConstructor(clazz);
+		instrumentation.addTransformer(patch, true);
 		try {
 			instrumentation.retransformClasses(clazz);
+			if(patch.exception != null)
+				throw patch.exception;
 		} catch (UnmodifiableClassException e) {
 			throw new AspectException("Failed to transform [" + clazz.getName() + "]", e);
 		} finally {
-			instrumentation.removeTransformer(dt);
+			instrumentation.removeTransformer(patch);
 		}       
 	}
 }
