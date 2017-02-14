@@ -25,8 +25,8 @@ import com.actemium.sdk.exception.GetAllObjectException;
 import com.actemium.sdk.restclient.RestClient;
 import com.actemium.sdk.restclient.RestException;
 import com.actemium.sdk.restclient.Serialisation;
-import com.rff.basictravaux.model.webservice.reponse.Reponse;
-import com.rff.basictravaux.model.webservice.requete.Requete;
+import com.rff.wstools.Reponse;
+import com.rff.wstools.Requete;
 
 import ariane.modele.ressource.RessourceAbstraite;
 import org.slf4j.Logger;

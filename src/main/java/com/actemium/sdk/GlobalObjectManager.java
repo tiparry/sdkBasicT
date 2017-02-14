@@ -19,12 +19,10 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -45,11 +43,10 @@ import com.actemium.sdk.exception.GetObjetEnProfondeurException;
 import com.actemium.sdk.exception.SaveAllException;
 import com.actemium.sdk.exception.SaveException;
 import com.actemium.sdk.restclient.RestException;
-import com.actemium.sdk.runtimeaspect.AspectException;
 import com.actemium.sdk.runtimeaspect.LoadAgent;
 import com.actemium.sdk.runtimeaspect.Transformer;
-import com.rff.basictravaux.model.webservice.reponse.Reponse;
-import com.rff.basictravaux.model.webservice.requete.Requete;
+import com.rff.wstools.Reponse;
+import com.rff.wstools.Requete;
 
 
 /**
