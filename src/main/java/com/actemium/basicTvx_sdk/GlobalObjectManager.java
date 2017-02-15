@@ -90,10 +90,10 @@ public class GlobalObjectManager implements EntityManager {
 	 * Instantiates a new global object manager.
 	 * @param remplirIdReseau 
 	 */
-	private GlobalObjectManager(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException, int connectTimeout, int socketTimeout, IdHelper<?> idHelper){
+	private GlobalObjectManager(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException, int connectTimeout, int socketTimeout, IdHelper<?> idHelper, List<String> annuaires){
 		this.idHelper = idHelper;
 		this.factory = new ObjectFactory<>(idHelper);
-		this.persistanceManager = new PersistanceManagerRest(httpLogin,  httpPwd, gisementBaseUrl, connectTimeout, socketTimeout, "annuaire", "annuaireTraitement");
+		this.persistanceManager = new PersistanceManagerRest(httpLogin,  httpPwd, gisementBaseUrl, connectTimeout, socketTimeout, annuaires);
 		this.gestionCache = new GestionCache();
 		this.isCachePurgeAutomatiquementSiException=isCachePurgeAutomatiquementSiException;
 	}
@@ -108,46 +108,18 @@ public class GlobalObjectManager implements EntityManager {
 		return instance;
 	}
 
-
 	/**
-	 * methode d'initialisation du GlobalObjectManager. La purge automatique du cache en cas d'exception est desactivee.
-	 * Les timeout HTTP par defaut sont de connecttimeout->10s et sockettimeout->60s 
+	 * methode d'initialisation du GlobalObjectManager. 
 	 * 
-	 * @param httpLogin le login http
-	 * @param httpPwd le mot de pase http
-	 * @param gisementBaseUrl l'adresse url du gisement BasicTravaux auquel on veut se connecter
+	 * @param gomConfiguration
 	 */
-	public static void init(String httpLogin, String httpPwd, String gisementBaseUrl){
-		init(httpLogin, httpPwd, gisementBaseUrl, false, 10000, 60000, new UUIDFactoryRandomImpl());
+	public static GlobalObjectManager init(GOMConfiguration gomConfiguration){
+		instance = new GlobalObjectManager(gomConfiguration.getHttpLogin(), gomConfiguration.getHttpPwd(), gomConfiguration.getGisementBaseUrl(),gomConfiguration.isCachePurgeAutomatiquement(),
+				gomConfiguration.getConnectTimeout(), gomConfiguration.getSocketTimeout(), gomConfiguration.getIdHelper(), gomConfiguration.getAnnuaires());
+		return instance;
 	}
-
-	/**
-	 * méthode d'initialisation du GlobalObjectmanager, permet de choisir ou non la purge automatique du cache en cas d'exception.
-	 * 
-	 * @param httpLogin le login BasicTravaux
-	 * @param httpPwd le mot de passe BasicTravaux
-	 * @param gisementBaseUrl l'adresse url du gisement BasicTravaux auquel on veut se connecter
-	 * @param isCachePurgeAutomatiquementSiException le boolean pour decider de la purge automatique du cache en cas d'exception
-	 * @param connectTimeout timeout en ms de l'etablissement de la connection HTTP (vaut -1 si pas de timeout)
-	 * @param socketTimeout timeout d'inactivite en ms de la socket de reponse HTTP (vaut -1 si pas de timeout)
-	 */
-	public static void init(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException, int connectTimeout, int socketTimeout){
-		init(httpLogin, httpPwd, gisementBaseUrl, isCachePurgeAutomatiquementSiException, connectTimeout, socketTimeout, new UUIDFactoryRandomImpl());
-	}
-
-	/**
-	 * méthode d'initialisation du GlobalObjectmanager, permet de choisir ou non la purge automatique du cache en cas d'exception.
-	 * 
-	 * @param httpLogin le login BasicTravaux
-	 * @param httpPwd le mot de passe BasicTravaux
-	 * @param gisementBaseUrl l'adresse url du gisement BasicTravaux auquel on veut se connecter
-	 * @param isCachePurgeAutomatiquementSiException le boolean pour decider de la purge automatique du cache en cas d'exception
-	 * @param connectTimeout timeout en ms de l'etablissement de la connection HTTP (vaut -1 si pas de timeout)
-	 * @param socketTimeout timeout d'inactivite en ms de la socket de reponse HTTP (vaut -1 si pas de timeout)
-	 */
-	public static void init(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException, int connectTimeout, int socketTimeout, IdHelper<?> uuidFactory){
-		instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl, isCachePurgeAutomatiquementSiException, connectTimeout, socketTimeout, uuidFactory);
-	}
+	
+	
 
 	/**
 	 * verifie si un objet a été modifié depuis son chargement du gisement

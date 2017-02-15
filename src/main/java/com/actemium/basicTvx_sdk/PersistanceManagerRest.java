@@ -51,7 +51,7 @@ import utils.ConfigurationMarshalling;
 	
 	
 	
-	PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl, int connectTimeout, int socketTimeout, String... annuaires) {
+	PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl, int connectTimeout, int socketTimeout, List<String> annuaires) {
 		super();
 		restClient = new RestClient(httpLogin, httpPwd, connectTimeout, socketTimeout);
 		annuaireWS = new AnnuaireWS(gisementBaseUrl);
