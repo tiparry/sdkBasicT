@@ -161,11 +161,11 @@ import org.xml.sax.ext.DefaultHandler2;
 	
 	private String gaiaUrl = null;
 	private UsernamePasswordCredentials credentialsGaia;
-	private static final String ressourceAbstraiteGaia = "/referentiel/infrastructure/gaia/v2/RA/{id}/xml";
+	private static final String RESSOURCE_ABSTRAITE_GAIA = "/referentiel/infrastructure/gaia/v2/RA/{id}/xml";
 	
 	public void setConfigAriane(String host, String username, String password){
 		 UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(username, password);
-		gaiaUrl = host + ressourceAbstraiteGaia;
+		gaiaUrl = host + RESSOURCE_ABSTRAITE_GAIA;
 		this.credentialsGaia = credentials;
 	}
 	
@@ -222,6 +222,10 @@ import org.xml.sax.ext.DefaultHandler2;
 
 		private String idExterne = null;
 		
+		public RessourceAbstraiteArianeHandler() {
+			super();
+		}
+
 		public Long getIdExterne(){
 			if(idExterne == null) 
 				return null;
@@ -231,7 +235,7 @@ import org.xml.sax.ext.DefaultHandler2;
 		@Override 
 		public void endElement(String uri, String localName, String qName) throws SAXException {
 			--niveau;
-		};
+		}
 		
 		
 		@Override
@@ -251,9 +255,6 @@ import org.xml.sax.ext.DefaultHandler2;
 	        	idExterne = value;
 	        	isIdExterne=false;
 	        }
-		}
-		
-		public RessourceAbstraiteArianeHandler() {
 		}
 
 	}

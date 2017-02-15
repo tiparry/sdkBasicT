@@ -1,7 +1,6 @@
 package com.actemium.sdk.runtimeaspect;
 
 import java.io.File;
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
@@ -37,29 +36,4 @@ public final class DynamicInstrumentationReflections {
         }
     }
 
-    /**
-     * http://stackoverflow.com/questions/11134159/how-to-load-attachprovider-attach-dll-dynamically
-     */
-    public static void addPathToJavaLibraryPath(final File dir) {
-        try {
-            final String javaLibraryPathKey = "java.library.path";
-            //CHECKSTYLE:OFF
-            final String existingJavaLibraryPath = System.getProperty(javaLibraryPathKey);
-            //CHECKSTYLE:ON
-            final String newJavaLibraryPath;
-            if (!org.springframework.util.StringUtils.isEmpty(existingJavaLibraryPath)) {
-                newJavaLibraryPath = existingJavaLibraryPath + File.pathSeparator + dir.getAbsolutePath();
-            } else {
-                newJavaLibraryPath = dir.getAbsolutePath();
-            }
-            //CHECKSTYLE:OFF
-            System.setProperty(javaLibraryPathKey, newJavaLibraryPath);
-            //CHECKSTYLE:ON
-            final Field fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");
-            fieldSysPath.setAccessible(true);
-            fieldSysPath.set(ClassLoader.class, null);
-        } catch (final NoSuchFieldException | IllegalArgumentException | IllegalAccessException e) {
-            org.springframework.util.ReflectionUtils.handleReflectionException(e);
-        }
-    }
 }
