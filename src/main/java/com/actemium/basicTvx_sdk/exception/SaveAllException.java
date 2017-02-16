@@ -8,9 +8,15 @@ public class SaveAllException extends Exception {
 
 	
 	private static final long serialVersionUID = 1709497872764266477L;
+	
+	private Exception e;
+	
 	public SaveAllException(String string, Exception e) {
 		super(string, e);
 	}
 	
+	public Exception getException() {
+		return e;
+	}
 	
 }

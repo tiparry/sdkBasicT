@@ -10,6 +10,8 @@ public class GetObjectException extends Exception {
 	private static final long serialVersionUID = 8766623874379130509L;
 	private final String idObjet;
 	private final Class<?> type;
+	private Exception e;
+	
 	public GetObjectException(String idObjet, Class<?> type, Throwable e) {
 		super("impossible de récupérer l'objet de type " + type.getCanonicalName() + " d'id " + idObjet + " ", e);
 		this.idObjet = idObjet;
@@ -22,6 +24,10 @@ public class GetObjectException extends Exception {
 	
 	public Class<?> getType() {
 		return type;
+	}
+	
+	public Exception getException() {
+		return e;
 	}
 
 }

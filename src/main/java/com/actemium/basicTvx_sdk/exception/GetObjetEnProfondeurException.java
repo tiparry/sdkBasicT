@@ -11,6 +11,7 @@ public class GetObjetEnProfondeurException extends Exception{
 	
 	private static final long serialVersionUID = -6480142152730314695L;
 	
+	private Exception e;
 	
 	public GetObjetEnProfondeurException(Object objetRacine, Exception cause) {
 		super(cause);
@@ -23,5 +24,8 @@ public class GetObjetEnProfondeurException extends Exception{
 		return objetRacine;
 	}
 	
+	public Exception getException() {
+		return e;
+	}
 	
 }

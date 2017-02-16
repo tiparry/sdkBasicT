@@ -9,12 +9,18 @@ public class GetAllObjectException extends Exception {
 	
 	private static final long serialVersionUID = 8766623874379130509L;
 
+	private Exception e;
+	
 	public GetAllObjectException(Exception e) {
 		super(e);
 	}
 	
 	public GetAllObjectException(String message, Exception e) {
 		super(message, e);
+	}
+	
+	public Exception getException() {
+		return e;
 	}
 	
 }

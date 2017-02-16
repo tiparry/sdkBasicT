@@ -8,8 +8,15 @@ public class SaveException extends Exception {
 	
 	
 	private static final long serialVersionUID = 5654150626291838529L;
+	
+	private Exception e;
+	
 	public SaveException(Exception e) {
 		super(e);
+	}
+
+	public Exception getException() {
+		return e;
 	}
 
 }
