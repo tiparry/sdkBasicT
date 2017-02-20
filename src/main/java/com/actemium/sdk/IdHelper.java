@@ -9,7 +9,7 @@ public abstract class IdHelper<U> {
 	@SuppressWarnings("unchecked")
 	public static <I> IdHelper<I> getIdHelper(){
 		if(instance == null){
-			instance = new UUIDFactoryRandomImpl();
+			instance = new DefaultUUIDHelper();
 		}
 		return (IdHelper<I>) instance;
 	}

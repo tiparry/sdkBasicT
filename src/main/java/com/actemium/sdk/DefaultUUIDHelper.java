@@ -9,9 +9,9 @@ import giraudsa.marshall.exception.SetValueException;
 import utils.TypeExtension;
 import utils.champ.Champ;
 
-public class UUIDFactoryRandomImpl extends IdHelper<UUID> {
+public class DefaultUUIDHelper extends IdHelper<UUID> {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(UUIDFactoryRandomImpl.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(DefaultUUIDHelper.class);
 	
 	@Override
 	public UUID getId(Object obj) {
