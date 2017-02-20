@@ -68,7 +68,7 @@ import utils.ConfigurationMarshalling;
 
 
 	@Override
-	 <U> void save(U obj) throws MarshallExeption, RestException, IOException {
+	 <U> void save(U obj) throws MarshallExeption, RestException{
 		String dataToSend = toJson(obj);
 		String url = annuaireWS.getUrl(obj.getClass());
 		if (url == null) {
