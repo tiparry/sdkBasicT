@@ -97,10 +97,10 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param remplirIdReseau 
 	 * @throws FabriqueInstantiationException 
 	 */
-	private GlobalObjectManager(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException, int connectTimeout, int socketTimeout, IdHelper<?> idHelper, Collection<Class<?>> aGererDansCache) throws FabriqueInstantiationException{
+	private GlobalObjectManager(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException, int connectTimeout, int socketTimeout, IdHelper<?> idHelper, List<String> annuaires, Collection<Class<?>> aGererDansCache) throws FabriqueInstantiationException{
 		this.idHelper = idHelper;
 		this.factory = new ObjectFactory<>(idHelper);
-		this.persistanceManager = new PersistanceManagerRest(httpLogin,  httpPwd, gisementBaseUrl, connectTimeout, socketTimeout, "annuaire", "annuaireTraitement");
+		this.persistanceManager = new PersistanceManagerRest(httpLogin,  httpPwd, gisementBaseUrl, connectTimeout, socketTimeout, annuaires);
 		this.gestionCache = new GestionCache();
 		this.isCachePurgeAutomatiquementSiException=isCachePurgeAutomatiquementSiException;
 		try{
@@ -109,8 +109,27 @@ public class GlobalObjectManager implements EntityManager {
 				transformer.transform(clazz);
 			}
 		}catch(Exception e){
+			LOGGER.error("Impossible de modifier les constructeurs des classes demandées", e);
 			throw new FabriqueInstantiationException("Impossible de modifier les constructeurs des classes demandées", e);
 		}
+	}
+
+
+	/**
+	 * methode d'initialisation du GlobalObjectManager. 
+	 * 
+	 * @param gomConfiguration
+	 * @throws FabriqueInstantiationException 
+	 */
+	static GlobalObjectManager init(String httpLogin, String httpPwd, String gisementBaseUrl,
+			boolean isCachePurgeAutomatiquement, int connectTimeout, int socketTimeout, IdHelper<?> idHelper,
+			List<String> annuaires, Collection<Class<?>> aGererDansCache) throws FabriqueInstantiationException {
+		if(instance != null){
+			LOGGER.error("le GOM a déjà été initialisé !");
+			throw new FabriqueInstantiationException("le GOM a déjà été initialisé !");
+		}
+		instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl, isCachePurgeAutomatiquement, connectTimeout, socketTimeout, idHelper, annuaires, aGererDansCache);
+		return instance;
 	}
 
 
@@ -123,49 +142,6 @@ public class GlobalObjectManager implements EntityManager {
 		return instance;
 	}
 
-
-	/**
-	 * methode d'initialisation du GlobalObjectManager. La purge automatique du cache en cas d'exception est desactivee.
-	 * Les timeout HTTP par defaut sont de connecttimeout->10s et sockettimeout->60s 
-	 * 
-	 * @param httpLogin le login http
-	 * @param httpPwd le mot de pase http
-	 * @param gisementBaseUrl l'adresse url du gisement BasicTravaux auquel on veut se connecter
-	 * @throws FabriqueInstantiationException 
-	 */
-	public static void init(String httpLogin, String httpPwd, String gisementBaseUrl, Collection<Class<?>> aGererDansCache) throws FabriqueInstantiationException{
-		init(httpLogin, httpPwd, gisementBaseUrl, false, 10000, 60000, new UUIDFactoryRandomImpl(), aGererDansCache);
-	}
-
-	/**
-	 * méthode d'initialisation du GlobalObjectmanager, permet de choisir ou non la purge automatique du cache en cas d'exception.
-	 * 
-	 * @param httpLogin le login BasicTravaux
-	 * @param httpPwd le mot de passe BasicTravaux
-	 * @param gisementBaseUrl l'adresse url du gisement BasicTravaux auquel on veut se connecter
-	 * @param isCachePurgeAutomatiquementSiException le boolean pour decider de la purge automatique du cache en cas d'exception
-	 * @param connectTimeout timeout en ms de l'etablissement de la connection HTTP (vaut -1 si pas de timeout)
-	 * @param socketTimeout timeout d'inactivite en ms de la socket de reponse HTTP (vaut -1 si pas de timeout)
-	 * @throws FabriqueInstantiationException 
-	 */
-	public static void init(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException, int connectTimeout, int socketTimeout, Collection<Class<?>> aGererDansCache) throws FabriqueInstantiationException{
-		init(httpLogin, httpPwd, gisementBaseUrl, isCachePurgeAutomatiquementSiException, connectTimeout, socketTimeout, new UUIDFactoryRandomImpl(), aGererDansCache);
-	}
-
-	/**
-	 * méthode d'initialisation du GlobalObjectmanager, permet de choisir ou non la purge automatique du cache en cas d'exception.
-	 * 
-	 * @param httpLogin le login BasicTravaux
-	 * @param httpPwd le mot de passe BasicTravaux
-	 * @param gisementBaseUrl l'adresse url du gisement BasicTravaux auquel on veut se connecter
-	 * @param isCachePurgeAutomatiquementSiException le boolean pour decider de la purge automatique du cache en cas d'exception
-	 * @param connectTimeout timeout en ms de l'etablissement de la connection HTTP (vaut -1 si pas de timeout)
-	 * @param socketTimeout timeout d'inactivite en ms de la socket de reponse HTTP (vaut -1 si pas de timeout)
-	 * @throws FabriqueInstantiationException 
-	 */
-	public static void init(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException, int connectTimeout, int socketTimeout, IdHelper<?> idHelper, Collection<Class<?>> aGererDansCache) throws FabriqueInstantiationException{
-		instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl, isCachePurgeAutomatiquementSiException, connectTimeout, socketTimeout, idHelper, aGererDansCache);
-	}
 
 	/**
 	 * verifie si un objet a été modifié depuis son chargement du gisement
@@ -511,8 +487,8 @@ public class GlobalObjectManager implements EntityManager {
 		} 
 	}
 
-	protected Future<Object> createFuture(ExecutorService executor, Object o){
-		return gestionCache.getOrCreateFuture(this, executor, o);
+	protected Future<Object> createFuture(ManagerChargementSDK managerChargement, Object o){
+		return gestionCache.getOrCreateFuture(this, managerChargement, o);
 	}
 
 
@@ -609,7 +585,7 @@ public class GlobalObjectManager implements EntityManager {
 				for(CallBack cb : callbacks){
 					cb.objetEnSucces(l, wasNew);
 				}
-			} catch (MarshallExeption | IOException | RestException e) {
+			} catch (MarshallExeption | RestException e) {
 				LOGGER.error("impossible d'enregistrer " + gestionCache.getId(l) + " de type " + l.getClass().getName());
 				gestionCache.setNEstPasEnregistreDansGisement(l, wasNew, ancienHash,wasCharge);
 				for(CallBack cb : callbacks){
@@ -652,5 +628,4 @@ public class GlobalObjectManager implements EntityManager {
 			this.save(l, this.hasChanged(l), objetsASauvegarder, callbacks);
 		}
 	}
-
 }

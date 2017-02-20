@@ -10,8 +10,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.commons.io.FilenameUtils;
-
 public final class DynamicInstrumentationReflections {
 
     private static Set<String> pathsAddedToSystemClassLoader = Collections.synchronizedSet(new HashSet<String>());
@@ -24,9 +22,8 @@ public final class DynamicInstrumentationReflections {
     public static void addPathToSystemClassLoader(final String dirOrJar) {
         try {
             final String normalizedPath = FilenameUtils.normalize(dirOrJar);
-            org.assertj.core.api.Assertions.assertThat(pathsAddedToSystemClassLoader.add(normalizedPath))
-            .as("Path [%s] has already been added before!", normalizedPath)
-            .isTrue();
+            if(!pathsAddedToSystemClassLoader.add(normalizedPath))
+            	return;//déjà ajouté avant
             final Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
             method.setAccessible(true);
             final URL url = new File(normalizedPath).toURI().toURL();

@@ -1,5 +1,6 @@
 package com.actemium.sdk;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -38,5 +39,10 @@ public abstract class ManagerChargementSDK {
 	}
 	protected ExecutorService getExecutor(){
 		return executor;
+	}
+	
+	
+	protected Future<Object> submitFuture(Callable<Object> task){
+		return executor.submit(task);
 	}
 }

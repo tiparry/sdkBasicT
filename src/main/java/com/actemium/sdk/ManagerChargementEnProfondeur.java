@@ -7,6 +7,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
@@ -22,9 +23,9 @@ import utils.champ.Champ;
 
 public class ManagerChargementEnProfondeur extends ManagerChargementSDK {
 
-	static final int WEB_SERVICE_REQUEST_TIME = 50000;
-	static final int LOAD_OBJECT_TIME = 5000;
-	static final int RATIO_WORK = WEB_SERVICE_REQUEST_TIME/LOAD_OBJECT_TIME;
+	private static final int WEB_SERVICE_REQUEST_TIME = 50000;
+	private static final int LOAD_OBJECT_TIME = 5000;
+	private static final int RATIO_WORK = WEB_SERVICE_REQUEST_TIME/LOAD_OBJECT_TIME;
 
 
 	private final Map<Object,Integer> dejaVu = new IdentityHashMap<>();
@@ -40,6 +41,12 @@ public class ManagerChargementEnProfondeur extends ManagerChargementSDK {
 	private static int determinePoolSize(){
 		int numberCores = Runtime.getRuntime().availableProcessors();
 		return Math.max(1, numberCores/2*(1+RATIO_WORK));
+	}
+	
+
+	@Override
+	protected Future<Object> submitFuture(Callable<Object> task){
+		return completion.submit(task);
 	}
 
 	@Override
@@ -95,7 +102,7 @@ public class ManagerChargementEnProfondeur extends ManagerChargementSDK {
 	@Override
 	protected Future<Object> submit(Object o) {
 		compteurdeTaches.beforeSubmitTask();
-		Future<Object> future = getGom().createFuture(getExecutor(), o);
+		Future<Object> future = getGom().createFuture(this, o);
 		mapFutureToObject.put(future, o);
 		return future;
 	}

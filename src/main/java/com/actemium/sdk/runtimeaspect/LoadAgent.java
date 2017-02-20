@@ -8,6 +8,10 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.sun.tools.attach.AgentInitializationException;
 import com.sun.tools.attach.AgentLoadException;
 import com.sun.tools.attach.AttachNotSupportedException;
@@ -21,6 +25,8 @@ import sun.tools.attach.SolarisVirtualMachine;
 import sun.tools.attach.WindowsVirtualMachine;
 
 public class LoadAgent {
+	
+	private static final Logger LOGGER = LoggerFactory.getLogger(LoadAgent.class);
 
 	private static final AtomicBoolean DEJA_FAIT = new AtomicBoolean(false);
 	private static final AttachProvider ATTACH_PROVIDER = new AttachProvider() {
@@ -43,23 +49,29 @@ public class LoadAgent {
 		if(DEJA_FAIT.get()){
 			if (AgentSdk.isInstrumentationAvailable())
 				return AgentSdk.getInstrumentation();
-			else
+			else{
+				LOGGER.trace("Deja initialisé, mais n'a pas pu aboutir une premiere fois...");
 				throw new AspectException("Deja initialisé, mais n'a pas pu aboutir une premiere fois...");
+			}
 		}			
 		DEJA_FAIT.set(true);
 		final String agentPath = CreateJar.getAgent();
 		DynamicInstrumentationReflections.addPathToSystemClassLoader(agentPath);
 		VirtualMachine vm;
 
+		LOGGER.debug("recupération de la Machine Virtuelle");
 		if (AttachProvider.providers().isEmpty()) {
 			if (HOTSPOT_VM) {
+				LOGGER.debug("la machine virtuelle est une embarquée");
 				vm = getVirtualMachineImplementationFromEmbeddedOnes();
 			}
 			else {
+				LOGGER.trace("impossible d'obtenir une instance de machine virtuelle");
 				throw new AspectException("impossible d'obtenir une instance de machine virtuelle");
 			}
 		}
 		else {
+			LOGGER.debug("récupération de la machine virtuelle qui tourne");
 			vm = attachToRunningVM();
 		}
 
@@ -90,9 +102,11 @@ public class LoadAgent {
 			return vmConstructor.newInstance(ATTACH_PROVIDER, pid);
 		}
 		catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e){
-			throw new AspectException("exception d'introspection...", e); 
+			LOGGER.error("exception d'introspection...", e);
+			throw new AspectException("exception d'introspection...", e);
 		}
 		catch (NoClassDefFoundError | UnsatisfiedLinkError e) {
+			LOGGER.error("Native library for Attach API not available in this JRE", e);
 			throw new AspectException("Native library for Attach API not available in this JRE", e);
 		}
 	}
@@ -118,7 +132,8 @@ public class LoadAgent {
 			return SolarisVirtualMachine.class;
 		}
 
-		throw new IllegalStateException("Cannot use Attach API on unknown OS: " + osName);
+		LOGGER.trace("Cannot use Attach API on unknown OS: " + osName);
+		throw new AspectException("Cannot use Attach API on unknown OS: " + osName);
 	}	   
 
 
@@ -130,6 +145,7 @@ public class LoadAgent {
 			return VirtualMachine.attach(pid);
 		}
 		catch (AttachNotSupportedException | IOException e) {
+			LOGGER.error("impossible de s'attacher à la VM", e);
 			throw new AspectException("impossible de s'attacher à la VM", e);
 		}
 	}
@@ -137,10 +153,14 @@ public class LoadAgent {
 	private static void loadAgentAndDetachFromRunningVM(VirtualMachine vm, String jarFilePath)
 	{
 		try {
+			LOGGER.debug("load agent");
 			vm.loadAgent(jarFilePath);
+			LOGGER.debug("agent loaded... detach VM !");
 			vm.detach();
+			LOGGER.debug("VM detached !");
 		}
 		catch (AgentLoadException | AgentInitializationException | IOException e) {
+			LOGGER.error("Impossible de charger l'agent dans la VM ou de la détacher", e);
 			throw new AspectException("Impossible de charger l'agent dans la VM ou de la détacher", e);
 		}
 	}

@@ -41,7 +41,7 @@ import org.xml.sax.ext.DefaultHandler2;
 	private RestClient restClient;
 	private AnnuaireWS annuaireWS;
 
-	PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl, int connectTimeout, int socketTimeout, String... annuaires) {
+	PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl, int connectTimeout, int socketTimeout, List<String> annuaires) {
 		super();
 		restClient = new RestClient(httpLogin, httpPwd, connectTimeout, socketTimeout);
 		annuaireWS = new AnnuaireWS(gisementBaseUrl);
@@ -58,7 +58,7 @@ import org.xml.sax.ext.DefaultHandler2;
 
 
 	@Override
-	 <U> void save(U obj) throws MarshallExeption, RestException, IOException {
+	 <U> void save(U obj) throws MarshallExeption, RestException {
 		String dataToSend = toJson(obj);
 		String url = annuaireWS.getUrl(obj.getClass());
 		if (url == null) {

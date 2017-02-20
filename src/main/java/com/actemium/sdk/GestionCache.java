@@ -54,11 +54,11 @@ public class GestionCache implements Iterable<Object>{
 		s.setEstCharge();
 	}
 	
-	synchronized Future<Object> getOrCreateFuture(GlobalObjectManager gom, ExecutorService executor, Object obj) {
+	synchronized Future<Object> getOrCreateFuture(GlobalObjectManager gom, ManagerChargementSDK managerChargement, Object obj) {
 		Stockage s = dejaCharge.get(obj);
 		if(s == null)
 			return null;
-		return s.getOrCreateFuture(gom, executor);
+		return s.getOrCreateFuture(gom, managerChargement);
 	}
 	
 	synchronized Future<Object> getChargement(Object obj){
@@ -234,12 +234,12 @@ public class GestionCache implements Iterable<Object>{
 			this.obj = obj;
 			this.id = id;
 		}
-		private Future<Object> getOrCreateFuture(GlobalObjectManager gom, ExecutorService executor) {
+		private Future<Object> getOrCreateFuture(GlobalObjectManager gom, ManagerChargementSDK managerChargement) {
 			if(future != null)
-				return executor.submit(new TacheAttenteWebService(future));
+				return managerChargement.submitFuture(new TacheAttenteWebService(future));
 			if (estCharge())
-				return executor.submit(new TacheRetourneObjet(obj));
-			future = executor.submit(new TacheChargementWebService(obj, gom));
+				return managerChargement.submitFuture(new TacheRetourneObjet(obj));
+			future = managerChargement.submitFuture(new TacheChargementWebService(obj, gom));
 			return future;
 		}
 		private boolean estCharge(){

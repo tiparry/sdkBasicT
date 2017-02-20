@@ -17,7 +17,7 @@ import com.rff.wstools.Requete;
 
  abstract class PersistanceManagerAbstrait {
 
-	abstract <U> void save(U l) throws MarshallExeption, IOException, RestException;
+	abstract <U> void save(U l) throws MarshallExeption, RestException;
 
 	abstract <U> U getObjectById(Class<U> clazz, String id, EntityManager entityManager) throws IOException, RestException, SAXException, InstanciationException;
 
