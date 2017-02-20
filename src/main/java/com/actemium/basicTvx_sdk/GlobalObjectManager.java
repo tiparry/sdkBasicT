@@ -500,8 +500,8 @@ public class GlobalObjectManager implements EntityManager {
 		} 
 	}
 
-	protected Future<Object> createFuture(ExecutorService executor, Object o){
-		return gestionCache.getOrCreateFuture(this, executor, o);
+	protected Future<Object> createFuture(ManagerChargementSDK managerChargement, Object o){
+		return gestionCache.getOrCreateFuture(this, managerChargement, o);
 	}
 
 

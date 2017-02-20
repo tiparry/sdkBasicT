@@ -17,7 +17,7 @@ public class ManagerChargementUnique extends ManagerChargementSDK {
 	
 	@Override
 	protected Future<Object> submit(Object o){
-		return getGom().createFuture(getExecutor(), o);
+		return getGom().createFuture(this, o);
 	}
 
 	@Override

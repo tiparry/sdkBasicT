@@ -7,6 +7,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
@@ -42,6 +43,11 @@ public class ManagerChargementEnProfondeur extends ManagerChargementSDK {
 		return Math.max(1, numberCores/2*(1+RATIO_WORK));
 	}
 
+	@Override
+	protected Future<Object> submitFuture(Callable<Object> task){
+		return completion.submit(task);
+	}
+	
 	@Override
 	protected void execute() throws GetObjetEnProfondeurException{
 		prendEnChargePourChargementEnProfondeur(getObjetRacine(), false);
@@ -95,7 +101,7 @@ public class ManagerChargementEnProfondeur extends ManagerChargementSDK {
 	@Override
 	protected Future<Object> submit(Object o) {
 		compteurdeTaches.beforeSubmitTask();
-		Future<Object> future = getGom().createFuture(getExecutor(), o);
+		Future<Object> future = getGom().createFuture(this, o);
 		mapFutureToObject.put(future, o);
 		return future;
 	}
