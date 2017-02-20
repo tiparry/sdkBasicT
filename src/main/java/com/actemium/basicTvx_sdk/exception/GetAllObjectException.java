@@ -4,13 +4,11 @@ package com.actemium.basicTvx_sdk.exception;
  * Lorsque cette exception est générée, le cache est potentiellement dans un état incohérent pouvant mener à des erreurs par la suite. 
  * Si la purge automatique du cache n'a pas été activée lors de l'init, la gestion des incohérences du Cache incombe à l'utilisateur.
  *  */
-public class GetAllObjectException extends Exception {
+public class GetAllObjectException extends GomException {
 
 	
 	private static final long serialVersionUID = 8766623874379130509L;
 
-	private Exception e;
-	
 	public GetAllObjectException(Exception e) {
 		super(e);
 	}
@@ -19,8 +17,5 @@ public class GetAllObjectException extends Exception {
 		super(message, e);
 	}
 	
-	public Exception getException() {
-		return e;
-	}
 	
 }

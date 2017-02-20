@@ -18,7 +18,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -26,12 +25,10 @@ import org.apache.http.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.actemium.basicTvx_sdk.exception.DumpException;
 import com.actemium.basicTvx_sdk.exception.GetAllObjectException;
 import com.actemium.basicTvx_sdk.exception.GetObjectException;
 import com.actemium.basicTvx_sdk.exception.GetObjetEnProfondeurException;
-import com.actemium.basicTvx_sdk.exception.SaveAllException;
-import com.actemium.basicTvx_sdk.exception.SaveException;
+import com.actemium.basicTvx_sdk.exception.GomException;
 import com.actemium.basicTvx_sdk.restclient.RestException;
 import com.rff.wstools.Reponse;
 import com.rff.wstools.Requete;
@@ -90,7 +87,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * Instantiates a new global object manager.
 	 * @param remplirIdReseau 
 	 */
-	private GlobalObjectManager(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException, int connectTimeout, int socketTimeout, IdHelper<?> idHelper, List<String> annuaires){
+	private GlobalObjectManager(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException, int connectTimeout, int socketTimeout, IdHelper<?> idHelper, List<String> annuaires)throws RestException{
 		this.idHelper = idHelper;
 		this.factory = new ObjectFactory<>(idHelper);
 		this.persistanceManager = new PersistanceManagerRest(httpLogin,  httpPwd, gisementBaseUrl, connectTimeout, socketTimeout, annuaires);
@@ -113,7 +110,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * 
 	 * @param gomConfiguration
 	 */
-	public static GlobalObjectManager init(GOMConfiguration gomConfiguration){
+	public static GlobalObjectManager init(GOMConfiguration gomConfiguration)throws RestException{
 		instance = new GlobalObjectManager(gomConfiguration.getHttpLogin(), gomConfiguration.getHttpPwd(), gomConfiguration.getGisementBaseUrl(),gomConfiguration.isCachePurgeAutomatiquement(),
 				gomConfiguration.getConnectTimeout(), gomConfiguration.getSocketTimeout(), gomConfiguration.getIdHelper(), gomConfiguration.getAnnuaires());
 		return instance;
@@ -149,15 +146,21 @@ public class GlobalObjectManager implements EntityManager {
 	 *
 	 * @throws SaveAllException 
 	 */
-	public synchronized void saveAll(CallBack... callBacks) throws SaveAllException {
+	public synchronized void saveAll(CallBack... callBacks) throws GomException {
 		try{
 			Set<Object> objetsASauvegarder = gestionCache.objetsModifiesDepuisChargementOuNouveau();
 			save(objetsASauvegarder, callBacks);
-		}catch(MarshallExeption | IllegalAccessException | IOException | RestException e){
+		}catch(MarshallExeption | IllegalAccessException | IOException e){
 			LOGGER.error(IMPOSSIBLE_DE_SAUVEGARDER, e);
 			if (purgeCacheAutomatiquementSiException())
 				LOGGER.error("erreur dans saveAll(), Cache reinitialisé");
-			throw new SaveAllException(IMPOSSIBLE_DE_SAUVEGARDER, e);
+			throw new GomException(IMPOSSIBLE_DE_SAUVEGARDER, e);
+		}
+		catch(RestException e){
+			LOGGER.error(IMPOSSIBLE_DE_SAUVEGARDER, e);
+			if (purgeCacheAutomatiquementSiException())
+				LOGGER.error("erreur dans saveAll(), Cache reinitialisé");
+			throw e;
 		}
 	}
 	/**
@@ -167,7 +170,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param  objet l'objet de type U
 	 * @throws SaveException
 	 */
-	public synchronized <U> void save(U objet, CallBack... callBacks) throws SaveException{
+	public synchronized <U> void save(U objet, CallBack... callBacks) throws GomException{
 		if (objet == null)
 			return;
 		if (!isNew(objet) && !hasChanged(objet)) 
@@ -176,11 +179,17 @@ public class GlobalObjectManager implements EntityManager {
 			Set<Object> objetsASauvegarder = new HashSet<>();
 			objetsASauvegarder.add(objet);
 			save(objetsASauvegarder, callBacks);
-		}catch(MarshallExeption | IllegalAccessException | IOException | RestException e){
+		}catch(MarshallExeption | IllegalAccessException | IOException e){
 			LOGGER.error(IMPOSSIBLE_DE_SAUVEGARDER, e);
 			if (purgeCacheAutomatiquementSiException())
 				LOGGER.error("erreur dans save(), Cache reinitialisé");
-			throw new SaveException(e);
+			throw new GomException(e);
+		}
+		catch( RestException e){
+			LOGGER.error(IMPOSSIBLE_DE_SAUVEGARDER, e);
+			if (purgeCacheAutomatiquementSiException())
+				LOGGER.error("erreur dans save(), Cache reinitialisé");
+			throw e;
 		}
 	}
 	
@@ -387,13 +396,13 @@ public class GlobalObjectManager implements EntityManager {
 	 * warning 2 : dangereux (temps d'exécution + mémoire + espace de stockage) si BDD large !
 	 * @throws DumpException 
 	 */
-	public  void dumpGisementToJson(String pathFile) throws DumpException{
+	public  void dumpGisementToJson(String pathFile) throws GomException{
 		try {
 			loadGisementInCache();
 			dumpCacheToJson(pathFile);
 		} catch (SecurityException | IllegalArgumentException | GetAllObjectException e) {
 			LOGGER.error("Dump du gisement impossible à réaliser", e);
-			throw new DumpException("Dump du gisement impossible à réaliser", e);
+			throw new GomException("Dump du gisement impossible à réaliser", e);
 		}
 	}
 
@@ -419,7 +428,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * 
 	 */
 	@SuppressWarnings("unchecked")
-	public  void dumpCacheToJson(String pathFile) throws DumpException{
+	public  void dumpCacheToJson(String pathFile) throws GomException{
 		File dump = new File(pathFile);
 		try (FileOutputStream file = new FileOutputStream(dump);
 				Writer writer = new BufferedWriter(new OutputStreamWriter(file,"UTF-8"))){
@@ -431,15 +440,15 @@ public class GlobalObjectManager implements EntityManager {
 		}
 		catch( NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e){
 			LOGGER.error("Erreur lors de la reflection: ", e);
-			throw new DumpException("Erreur lors de la reflection", e);
+			throw new GomException("Erreur lors de la reflection", e);
 		}
 		catch(IOException e){
 			LOGGER.error("Erreur lors de l'écriture: ", e);
-			throw new DumpException("Erreur lors de la reflection", e);
+			throw new GomException("Erreur lors de l'écriture", e);
 		}
 		catch(MarshallExeption e){
 			LOGGER.error("Erreur lors de la sérialisation: ", e);
-			throw new DumpException("Erreur lors de la sérialisation", e);
+			throw new GomException("Erreur lors de la sérialisation", e);
 		}
 	}
 
@@ -457,13 +466,13 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws SecurityException 
 	 * @throws NoSuchFieldException 
 	 */
-	public void saveToGisementFromJsonFile(String pathFile) throws DumpException{
+	public void saveToGisementFromJsonFile(String pathFile) throws GomException{
 		try {
 			loadJsonFile(pathFile);
 			this.saveAll();
-		} catch (SaveAllException e) {
+		} catch (GomException e) {
 			LOGGER.error("impossible de sauvegarder le gisement sur un fichier json " + pathFile, e);
-			throw new DumpException("impossible de sauvegarder le gisement sur un fichier json " + pathFile, e);
+			throw e;
 		} 
 	}
 
@@ -474,7 +483,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws DumpException 
 	 */
 	@SuppressWarnings("unchecked")
-	public void loadJsonFile(String pathFile) throws DumpException{
+	public void loadJsonFile(String pathFile) throws GomException{
 		File dump = new File(pathFile);
 		try(FileInputStream file = new FileInputStream(dump);
 				Reader reader = new BufferedReader(new InputStreamReader(file,"UTF-8"))){
@@ -489,14 +498,14 @@ public class GlobalObjectManager implements EntityManager {
 		}
 		catch( NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e){
 			LOGGER.error("Erreur lors de la reflection: ", e);
-			throw new DumpException("erreur de la reflection", e);
+			throw new GomException("erreur de la reflection", e);
 		}
 		catch(IOException e){
 			LOGGER.error("erreur de lecture du fichier: ", e);
-			throw new DumpException("erreur de lecture du fichier", e);
+			throw new GomException("erreur de lecture du fichier", e);
 		} catch (UnmarshallExeption e) {
 			LOGGER.error("Erreur lors de la désérialisation ", e);
-			throw new DumpException("erreur de la désérialisation", e);
+			throw new GomException("erreur de la désérialisation", e);
 		} 
 	}
 
