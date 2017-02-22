@@ -319,7 +319,7 @@ public class GlobalObjectManager implements EntityManager {
 		} catch (MarshallExeption | IOException | RestException e) {
 			if (purgeCacheAutomatiquementSiException())
 				LOGGER.error("erreur dans getReponse(), Cache reinitialisé");
-			throw new GetObjectException("objet sans id", request.getClass(), e);
+			throw new GetObjectException("Impossible de récupérer la réponse", request.getClass(), e);
 		}
 		catch(GetObjetEnProfondeurException e){
 			if (purgeCacheAutomatiquementSiException())
