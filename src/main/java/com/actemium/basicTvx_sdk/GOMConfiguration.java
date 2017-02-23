@@ -14,7 +14,7 @@ public class GOMConfiguration {
 	private final String httpLogin;
 	private final String httpPwd;
 	private final String gisementBaseUrl;
-	private boolean isCachePurgeAutomatiquement =true;
+	private boolean isCachePurgeAutomatiquement =false;
 	private int connectTimeout=10000;
 	private int socketTimeout=60000;
 	private IdHelper<?> idHelper = new UUIDFactoryRandomImpl();
