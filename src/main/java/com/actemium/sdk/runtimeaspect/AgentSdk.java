@@ -29,8 +29,6 @@ public class AgentSdk {
 	}
 
 	public static Instrumentation getInstrumentation(){
-		if(instrumentation == null)
-			System.out.println("c'est null");
 		return instrumentation;
 	}
 

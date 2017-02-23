@@ -51,9 +51,7 @@ public class LoadAgent {
 
 	public static synchronized Instrumentation init(){
 		if(DEJA_FAIT.get()){
-			if (AgentSdk.isInstrumentationAvailable())
-				return AgentSdk.getInstrumentation();
-			else if(instrumentation.get() != null)
+			if (instrumentation.get() != null)
 				return instrumentation.get();
 			else{
 				LOGGER.trace("Deja initialisé, mais n'a pas pu aboutir une premiere fois...");
