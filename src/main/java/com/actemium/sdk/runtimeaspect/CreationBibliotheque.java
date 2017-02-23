@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
@@ -14,14 +15,15 @@ import java.util.zip.ZipEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CreateJar {
-	
-	private static final Logger LOGGER = LoggerFactory.getLogger(CreateJar.class);
-	
-	private static final AtomicReference<String> AGENT_JAR = new AtomicReference<>(null); 
+public class CreationBibliotheque {
 
-	private CreateJar(){/*hide constructor*/}
-	
+	private static final Logger LOGGER = LoggerFactory.getLogger(CreationBibliotheque.class);
+
+	private static final AtomicReference<String> AGENT_JAR = new AtomicReference<>(null); 
+	private static final AtomicReference<String> ATTACH_LIB = new AtomicReference<>(null);
+
+	private CreationBibliotheque(){/*hide constructor*/}
+
 	/**
 	 * cree un jar temporaire avec l'agent dedans
 	 */
@@ -63,7 +65,9 @@ public class CreateJar {
 	}
 
 	/**
-	 * Ajoute les classes au jar
+	 * Ajoute les classes au jarsynchronized(ATTACH_LIB) {
+
+			}
 	 */
 	private static void addClassesToJar(JarOutputStream jos, Class<?>...classes) throws IOException {
 		for(Class<?> clazz: classes) {
@@ -90,6 +94,58 @@ public class CreateJar {
 		} catch (Exception e) {
 			throw new AspectException("impossible de lire le bytecode de la classe " + clazz.getName(), e);
 		}
-	} 
+	}
+
+	static synchronized String getAttachBibl(String os, String nomBibliotheque) {
+		if(ATTACH_LIB.get() == null) {
+			File tmpDir;
+			File attachLib;
+			try {
+				tmpDir = Files.createTempDirectory("attachDir").toFile();
+				tmpDir.deleteOnExit();
+				attachLib = new File(tmpDir, nomBibliotheque);
+				attachLib.deleteOnExit();
+			} catch (IOException e) {
+				LOGGER.error("impossible de creer la bibliothèque temporaire d'attach : " + nomBibliotheque , e);
+				throw new AspectException("impossible de creer la bibliothèque temporaire d'attach : " + nomBibliotheque , e);
+			}
+			String nomStream = getNomStream(os, nomBibliotheque);
+			try(InputStream is = CreationBibliotheque.class.getResourceAsStream(nomStream);
+					FileOutputStream fos = new FileOutputStream(attachLib, false)){
+				if(is == null)
+					throw new AspectException("bibliothèque non supportée : " + nomStream);
+				int bytesRead = -1;
+				byte[] buffer = new byte[8 * 1024];
+				while((bytesRead = is.read(buffer))!=-1) {
+					fos.write(buffer, 0, bytesRead);
+				}
+				fos.flush();
+				LOGGER.info("Temp attach File:" + attachLib.getAbsolutePath());
+				ATTACH_LIB.set(tmpDir.getAbsolutePath());
+			} catch (IOException e) {
+				LOGGER.error("impossible de copier la bibliothèque temporaire d'attach : " + nomStream , e);
+				throw new AspectException("impossible de copier la bibliothèque temporaire d'attach : " + nomStream , e);
+			}
+		}
+		return ATTACH_LIB.get();
+	}
+
+	private static String getNomStream(String osType, String nomBibliotheque) {
+		StringBuilder sb = new StringBuilder("/attachlib/");
+		
+
+		String os = System.getProperty("sun.arch.data.model");
+		if("32".equals(os))
+			sb.append("v32bits/");
+		else if("64".equals(os))
+			sb.append("v64bits/");
+		else{
+			LOGGER.error("Version d'OS non pris en charge pour la librairie Attach");
+			throw new AspectException("Version d'OS non pris en charge pour la librairie Attach");
+		}
+		sb.append(osType).append("/").append(nomBibliotheque);
+		LOGGER.info("la librairie demandée est " + sb.toString());
+		return sb.toString();
+	}
 
 }

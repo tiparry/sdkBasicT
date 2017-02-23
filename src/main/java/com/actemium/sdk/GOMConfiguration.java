@@ -5,14 +5,14 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-import giraudsa.marshall.exception.FabriqueInstantiationException;
+import com.actemium.sdk.exception.GomException;
 
 /**Objet permettant la configuration du GlobalObjectManager
  * 
  * 	La purge automatique du cache en cas d'exception est desactivee.
  * 	Les timeout HTTP par defaut sont de connecttimeout->10s et sockettimeout->60s 
  * 	L'idHelper par defaut est la classe UUIDFactoryRandomImpl
- * 	L'annuaire par defaut est celui contenant l'URL des WS entites et taches des objets BasicTravaux
+ * 	L'annuaire par defaut est celui contenant l'URL des WS entites et taches des objets metier
  */
 public class GOMConfiguration {
 	private final String httpLogin;
@@ -63,7 +63,7 @@ public class GOMConfiguration {
 		return this;
 	}
 
-	public GlobalObjectManager init() throws FabriqueInstantiationException {
+	public GlobalObjectManager init() throws GomException {
 		return GlobalObjectManager.init(httpLogin, httpPwd, gisementBaseUrl, isCachePurgeAutomatiquement,
 				connectTimeout, socketTimeout, idHelper, annuaires, aGererDansCache);
 	}

@@ -25,7 +25,7 @@ class TacheChargementWebService implements Callable<Object> {
 		if (!Thread.currentThread().isInterrupted()) {
 			String id = gom.getId(objetATraiter);
 			Class<?> clazz = objetATraiter.getClass();
-			if(gom.chargeObjectFromGisement(clazz, id, gom))
+			if(gom.chargeObjectFromGisement(clazz, id))
 				gom.setEstCharge(objetATraiter);
 		}
 		return objetATraiter;

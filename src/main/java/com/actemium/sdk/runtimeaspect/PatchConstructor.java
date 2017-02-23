@@ -60,21 +60,21 @@ public class PatchConstructor implements ClassFileTransformer {
 			ctClazz = cPool.get(binName);
 			String newCode = codeAAjouter(ctClazz);
 			if(newCode.isEmpty()){
-				LOGGER.trace("la classe " + binName + "n'a pas d'attribut id et ne va donc pas être modifiée.");
+				LOGGER.info("la classe " + binName + "n'a pas d'attribut id et ne va donc pas être modifiée.");
 				return byteCode;
 			}
 			int modifies = 0;
-			LOGGER.trace("on va modifier les constructeurs de la classe " + className);
+			LOGGER.info("on va modifier les constructeurs de la classe " + className);
 			for(CtConstructor constructor : ctClazz.getDeclaredConstructors()) {
 				ctClazz.removeConstructor(constructor);
 				constructor.insertAfter(newCode);
 				ctClazz.addConstructor(constructor);
 				modifies++;
 			}
-			LOGGER.trace("la classe " + binName + " a ete enregistre pour être gérée dans le GOM : " + modifies + " constructeurs modifies !");
+			LOGGER.info("la classe " + binName + " a ete enregistre pour être gérée dans le GOM : " + modifies + " constructeurs modifies !");
 			return ctClazz.toBytecode();
 		} catch (NotFoundException | CannotCompileException | IOException e) {
-			LOGGER.trace("Impossible de compiler la classe transformée[" + binName + "] : ", e);
+			LOGGER.error("Impossible de compiler la classe transformée[" + binName + "] : ", e);
 			this.exception = new AspectException("Impossible de compiler la classe transformée[" + binName + "] .", e);
 			return byteCode;
 		}
@@ -100,7 +100,7 @@ public class PatchConstructor implements ClassFileTransformer {
 				}else if(UUID.class.getName().equals(typeid)){
 					sb.append(GENERE_UUID_SI_NULL);
 				}else{
-					LOGGER.trace("attention, le type " + typeid + " est inconnu, il faut que le constructeur en génère un");
+					LOGGER.info("attention, le type " + typeid + " est inconnu, il faut que le constructeur en génère un");
 				}
 				sb.append("com.actemium.sdk.GlobalObjectManager.getInstance().metEnCache(this,false, true);");
 				return sb.toString();

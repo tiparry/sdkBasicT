@@ -4,7 +4,7 @@ package com.actemium.sdk.exception;
  * Lorsque cette exception est générée, le cache est potentiellement dans un état incohérent pouvant mener à des erreurs par la suite. 
  * Si la purge automatique du cache n'a pas été activée lors de l'init, la gestion des incohérences du Cache incombe à l'utilisateur.
  *  */
-public class GetObjectException extends Exception {
+public class GetObjectException extends GomException {
 
 	
 	private static final long serialVersionUID = 8766623874379130509L;

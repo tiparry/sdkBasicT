@@ -5,7 +5,7 @@ package com.actemium.sdk.exception;
  * Lorsque cette exception est générée, le cache est potentiellement dans un état incohérent pouvant mener à des erreurs par la suite. 
  * Si la purge automatique du cache n'a pas été activée lors de l'init, la gestion des incohérences du Cache incombe à l'utilisateur.
  *  */
-public class GetObjetEnProfondeurException extends Exception{
+public class GetObjetEnProfondeurException extends GomException{
 
 	private final transient Object objetRacine;
 	

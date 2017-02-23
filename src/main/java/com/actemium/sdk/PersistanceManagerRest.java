@@ -41,7 +41,7 @@ import org.xml.sax.ext.DefaultHandler2;
 	private RestClient restClient;
 	private AnnuaireWS annuaireWS;
 
-	PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl, int connectTimeout, int socketTimeout, List<String> annuaires) {
+	PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl, int connectTimeout, int socketTimeout, List<String> annuaires) throws RestException {
 		super();
 		restClient = new RestClient(httpLogin, httpPwd, connectTimeout, socketTimeout);
 		annuaireWS = new AnnuaireWS(gisementBaseUrl);
@@ -50,6 +50,7 @@ import org.xml.sax.ext.DefaultHandler2;
 				annuaireWS.loadAnnuaire(restClient, annuaire);
 			} catch (RestException e) {
 				LOGGER.error("Erreur lors de la récupération de l'annuaire : " + annuaire, e);
+				throw e;
 			}
 		}
 		ConfigurationMarshalling.setIdUniversel();

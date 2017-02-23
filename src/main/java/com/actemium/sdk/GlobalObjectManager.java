@@ -1,14 +1,5 @@
 package com.actemium.sdk;
 
-import giraudsa.marshall.annotations.TypeRelation;
-import giraudsa.marshall.deserialisation.EntityManager;
-import giraudsa.marshall.deserialisation.text.json.JsonUnmarshaller;
-import giraudsa.marshall.exception.FabriqueInstantiationException;
-import giraudsa.marshall.exception.InstanciationException;
-import giraudsa.marshall.exception.MarshallExeption;
-import giraudsa.marshall.exception.UnmarshallExeption;
-import giraudsa.marshall.serialisation.text.json.JsonMarshaller;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -24,29 +15,36 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.http.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
-import utils.TypeExtension;
-import utils.champ.Champ;
-
-import com.actemium.sdk.exception.DumpException;
 import com.actemium.sdk.exception.GetAllObjectException;
 import com.actemium.sdk.exception.GetObjectException;
 import com.actemium.sdk.exception.GetObjetEnProfondeurException;
-import com.actemium.sdk.exception.SaveAllException;
-import com.actemium.sdk.exception.SaveException;
+import com.actemium.sdk.exception.GomException;
 import com.actemium.sdk.restclient.RestException;
+import com.actemium.sdk.runtimeaspect.AspectException;
 import com.actemium.sdk.runtimeaspect.LoadAgent;
 import com.actemium.sdk.runtimeaspect.Transformer;
 import com.rff.wstools.Reponse;
 import com.rff.wstools.Requete;
+
+import giraudsa.marshall.annotations.TypeRelation;
+import giraudsa.marshall.deserialisation.EntityManager;
+import giraudsa.marshall.deserialisation.text.json.JsonUnmarshaller;
+import giraudsa.marshall.exception.FabriqueInstantiationException;
+import giraudsa.marshall.exception.InstanciationException;
+import giraudsa.marshall.exception.MarshallExeption;
+import giraudsa.marshall.exception.UnmarshallExeption;
+import giraudsa.marshall.serialisation.text.json.JsonMarshaller;
+import utils.TypeExtension;
+import utils.champ.Champ;
 
 
 /**
@@ -61,7 +59,7 @@ public class GlobalObjectManager implements EntityManager {
 	private static final String IMPOSSIBLE_DE_SAUVEGARDER = "impossible de sauvegarder";
 
 
-	private static GlobalObjectManager instance = null;
+	private static final AtomicReference<GlobalObjectManager> instance = new AtomicReference<>(null);
 
 
 	private final Set<Class<?>> nonRecuperableViaWebService = new HashSet<>();
@@ -72,7 +70,7 @@ public class GlobalObjectManager implements EntityManager {
 
 
 	/**la gestion du cache. */
-	private GestionCache gestionCache;
+	private final GestionCache gestionCache;
 	
 	
 	/**permet de manipuler des id sans etre dépendant de la bibliothèque métier */
@@ -97,12 +95,17 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param remplirIdReseau 
 	 * @throws FabriqueInstantiationException 
 	 */
-	private GlobalObjectManager(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException, int connectTimeout, int socketTimeout, IdHelper<?> idHelper, List<String> annuaires, Collection<Class<?>> aGererDansCache) throws FabriqueInstantiationException{
+	private GlobalObjectManager(String httpLogin, String httpPwd, String gisementBaseUrl, boolean isCachePurgeAutomatiquementSiException, int connectTimeout, int socketTimeout, IdHelper<?> idHelper, List<String> annuaires, Collection<Class<?>> aGererDansCache) throws GomException{
 		this.idHelper = idHelper;
-		this.factory = new ObjectFactory<>(idHelper);
+		try {
+			this.factory = new ObjectFactory<>(idHelper);
+		} catch (FabriqueInstantiationException e1) {
+			LOGGER.error("Impossible de créer la factory d'objet bas niveau.", e1);
+			throw new GomException("Impossible de créer la factory d'objet bas niveau.", e1);
+		}
 		this.persistanceManager = new PersistanceManagerRest(httpLogin,  httpPwd, gisementBaseUrl, connectTimeout, socketTimeout, annuaires);
 		this.gestionCache = new GestionCache();
-		this.isCachePurgeAutomatiquementSiException=isCachePurgeAutomatiquementSiException;
+		this.isCachePurgeAutomatiquementSiException = isCachePurgeAutomatiquementSiException;
 		try{
 			this.transformer = new Transformer(LoadAgent.init());
 			for(Class<?> clazz : aGererDansCache){
@@ -110,7 +113,7 @@ public class GlobalObjectManager implements EntityManager {
 			}
 		}catch(Exception e){
 			LOGGER.error("Impossible de modifier les constructeurs des classes demandées", e);
-			throw new FabriqueInstantiationException("Impossible de modifier les constructeurs des classes demandées", e);
+			throw new GomException("Impossible de modifier les constructeurs des classes demandées", e);
 		}
 	}
 
@@ -123,13 +126,13 @@ public class GlobalObjectManager implements EntityManager {
 	 */
 	static GlobalObjectManager init(String httpLogin, String httpPwd, String gisementBaseUrl,
 			boolean isCachePurgeAutomatiquement, int connectTimeout, int socketTimeout, IdHelper<?> idHelper,
-			List<String> annuaires, Collection<Class<?>> aGererDansCache) throws FabriqueInstantiationException {
-		if(instance != null){
+			List<String> annuaires, Collection<Class<?>> aGererDansCache) throws GomException {
+		if(instance.get() != null){
 			LOGGER.error("le GOM a déjà été initialisé !");
-			throw new FabriqueInstantiationException("le GOM a déjà été initialisé !");
+			throw new GomException("le GOM a déjà été initialisé !");
 		}
-		instance = new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl, isCachePurgeAutomatiquement, connectTimeout, socketTimeout, idHelper, annuaires, aGererDansCache);
-		return instance;
+		instance.set(new GlobalObjectManager(httpLogin, httpPwd, gisementBaseUrl, isCachePurgeAutomatiquement, connectTimeout, socketTimeout, idHelper, annuaires, aGererDansCache));
+		return instance.get();
 	}
 
 
@@ -139,7 +142,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @return single instance of GlobalObjectManager
 	 */
 	public static GlobalObjectManager getInstance(){
-		return instance;
+		return instance.get();
 	}
 
 
@@ -171,15 +174,21 @@ public class GlobalObjectManager implements EntityManager {
 	 *
 	 * @throws SaveAllException 
 	 */
-	public synchronized void saveAll(CallBack... callbacks) throws SaveAllException {
+	public synchronized void saveAll(CallBack... callbacks) throws GomException {
 		try{
 			Set<Object> objetsASauvegarder = gestionCache.objetsModifiesDepuisChargementOuNouveau();
 			save(objetsASauvegarder, callbacks);
-		}catch(MarshallExeption | IllegalAccessException | IOException | RestException e){
+		}catch(MarshallExeption | IllegalAccessException | IOException e){
 			LOGGER.error(IMPOSSIBLE_DE_SAUVEGARDER, e);
 			if (purgeCacheAutomatiquementSiException())
 				LOGGER.error("erreur dans saveAll(), Cache reinitialisé");
-			throw new SaveAllException(IMPOSSIBLE_DE_SAUVEGARDER, e);
+			throw new GomException(IMPOSSIBLE_DE_SAUVEGARDER, e);
+		}
+		catch(RestException e){
+			LOGGER.error(IMPOSSIBLE_DE_SAUVEGARDER, e);
+			if (purgeCacheAutomatiquementSiException())
+				LOGGER.error("erreur dans saveAll(), Cache reinitialisé");
+			throw e;
 		}
 	}
 	
@@ -190,7 +199,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param  objet l'objet de type U
 	 * @throws SaveException
 	 */
-	public synchronized <U> void save(U objet, CallBack... callbacks) throws SaveException{
+	public synchronized <U> void save(U objet, CallBack... callbacks) throws GomException{
 		if (objet == null)
 			return;
 		if (!isNew(objet) && !hasChanged(objet)) 
@@ -199,11 +208,17 @@ public class GlobalObjectManager implements EntityManager {
 			Set<Object> objetsASauvegarder = new HashSet<>();
 			objetsASauvegarder.add(objet);
 			save(objetsASauvegarder, callbacks);
-		}catch(MarshallExeption | IllegalAccessException | IOException | RestException e){
+		}catch(MarshallExeption | IllegalAccessException | IOException e){
 			LOGGER.error(IMPOSSIBLE_DE_SAUVEGARDER, e);
 			if (purgeCacheAutomatiquementSiException())
 				LOGGER.error("erreur dans save(), Cache reinitialisé");
-			throw new SaveException(e);
+			throw new GomException(e);
+		}
+		catch(RestException e){
+			LOGGER.error(IMPOSSIBLE_DE_SAUVEGARDER, e);
+			if (purgeCacheAutomatiquementSiException())
+				LOGGER.error("erreur dans save(), Cache reinitialisé");
+			throw e;
 		}
 	}
 
@@ -251,7 +266,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws GetObjectException
 	 * @throws GetObjetEnProfondeurException
 	 */
-	public <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur) throws GetObjectException, GetObjetEnProfondeurException{
+	public <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur) throws GomException{
 		try{
 			if(id == null || clazz == null) 
 				return null;
@@ -310,7 +325,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws GetObjetEnProfondeurException
 	 * @throws GetObjectException
 	 */
-	public Reponse getReponse(Requete request, boolean enProfondeur) throws GetObjetEnProfondeurException, GetObjectException  {
+	public Reponse getReponse(Requete request, boolean enProfondeur) throws GomException  {
 		Reponse reponse;
 		try {
 			reponse = persistanceManager.getReponse(request, this);
@@ -390,15 +405,15 @@ public class GlobalObjectManager implements EntityManager {
 	 * 
 	 * warning 1 cette méthode va purger le cache avant de se lancer; 
 	 * warning 2 : dangereux (temps d'exécution + mémoire + espace de stockage) si BDD large !
-	 * @throws DumpException 
+	 * @throws GomException 
 	 */
-	public  void dumpGisementToJson(String pathFile) throws DumpException{
+	public  void dumpGisementToJson(String pathFile) throws GomException{
 		try {
 			loadGisementInCache();
 			dumpCacheToJson(pathFile);
 		} catch (SecurityException | IllegalArgumentException | GetAllObjectException e) {
 			LOGGER.error("Dump du gisement impossible à réaliser", e);
-			throw new DumpException("Dump du gisement impossible à réaliser", e);
+			throw new GomException("Dump du gisement impossible à réaliser", e);
 		}
 	}
 
@@ -406,7 +421,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * 
 	 *
 	 * warning, cette méthode purge le cache avant de se lancer
-	 * @throws DumpException 
+	 * @throws GomException 
 	 * 
 	 * @throws IOException
 	 * @throws UnmarshallExeption
@@ -416,13 +431,13 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws SecurityException 
 	 * @throws NoSuchFieldException 
 	 */
-	public void saveToGisementFromJsonFile(String pathFile) throws DumpException{
+	public void saveToGisementFromJsonFile(String pathFile) throws GomException{
 		try {
 			loadJsonFile(pathFile);
 			this.saveAll();
-		} catch (SaveAllException e) {
+		} catch (GomException e) {
 			LOGGER.error("impossible de sauvegarder le gisement sur un fichier json " + pathFile, e);
-			throw new DumpException("impossible de sauvegarder le gisement sur un fichier json " + pathFile, e);
+			throw e;
 		} 
 	}
 
@@ -444,11 +459,11 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 	/**sauvegarde tous les objets du cache dans un fichier json
-	 * @throws DumpException 
+	 * @throws GomException 
 	 * @throws IOException 
 	 * 
 	 */
-	private  void dumpCacheToJson(String pathFile) throws DumpException{
+	private  void dumpCacheToJson(String pathFile) throws GomException{
 		File dump = new File(pathFile);
 		try (FileOutputStream file = new FileOutputStream(dump);
 				Writer writer = new BufferedWriter(new OutputStreamWriter(file,"UTF-8"))){
@@ -456,10 +471,10 @@ public class GlobalObjectManager implements EntityManager {
 				JsonMarshaller.toJson(objetToWrite, writer);	
 		}catch(IOException e){
 			LOGGER.error("Erreur lors de l'écriture: ", e);
-			throw new DumpException("Erreur lors de l'écriture", e);
+			throw new GomException("Erreur lors de l'écriture", e);
 		}catch(MarshallExeption e){
 			LOGGER.error("Erreur lors de la sérialisation: ", e);
-			throw new DumpException("Erreur lors de la sérialisation", e);
+			throw new GomException("Erreur lors de la sérialisation", e);
 		}
 	}
 
@@ -467,9 +482,9 @@ public class GlobalObjectManager implements EntityManager {
 	 * 
 	 *
 	 * warning, cette méthode purge le cache avant de se lancer
-	 * @throws DumpException 
+	 * @throws GomException 
 	 */
-	private void loadJsonFile(String pathFile) throws DumpException{
+	private void loadJsonFile(String pathFile) throws GomException{
 		File dump = new File(pathFile);
 		try(FileInputStream file = new FileInputStream(dump);
 				Reader reader = new BufferedReader(new InputStreamReader(file,"UTF-8"))){
@@ -480,10 +495,10 @@ public class GlobalObjectManager implements EntityManager {
 			}
 		}catch(IOException e){
 			LOGGER.error("erreur de lecture du fichier: ", e);
-			throw new DumpException("erreur de lecture du fichier", e);
+			throw new GomException("erreur de lecture du fichier", e);
 		} catch (UnmarshallExeption e) {
 			LOGGER.error("Erreur lors de la désérialisation ", e);
-			throw new DumpException("erreur de la désérialisation", e);
+			throw new GomException("erreur de la désérialisation", e);
 		} 
 	}
 
@@ -508,7 +523,7 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 
-	protected <U> boolean chargeObjectFromGisement(Class<U> clazz, String id, GlobalObjectManager gom) throws IOException, RestException, SAXException, InstanciationException {
+	protected <U> boolean chargeObjectFromGisement(Class<U> clazz, String id) throws IOException, RestException, SAXException, InstanciationException {
 		U o = persistanceManager.getObjectById(clazz, id, this);
 		return o != null;
 	}
