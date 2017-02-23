@@ -137,6 +137,26 @@ public class GlobalObjectManager implements EntityManager {
 
 
 	/**
+	 * permet de définir à partir de combien de temps apres le chargement un objet est considéré comme obsolète
+	 * @param duree
+	 * @param unite
+	 */
+	void setDureeCache(long duree){
+		gestionCache.setDureeCache(duree);
+	}
+
+
+	/**
+	 * Charge un objet traitant du hors périmètre (objets qui ne sont pas dans les annuaires)
+	 * 
+	 * @param horsPerimetre l'objet implémentant l'interface HorsPerimetre traitant les cas n'étant pas dans annuaires.
+	 */
+	void setHorsPerimetre(HorsPerimetre horsPerimetre){
+		persistanceManager.setHorsPerimetre(horsPerimetre);
+	}
+
+
+	/**
 	 * Gets the single instance of GlobalObjectManager.
 	 *
 	 * @return single instance of GlobalObjectManager
@@ -154,16 +174,6 @@ public class GlobalObjectManager implements EntityManager {
 	 */
 	public boolean hasChanged(final Object objet){
 		return gestionCache.aChangeDepuisChargement(objet);
-	}
-
-
-	/**
-	 * Charge un objet traitant du hors périmètre (objets qui ne sont pas dans les annuaires)
-	 * 
-	 * @param horsPerimetre l'objet implémentant l'interface HorsPerimetre traitant les cas n'étant pas dans annuaires.
-	 */
-	public void setHorsPerimetre(HorsPerimetre horsPerimetre){
-		persistanceManager.setHorsPerimetre(horsPerimetre);
 	}
 
 
@@ -303,15 +313,6 @@ public class GlobalObjectManager implements EntityManager {
 	 */
 	public void remove(Object obj){
 		gestionCache.remove(obj);
-	}
-
-	/**
-	 * permet de définir à partir de combien de temps apres le chargement un objet est considéré comme obsolète
-	 * @param duree
-	 * @param unite
-	 */
-	public void setDureeCache(long duree, TimeUnit unite){
-		gestionCache.setDureeCache(unite.toMillis(duree));
 	}
 
 	/**

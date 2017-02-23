@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import com.actemium.sdk.exception.GomException;
 
@@ -24,6 +25,8 @@ public class GOMConfiguration {
 	private IdHelper<?> idHelper = new DefaultUUIDHelper();
 	private final List<String> annuaires = new ArrayList<>();
 	private final Collection<Class<?>> aGererDansCache = new LinkedHashSet<>();
+	private long dureeCache = TimeUnit.HOURS.toMillis(1); //1 heure
+	private HorsPerimetre horsPerimetre = null;
 	
 	public GOMConfiguration(String httpLogin, String httpPwd, String gisementBaseUrl){
 		super();
@@ -62,10 +65,28 @@ public class GOMConfiguration {
 		this.aGererDansCache.add(clazz);
 		return this;
 	}
+	
+	/**
+	 * permet de définir à partir de combien de temps apres le chargement un objet est considéré comme obsolète
+	 * @param duree
+	 * @param unite
+	 */
+	public GOMConfiguration setDureeCache(long duree, TimeUnit unite){
+		dureeCache = unite.toMillis(duree);
+		return this;
+	}
+	
+	public GOMConfiguration setHorsPerimetre(HorsPerimetre horsPerimetre){
+		this.horsPerimetre = horsPerimetre;
+		return this;
+	}
 
 	public GlobalObjectManager init() throws GomException {
-		return GlobalObjectManager.init(httpLogin, httpPwd, gisementBaseUrl, isCachePurgeAutomatiquement,
+		GlobalObjectManager gom = GlobalObjectManager.init(httpLogin, httpPwd, gisementBaseUrl, isCachePurgeAutomatiquement,
 				connectTimeout, socketTimeout, idHelper, annuaires, aGererDansCache);
+		gom.setDureeCache(dureeCache);
+		gom.setHorsPerimetre(horsPerimetre);
+		return gom;
 	}
 
 }

@@ -11,6 +11,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,8 +26,8 @@ import giraudsa.marshall.serialisation.text.json.JsonMarshaller;
  */
 public class GestionCache implements Iterable<Object>{
 	private static final Logger LOGGER = LoggerFactory.getLogger(GestionCache.class);
-	private static final long TEMPS_DE_CACHE_MINIMUM = 1000L * 60L; //une minute 
-	private long tempsDeCache = 1000L * 60L * 60L; //une heure 
+	private static final long TEMPS_DE_CACHE_MINIMUM = TimeUnit.MINUTES.toMillis(1); //une minute
+	private long tempsDeCache = TimeUnit.HOURS.toMillis(1); //une heure 
 	private BiHashMap<Class<?>, String, Object> classAndIdToObject = new BiHashMap<>();
 	private final Map<Object, Stockage> dejaCharge = new IdentityHashMap<>();
 	private Map<Class<?>, Stockage> dicoClasseDejaChargee = new HashMap<>();

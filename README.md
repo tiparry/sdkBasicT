@@ -17,12 +17,6 @@ L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes
 		<version>4.4.1</version>
 	</dependency>		
     
-<!-- Model basic travaux -->
-	<dependency>
-	  <groupId>com.rff</groupId>
-	  <artifactId>BasicTravaux</artifactId>
-	  <version>1.0.7</version>
-	</dependency>
 	
 <!-- lib de serialisation-->
 	<dependency>
@@ -54,37 +48,32 @@ Tous les objets doivent passer par l'instance singleton du GlobalObjectManager (
 
 Le GOM doit être instancié avant le premier usage de la manière suivante :
 
-	String login = "LOGIN_BT";
-	String pwd = "PASSWORD_BT";
-	String baseUrl = "http://ip:port/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/";
-	GlobalObjectManager.init(login, pwd, baseUrl);
-	
-Une deuxième instantiation est possible. Elle permet de mieux préciser le comportement du GOM. C'est celle conseillée : 
-
-	String login = "LOGIN_BT";
-	String pwd = "PASSWORD_BT";
-	String baseUrl = "http://ip:port/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/";
-	boolean isCachePurgeAutomatiquementSiException = true;
-	int connectTimeout=10000; // la valeur -1 correspond a un timeout infini
-	int socketTimeout=60000; // la valeur -1 correspond a un timeout infini
-	GlobalObjectManager.init(login, pwd, baseUrl, isCachePurgeAutomatiquementSiException, connectTimeout, socketTimeout);
-	
-Elle instancie le gom de telle manière qu'il se purge automatiquement en cas de certaines exceptions, pour se prémunir d'un état potentiellement incohérent, susceptible de générer des erreurs par la suite.
+	String baseUrl = "http://ip:partie/commune/de/l/url/";
+						
+	final GlobalObjectManager gom = new GOMConfiguration("login", "pwd", baseUrl)
+						.addAnnuaire("annuaireTraitement") // fin de l'url pour l'annuaire des WS
+						.addClasseAGererDansGom(ObjetPersistant.class) //classe avec l'attribut "id" à gérer par le GOM 
+						.setCachePurgeAutomatiquement(false) //purge le cache en cas d'erreur (défaut : true)
+						.setConnectTimeout(900) // défaut : 1000 ms
+						.setSocketTimeout(5000) //défaut 6000 ms
+						.setHorsPerimetre(new NourritIdReseau(args)) //comportement hors annuaire
+						.setDureeCache(12, TimeUnit.HOURS) //par défaut 1 heure 
+						.setIdHelper(new MyIdHelper())//par défaut : DefaultUUIDHelper extends 
+						.init();
+		    		
+Le paramètre setCachePurgeAutomatiquement(true) instancie le gom de telle manière qu'il se purge automatiquement en cas de certaines exceptions, pour se prémunir d'un état potentiellement incohérent, susceptible de générer des erreurs par la suite.
 
 Après cette phase d'initialisation, le GOM est disponible sur le simple appel suivant :
 
 	GlobalObjectManager gom = GlobalObjectManager.getInstance();
 	
-On peut demander au GOM de nourrir automatiquement les id Reseau lorsqu'on fait un appel en profondeur d'un objet en faisant des requetes au gisement GAIA. Il faut configurer le serveur de gisement Gaia.
-	
-	gom.nourrirIdReseau("https://int-ws-gaia.rff.ferre", "loginGaia", "mdpGaia");
 	
 	2.2 - Gestion du cache
 	----------------------
 	
 La durée de cache par défaut des objets dans le GOM est de 1h. Il est possible de modifier cette valeur en appelant :
 
-	gom.setDureeCache(15, TimeUnit.HOURS); // durée du cache à 15h
+	gOMConfiguration.setDureeCache(12, TimeUnit.HOURS)
 	
 La valeur du cache minimum est de 1 minute. 
 	
@@ -116,18 +105,8 @@ ATTENTION : lorsque les méthodes saveAll, save, getAllObject, getObject, getRep
 			Le choix de la purge automatique est fortement conseillé, accessible en apellant la methode init() avec le paramètre boolean true.
 !!!!!!!!!
 
-    /**
-	 * Creates the object.
-	 *
-	 * @param <U> the generic type
-	 * @param clazz the clazz
-	 * @param date the date
-	 * @return the u
-	 */
-	 public synchronized <U> U createObject(final Class<U> clazz, final Date date) 
 	   
-	   
-	     /**
+	 /**
      * Sauvegarde ou update dans le gisement les objets nouveaux ou modifies.
      *
      * @param <U> the generic type
