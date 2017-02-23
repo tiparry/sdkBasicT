@@ -341,19 +341,26 @@ public class GlobalObjectManager implements EntityManager {
 		return gestionCache.isNew(obj);
 	}
 
-	public synchronized void metEnCache(Object objetPere,boolean enProfondeur, boolean isNew) throws IllegalAccessException{
+	public  void metEnCache(Object objetPere,boolean enProfondeur, boolean isNew) throws IllegalAccessException{
+		metEnCache(objetPere, enProfondeur, isNew, new HashSet<Object>());
+	}
+	
+	private synchronized void metEnCache(Object objetPere,boolean enProfondeur, boolean isNew, HashSet<Object> dejaVu) throws IllegalAccessException{
+		if(dejaVu.contains(objetPere))
+			return;
+		dejaVu.add(objetPere);
 		if(objetPere instanceof Collection<?>){
 			final Iterable<?> collection = (Iterable<?>) objetPere;
 			for(final Object objet : collection)
-				this.metEnCache(objet, enProfondeur, isNew);
-		}else if(idHelper.getId(objetPere) != null)
+				this.metEnCache(objet, enProfondeur, isNew, dejaVu);
+		}else if(idHelper.getId(objetPere) != null )
 			this.gestionCache.metEnCache(idHelper.getId(objetPere).toString(), objetPere, isNew);
 		if(enProfondeur){
 			final List<Champ> champs = TypeExtension.getSerializableFields(objetPere.getClass());
 			for(final Champ champ : champs){
 				final Object objetFils = champ.get(objetPere);
 				if(objetFils != null && !champ.isSimple()){
-					metEnCache(objetFils, enProfondeur, isNew);
+					metEnCache(objetFils, enProfondeur, isNew, dejaVu);
 				}
 			}
 		}
