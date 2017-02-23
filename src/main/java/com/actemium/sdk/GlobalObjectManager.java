@@ -158,14 +158,12 @@ public class GlobalObjectManager implements EntityManager {
 
 
 	/**
-	 * méthode d'initialisation des paramètres gaia
+	 * Charge un objet traitant du hors périmètre (objets qui ne sont pas dans les annuaires)
 	 * 
-	 * @param host l'adresse url du gisement gaia
-	 * @param username le login gaia
-	 * @param password le mot de passe gaia
+	 * @param horsPerimetre l'objet implémentant l'interface HorsPerimetre traitant les cas n'étant pas dans annuaires.
 	 */
-	public void nourrirIdReseau(String host, String username, String password){
-		((PersistanceManagerRest)persistanceManager).setConfigAriane(host, username, password);
+	public void setHorsPerimetre(HorsPerimetre horsPerimetre){
+		persistanceManager.setHorsPerimetre(horsPerimetre);
 	}
 
 

@@ -16,6 +16,7 @@ import com.rff.wstools.Requete;
 
 
  abstract class PersistanceManagerAbstrait {
+	private HorsPerimetre horsPerimetre;
 
 	abstract <U> void save(U l) throws MarshallExeption, RestException;
 
@@ -26,5 +27,13 @@ import com.rff.wstools.Requete;
 	abstract Reponse getReponse(Requete requete, EntityManager entityManager) throws MarshallExeption, RestException, IOException;
 
 	abstract Set<Class<?>> getAllClasses() throws GetAllObjectException;
+
+	public void setHorsPerimetre(HorsPerimetre horsPerimetre) {
+		this.horsPerimetre = horsPerimetre;
+	}
+	
+	protected HorsPerimetre getHorsPerimetre(){
+		return horsPerimetre;
+	}
 
 }
