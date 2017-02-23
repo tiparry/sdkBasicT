@@ -65,9 +65,7 @@ public class CreationBibliotheque {
 	}
 
 	/**
-	 * Ajoute les classes au jarsynchronized(ATTACH_LIB) {
-
-			}
+	 * Ajoute les classes au jar
 	 */
 	private static void addClassesToJar(JarOutputStream jos, Class<?>...classes) throws IOException {
 		for(Class<?> clazz: classes) {
