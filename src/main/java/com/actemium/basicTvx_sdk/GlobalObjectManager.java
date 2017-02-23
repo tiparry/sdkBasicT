@@ -341,11 +341,11 @@ public class GlobalObjectManager implements EntityManager {
 		return gestionCache.isNew(obj);
 	}
 
-	public  void metEnCache(Object objetPere,boolean enProfondeur, boolean isNew) throws IllegalAccessException{
+	public synchronized  void metEnCache(Object objetPere,boolean enProfondeur, boolean isNew) throws IllegalAccessException{
 		metEnCache(objetPere, enProfondeur, isNew, new HashSet<Object>());
 	}
 	
-	private synchronized void metEnCache(Object objetPere,boolean enProfondeur, boolean isNew, HashSet<Object> dejaVu) throws IllegalAccessException{
+	private void metEnCache(Object objetPere,boolean enProfondeur, boolean isNew, HashSet<Object> dejaVu) throws IllegalAccessException{
 		if(dejaVu.contains(objetPere))
 			return;
 		dejaVu.add(objetPere);
