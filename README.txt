@@ -17,11 +17,11 @@ L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes
 		<version>4.4.1</version>
 	</dependency>		
     
-    <!-- Model basic travaux -->
+   <!--classes BasicTravaux nécessaires pour le sdk (Requete, Reponse, RessourceAbstraite) -->
 	<dependency>
-	  <groupId>com.rff</groupId>
-	  <artifactId>BasicTravaux</artifactId>
-	  <version>1.0.7</version>
+	  <groupId>com.actemium</groupId>
+	  <artifactId>BTForSDK</artifactId>
+	  <version>1.0.0</version>
 	</dependency>
 	
 	<!-- lib de serialisation-->
@@ -56,20 +56,26 @@ Tous les objets doivent passer par l'instance singleton du GlobalObjectManager (
 
 Le GOM doit être instancié avant le premier usage de la manière suivante :
 
+On passe par une classe de configuration pour les parametres du GOM, qui utilise certaines valeurs par defaut si pas d'instruction contraire.
 	String login = "LOGIN_BT";
 	String pwd = "PASSWORD_BT";
 	String baseUrl = "http://ip:port/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/";
-	GlobalObjectManager.init(login, pwd, baseUrl);
+	GOMConfiguration gomConfiguration= new GOMConfiguration(System.getProperty("gisement.bt.login"), System.getProperty("gisement.bt.pwd"), System.getProperty("gisement.bt.baseurl"));
+	GlobalObjectManager.init(gomConfiguration);
 	
-Une deuxième instantiation est possible. C'est celle conseillée : 
+	
+Des instanciations avec un autre paramétrage sont possibles  : 
 
 String login = "LOGIN_BT";
 	String pwd = "PASSWORD_BT";
 	String baseUrl = "http://ip:port/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/";
-	boolean isCachePurgeAutomatiquementSiException = true;
-	GlobalObjectManager.init(login, pwd, baseUrl, isCachePurgeAutomatiquementSiException);
+	GOMConfiguration gomConfiguration= new GOMConfiguration(System.getProperty("gisement.bt.login"), System.getProperty("gisement.bt.pwd"), System.getProperty("gisement.bt.baseurl"));
+	gomConfiguration.setCachePurgeAutomatiquement(true);
+	gomConfiguration.setConnectTimeout(15000) //15000 ms
+	gomConfiguration.setSocketTimeout(-1) // la valeur -1 correspond a un timeout infini
+	GlobalObjectManager.init(gomConfiguration);
 	
-Elle instancie le gom de telle manière qu'il se purge automatiquement en cas de certaines exceptions, pour se prémunir d'un état potentiellement incohérent, susceptible de générer des erreurs par la suite.
+Nous conseillons  d'instancier le gom de telle manière qu'il se purge automatiquement en cas de certaines exceptions, pour se prémunir d'un état potentiellement incohérent, susceptible de générer des erreurs par la suite.
 
 Après cette phase d'initialisation, le GOM est disponible sur le simple appel suivant :
 
@@ -112,8 +118,8 @@ il est aussi possible de supprimer un objet du cache unitairement si par exemple
 Voila la liste des autres méthodes publiques disponible dans le GOM : 
 
 !!!!!!!!!
-ATTENTION : lorsque les méthodes saveAll, save, getAllObject, getObject, getReponse génèrent leurs exceptions, le cache n'est pas par défaut purgé. Il est potentiellement dans un état incohérent. 
-			Le choix de la purge automatique est fortement conseillé, accessible en apellant la methode init() avec le paramètre boolean true.
+ATTENTION : lorsque les méthodes saveAll, save, getAllObject, getObject, getReponse génèrent des exceptions, le cache n'est pas par défaut purgé. Il est potentiellement dans un état incohérent. 
+			Le choix de la purge automatique est fortement conseillé, à faire via l'objet GOMConfiguration.
 !!!!!!!!!
 
     /**
