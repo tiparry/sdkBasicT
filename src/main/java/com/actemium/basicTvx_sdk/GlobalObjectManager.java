@@ -638,7 +638,8 @@ public class GlobalObjectManager implements EntityManager {
 			return;
 		else if(l instanceof Collection<?>){
 			for(final Object objet : (Collection<?>)l) {
-				this.saveReferences(objet, relation, objetsASauvegarder, callBacks);
+				if(objet!=null)
+					this.saveReferences(objet, relation, objetsASauvegarder, callBacks);
 			}
 		}else if(relation == TypeRelation.COMPOSITION){
 			final List<Champ> champs = TypeExtension.getSerializableFields(l.getClass());
