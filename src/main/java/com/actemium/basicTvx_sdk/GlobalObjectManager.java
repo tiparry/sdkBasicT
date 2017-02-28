@@ -229,7 +229,7 @@ public class GlobalObjectManager implements EntityManager {
 			for(Object o : listeObj){
 				setEstCharge(o);//on dit au cache que c'est chargé...
 			}
-			return listeObj;
+			return gestionCache.getClasse(clazz);
 		}catch(ParseException | RestException | IOException  e){
 			LOGGER.error("impossible de récupérer l'objet", e);
 			if(purgeCacheAutomatiquementSiException())
