@@ -278,7 +278,7 @@ public class GestionCache {
 			if(estCharge()){
 				return !hash.equals(calculHash());
 			}
-			return true;
+			return false;
 		}
 	}
 }
