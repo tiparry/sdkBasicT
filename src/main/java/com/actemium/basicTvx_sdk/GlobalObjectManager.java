@@ -214,7 +214,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @return all object by type
 	 * @throws GetAllObjectException 
 	 */
-	public <U> List<U> getAllObject(final Class<U> clazz) throws GetAllObjectException{
+	public synchronized <U> List<U> getAllObject(final Class<U> clazz) throws GetAllObjectException{
 		try{
 			if(gestionCache.estDejaCharge(clazz)) {
 				return gestionCache.getClasse(clazz);
@@ -249,16 +249,15 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws GetObjectException
 	 * @throws GetObjetEnProfondeurException
 	 */
-	public <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur) throws GetObjectException, GetObjetEnProfondeurException{
+	public synchronized <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur) throws GetObjectException, GetObjetEnProfondeurException{
 		try{
 			if(id == null || clazz == null) 
 				return null;
-			U obj = findObjectOrCreate(id, clazz, false);
+			U obj = findObjectOrCreate(id, clazz);
 			ManagerChargementSDK manager = enProfondeur ? new ManagerChargementEnProfondeur(this, obj) : new ManagerChargementUnique(this, obj);
 			manager.execute();
-			if( isNew(obj) && !gestionCache.estCharge(obj)){
+			if( !isNew(obj) && !gestionCache.estCharge(obj)){
 				obj = factory.newObjectAndId(clazz, id, gestionCache);
-				setEstCharge(obj);
 			}
 			return obj;
 		}catch(InstanciationException e){
@@ -286,7 +285,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * supprime un objet du cache
 	 * @param obj
 	 */
-	public void remove(Object obj){
+	public synchronized void remove(Object obj){
 		gestionCache.remove(obj);
 	}
 
@@ -308,7 +307,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws GetObjetEnProfondeurException
 	 * @throws GetObjectException
 	 */
-	public Reponse getReponse(Requete request, boolean enProfondeur) throws GetObjetEnProfondeurException, GetObjectException  {
+	public synchronized Reponse getReponse(Requete request, boolean enProfondeur) throws GetObjetEnProfondeurException, GetObjectException  {
 		Reponse reponse;
 		try {
 			reponse = persistanceManager.getReponse(request, this);
@@ -366,18 +365,6 @@ public class GlobalObjectManager implements EntityManager {
 		}
 	}
 	
-	
-	protected synchronized <U> U findObjectOrCreate(final String id, final Class<U> clazz, final boolean fromExt) throws InstanciationException {
-		U obj = gestionCache.getObject(clazz, id); //on regarde en cache
-		if(obj == null){
-			obj = this.factory.newObjectWithOnlyId(clazz, id, gestionCache);
-		}
-		if (obj!=null && fromExt){
-			this.gestionCache.setNotNew(obj);
-		}
-		return obj;
-	}
-
 
 	/**
 	 * Méthode pour récupérer un objet du cache ou le creer s'in n'existe pas.
@@ -391,8 +378,11 @@ public class GlobalObjectManager implements EntityManager {
 	 */
 	@Override
 	public synchronized <U> U findObjectOrCreate(final String id, final Class<U> clazz) throws InstanciationException {
-		return findObjectOrCreate(id, clazz, true);
-		
+		U obj = gestionCache.getObject(clazz, id); //on regarde en cache
+		if(obj == null){
+			obj = this.factory.newObjectWithOnlyId(clazz, id, gestionCache);
+		}
+		return obj;
 	}
 
 
@@ -403,7 +393,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * warning 2 : dangereux (temps d'exécution + mémoire + espace de stockage) si BDD large !
 	 * @throws DumpException 
 	 */
-	public  void dumpGisementToJson(String pathFile) throws GomException{
+	public synchronized void dumpGisementToJson(String pathFile) throws GomException{
 		try {
 			loadGisementInCache();
 			dumpCacheToJson(pathFile);
@@ -420,7 +410,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * 
 	 * @throws GetAllObjectException
 	 */
-	public void loadGisementInCache() throws GetAllObjectException{
+	public synchronized void loadGisementInCache() throws GetAllObjectException{
 		this.purgeCache();
 		Set<Class<?>> classes = persistanceManager.getAllClasses();
 		this.purgeCache(); //peut etre pas necessaire
@@ -435,7 +425,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * 
 	 */
 	@SuppressWarnings("unchecked")
-	public  void dumpCacheToJson(String pathFile) throws GomException{
+	public synchronized void dumpCacheToJson(String pathFile) throws GomException{
 		File dump = new File(pathFile);
 		try (FileOutputStream file = new FileOutputStream(dump);
 				Writer writer = new BufferedWriter(new OutputStreamWriter(file,"UTF-8"))){

@@ -64,7 +64,7 @@ import utils.champ.FieldInformations;
 		U ret;
 		ret = onlyId ? newInstanceBasNiveau(clazz) : newInstanceConstructeur(clazz);
 		idHelper.setId(ret, idHelper.convertId(id));
-		cache.metEnCache(id, ret, true);
+		cache.metEnCache(id, ret, !onlyId);
 		return ret;
 	}
 
