@@ -116,7 +116,9 @@ public class GlobalObjectManager implements EntityManager {
 		return instance;
 	}
 	
-	
+	public int getNombreObjetEnCache(){
+		return gestionCache.getNombreObjetEnCache();
+	}
 
 	/**
 	 * verifie si un objet a été modifié depuis son chargement du gisement

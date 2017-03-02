@@ -31,6 +31,10 @@ public class GestionCache {
 	private final Map<Object, Stockage> dejaCharge = new IdentityHashMap<>();
 	private Map<Class<?>, Stockage> dicoClasseDejaChargee = new HashMap<>();
 	
+	synchronized int getNombreObjetEnCache(){
+		return dejaCharge.size();
+	}
+	
 	synchronized boolean setDureeCache(long nouveauTempsDeCache) {
 		if (nouveauTempsDeCache < TEMPS_DE_CACHE_MINIMUM){
 			tempsDeCache = TEMPS_DE_CACHE_MINIMUM;
