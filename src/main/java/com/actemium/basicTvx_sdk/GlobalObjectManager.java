@@ -78,6 +78,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * GetObjectException, GetObjectEnProfondeurException, SaveAllException, SaveException**/
 	private final boolean isCachePurgeAutomatiquementSiException;
 
+	private final Object lockFindOrCreate = new Object();
 
 	/** The persistance manager. */
 	final PersistanceManagerAbstrait persistanceManager;
@@ -379,12 +380,14 @@ public class GlobalObjectManager implements EntityManager {
 	 * @see giraudsa.marshall.deserialisation.EntityManager#findObjectOrCreate(java.lang.String, java.lang.Class, boolean )
 	 */
 	@Override
-	public synchronized <U> U findObjectOrCreate(final String id, final Class<U> clazz) throws InstanciationException {
-		U obj = gestionCache.getObject(clazz, id); //on regarde en cache
-		if(obj == null){
-			obj = this.factory.newObjectWithOnlyId(clazz, id, gestionCache);
+	public <U> U findObjectOrCreate(final String id, final Class<U> clazz) throws InstanciationException {
+		synchronized(lockFindOrCreate){
+			U obj = gestionCache.getObject(clazz, id); //on regarde en cache
+			if(obj == null){
+				obj = this.factory.newObjectWithOnlyId(clazz, id, gestionCache);
+			}
+			return obj;
 		}
-		return obj;
 	}
 
 
