@@ -28,13 +28,13 @@ import com.rff.wstools.Reponse;
 import com.rff.wstools.Requete;
 
 import ariane.modele.ressource.RessourceAbstraite;
-import giraudsa.marshall.deserialisation.EntityManager;
 import giraudsa.marshall.deserialisation.text.json.JsonUnmarshaller;
 import giraudsa.marshall.exception.InstanciationException;
 import giraudsa.marshall.exception.MarshallExeption;
 import giraudsa.marshall.exception.UnmarshallExeption;
 import giraudsa.marshall.serialisation.text.json.JsonMarshaller;
 import utils.ConfigurationMarshalling;
+import utils.EntityManager;
 
  class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	private static final Logger LOGGER = LoggerFactory.getLogger(PersistanceManagerRest.class);
@@ -69,8 +69,8 @@ import utils.ConfigurationMarshalling;
 
 
 	@Override
-	 <U> void save(U obj) throws MarshallExeption, RestException{
-		String dataToSend = toJson(obj);
+	 <U> void save(U obj, EntityManager entityManager) throws MarshallExeption, RestException{
+		String dataToSend = toJson(obj, entityManager);
 		String url = annuaireWS.getUrl(obj.getClass());
 		if (url == null) {
 			return;
@@ -85,7 +85,7 @@ import utils.ConfigurationMarshalling;
 			LOGGER.error("la requete " + requete.getClass() + " n'est pas dans l'annuaire");
 			throw new RestException(0, "la requete " + requete.getClass() + " n'est pas dans l'annuaire");
 		}
-		String message = toJson(requete);
+		String message = toJson(requete, entityManager);
 		Reader br = restClient.postReader(url, message, Serialisation.JSON);
 		Reponse reponse = null;
 		if (br != null) {
@@ -162,8 +162,8 @@ import utils.ConfigurationMarshalling;
 		return null;
 	}
 
-	private String toJson(Object obj) throws MarshallExeption  {
-		return JsonMarshaller.toJson(obj);
+	private String toJson(Object obj, EntityManager entityManager) throws MarshallExeption  {
+		return JsonMarshaller.toJson(obj, entityManager);
 	}
 	
 	

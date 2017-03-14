@@ -34,12 +34,12 @@ import com.rff.wstools.Reponse;
 import com.rff.wstools.Requete;
 
 import giraudsa.marshall.annotations.TypeRelation;
-import giraudsa.marshall.deserialisation.EntityManager;
 import giraudsa.marshall.deserialisation.text.json.JsonUnmarshaller;
 import giraudsa.marshall.exception.InstanciationException;
 import giraudsa.marshall.exception.MarshallExeption;
 import giraudsa.marshall.exception.UnmarshallExeption;
 import giraudsa.marshall.serialisation.text.json.JsonMarshaller;
+import utils.EntityManager;
 import utils.TypeExtension;
 import utils.champ.Champ;
 
@@ -438,7 +438,7 @@ public class GlobalObjectManager implements EntityManager {
 			objetsCacheField.setAccessible(true);
 			Map<Object, ?> objetsCache = (Map<Object, ?>)objetsCacheField.get(this.gestionCache);
 			for(Object objetToWrite : objetsCache.keySet())
-				JsonMarshaller.toJson(objetToWrite, writer);	
+				JsonMarshaller.toJson(objetToWrite, writer, this);	
 		}
 		catch( NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e){
 			LOGGER.error("Erreur lors de la reflection: ", e);
@@ -521,8 +521,8 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 
-
-	protected String getId(Object objetDontOnVeutLId) {
+	@Override
+	public String getId(Object objetDontOnVeutLId) {
 		return gestionCache.getId(objetDontOnVeutLId);
 	}
 
@@ -599,7 +599,7 @@ public class GlobalObjectManager implements EntityManager {
 			objetsASauvegarder.remove(l);
 			this.saveReferences(l, TypeRelation.COMPOSITION, objetsASauvegarder, callBacks);
 			try {
-				this.persistanceManager.save(l);
+				this.persistanceManager.save(l, this);
 				for(CallBack c :  callBacks){
 					c.objetEnSucces(l, wasNew);
 				}

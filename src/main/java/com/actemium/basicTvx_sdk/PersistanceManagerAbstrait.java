@@ -1,8 +1,5 @@
 package com.actemium.basicTvx_sdk;
 
-import giraudsa.marshall.deserialisation.EntityManager;
-import giraudsa.marshall.exception.InstanciationException;
-import giraudsa.marshall.exception.MarshallExeption;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -14,10 +11,14 @@ import com.actemium.basicTvx_sdk.restclient.RestException;
 import com.rff.wstools.Reponse;
 import com.rff.wstools.Requete;
 
+import giraudsa.marshall.exception.InstanciationException;
+import giraudsa.marshall.exception.MarshallExeption;
+import utils.EntityManager;
+
 
  abstract class PersistanceManagerAbstrait {
 
-	abstract <U> void save(U l) throws MarshallExeption, IOException, RestException;
+	abstract <U> void save(U l, EntityManager entityManager) throws MarshallExeption, IOException, RestException;
 
 	abstract <U> U getObjectById(Class<U> clazz, String id, EntityManager entityManager) throws IOException, RestException, SAXException, InstanciationException;
 
