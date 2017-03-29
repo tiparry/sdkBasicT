@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -192,6 +194,45 @@ public class GlobalObjectManager implements EntityManager {
 			LOGGER.error(IMPOSSIBLE_DE_SAUVEGARDER, e);
 			if (purgeCacheAutomatiquementSiException())
 				LOGGER.error("erreur dans save(), Cache reinitialisé");
+			throw e;
+		}
+	}
+	
+	private void getGrappe(Object objet, Set<Object> grappe) throws IllegalAccessException{
+		if(objet == null || grappe.contains(objet))
+			return;
+		Class<?> type = objet.getClass();
+		if(objet instanceof Collection<?>)
+			for(Object o : (Collection<?>) objet)
+				getGrappe(o, grappe);
+		else if (type.getPackage() != null && type.getPackage().getName().startsWith("java")){
+			return;
+		}
+		else if(!TypeExtension.isSimple(objet.getClass())  ){
+			grappe.add(objet);
+			for(Champ champ : TypeExtension.getSerializableFields(objet.getClass())){
+				getGrappe(champ.get(objet), grappe);
+			}
+		}
+	}
+	
+	public synchronized <U> void saveEnProfondeur(U objet, CallBack... callBacks) throws GomException{
+		if (objet == null)
+			return;
+		try{
+			Set<Object> objetsASauvegarder = new LinkedHashSet<>();
+			getGrappe(objet, objetsASauvegarder);
+			save(objetsASauvegarder, callBacks);
+		}catch(MarshallExeption | IllegalAccessException | IOException e){
+			LOGGER.error(IMPOSSIBLE_DE_SAUVEGARDER, e);
+			if (purgeCacheAutomatiquementSiException())
+				LOGGER.error("erreur dans saveEnProfondeur(), Cache reinitialisé");
+			throw new GomException(e);
+		}
+		catch( RestException e){
+			LOGGER.error(IMPOSSIBLE_DE_SAUVEGARDER, e);
+			if (purgeCacheAutomatiquementSiException())
+				LOGGER.error("erreur dans saveEnProfondeur(), Cache reinitialisé");
 			throw e;
 		}
 	}
@@ -555,9 +596,9 @@ public class GlobalObjectManager implements EntityManager {
 	 * @return the objet to save
 	 */
 	@SuppressWarnings("unchecked")
-	private <U> U getObjetToSave(Set<Object> objetsASauvegarder) {
-		if(objetsASauvegarder.iterator().hasNext())
-			return (U) objetsASauvegarder.iterator().next();
+	private <U> U getObjetToSave(Iterator<Object> iterator) {
+		if(iterator.hasNext())
+			return (U) iterator.next();
 		return null;
 	}
 
@@ -572,10 +613,11 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws IOException 
 	 */
 	private void save(Set<Object> objetsASauvegarder, CallBack... callBacks) throws IllegalAccessException, MarshallExeption, IOException, RestException{
-		Object obj = getObjetToSave(objetsASauvegarder);
+		Iterator<Object> iterator = objetsASauvegarder.iterator();
+		Object obj = getObjetToSave(iterator);
 		while(obj != null){
 			this.save(obj, this.hasChanged(obj), objetsASauvegarder, callBacks);
-			obj = this.getObjetToSave(objetsASauvegarder);
+			obj = getObjetToSave(iterator);
 		}
 	}
 
@@ -596,7 +638,6 @@ public class GlobalObjectManager implements EntityManager {
 			String ancienHash = gestionCache.getHash(l);
 			boolean wasCharge= gestionCache.estCharge(l);
 			gestionCache.setEstEnregistreDansGisement(l);
-			objetsASauvegarder.remove(l);
 			this.saveReferences(l, TypeRelation.COMPOSITION, objetsASauvegarder, callBacks);
 			try {
 				this.persistanceManager.save(l, this);
@@ -629,14 +670,14 @@ public class GlobalObjectManager implements EntityManager {
 	@SuppressWarnings("unchecked")
 	private <U> void saveReferences(final U l, final TypeRelation relation, Set<Object> objetsASauvegarder, CallBack... callBacks) throws IllegalAccessException, MarshallExeption, IOException, RestException {
 		Class<U> type = (Class<U>) l.getClass();
-		if(type.getPackage() != null && type.getPackage().getName().startsWith("System"))
-			return;
-		else if(l instanceof Collection<?>){
+		if(l instanceof Collection<?>){
 			for(final Object objet : (Collection<?>)l) {
 				if(objet!=null)
 					this.saveReferences(objet, relation, objetsASauvegarder, callBacks);
 			}
-		}else if(relation == TypeRelation.COMPOSITION){
+		}else if(type.getPackage() != null && type.getPackage().getName().startsWith("java")){
+			return;
+		} else if (relation == TypeRelation.COMPOSITION) {
 			final List<Champ> champs = TypeExtension.getSerializableFields(l.getClass());
 			for(final Champ champ : champs){
 				final Object toSave = champ.get(l);
