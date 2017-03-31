@@ -102,7 +102,10 @@ public class ManagerChargementEnProfondeur extends ManagerChargementSDK {
 	protected Future<Object> submit(Object o) {
 		compteurdeTaches.beforeSubmitTask();
 		Future<Object> future = getGom().createFuture(this, o);
-		mapFutureToObject.put(future, o);
+		if (future == null)
+			compteurdeTaches.oneTaskCompleted();
+		else
+			mapFutureToObject.put(future, o);
 		return future;
 	}
 
