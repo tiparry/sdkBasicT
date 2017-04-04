@@ -13,6 +13,7 @@ import org.xml.sax.SAXException;
 
 import com.actemium.basicTvx_sdk.restclient.RestException;
 
+import giraudsa.marshall.annotations.TypeRelation;
 import giraudsa.marshall.exception.InstanciationException;
 import utils.TypeExtension;
 import utils.champ.Champ;
@@ -48,7 +49,7 @@ class TacheChargementWebService implements Callable<Object> {
 		List<Champ> champs = TypeExtension.getSerializableFields(objetPere.getClass());
 		for (Champ champ : champs) {
 			Object value = champ.get(objetPere);
-			if (!champ.isSimple() && value != null) {
+			if (!champ.isSimple() && champ.getRelation().equals(TypeRelation.COMPOSITION) && value != null) {
 				if (value instanceof Collection<?>)
 					traiteCollection((Collection<?>) value);
 				else if (value instanceof Map<?, ?>)
