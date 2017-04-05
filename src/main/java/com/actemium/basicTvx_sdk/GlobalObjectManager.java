@@ -355,6 +355,7 @@ public class GlobalObjectManager implements EntityManager {
 		Reponse reponse;
 		try {
 			reponse = persistanceManager.getReponse(request, this);
+			setFilsEstCharge(reponse);
 			if(enProfondeur){
 				ManagerChargementSDK manager = new ManagerChargementEnProfondeur(this, reponse);
 				manager.execute();
@@ -559,6 +560,10 @@ public class GlobalObjectManager implements EntityManager {
 
 	protected void setEstCharge(Object objetCharge) {
 		gestionCache.setEstCharge(objetCharge);
+	}
+	
+	protected void setFilsEstCharge(Object objetPere) {
+		gestionCache.setFilsEstCharge(objetPere);
 	}
 
 

@@ -1,15 +1,17 @@
 package com.actemium.basicTvx_sdk;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 import org.slf4j.Logger;
@@ -17,8 +19,11 @@ import org.slf4j.LoggerFactory;
 
 import com.actemium.basicTvx_sdk.util.BiHashMap;
 
+import giraudsa.marshall.annotations.TypeRelation;
 import giraudsa.marshall.exception.MarshallExeption;
 import giraudsa.marshall.serialisation.text.json.JsonMarshaller;
+import utils.TypeExtension;
+import utils.champ.Champ;
 
 /**
  * le gestionnaire des objets du cache.
@@ -212,6 +217,69 @@ public class GestionCache {
 				ret.add((U) o);
 		}
 		return ret;
+	}
+	
+	synchronized void setFilsEstCharge(Object objetPere) {
+		if (objetPere == null)
+			return;
+		Queue<Object> objetsATraites = new ArrayDeque<>();
+		objetsATraites.add(objetPere);
+		while(!objetsATraites.isEmpty())
+			objetsATraites.addAll(traiteChamps(objetsATraites.poll()));
+	}
+	
+	private Collection<Object> traiteChamps(Object o) {
+		Collection<Object> objetsATraites = new ArrayList<>();
+		Queue<Champ> champs = new ArrayDeque<>();
+		champs.addAll(TypeExtension.getSerializableFields(o.getClass()));
+		while(!champs.isEmpty()) {
+			Champ champ = champs.poll();
+			Object value = getValue(champ, o);
+			if (!champ.isSimple() && champ.getRelation().equals(TypeRelation.COMPOSITION) && value != null) {
+				if (value instanceof Collection<?>)
+					objetsATraites.addAll(traiteCollection((Collection<?>) value));
+				else if (value instanceof Map<?, ?>)
+					traiteMap((Map<?, ?>) value);
+				else // objet
+					objetsATraites.add(setEstChargeAndReturn(value));
+			}
+		}
+		return objetsATraites;
+	}
+	
+	private Object getValue(Champ champ, Object o) {
+		try {
+			return champ.get(o);
+		} catch (IllegalAccessException e) {
+			LOGGER.error("Impossible de récupérer la valeur du champ " + champ.getName() + " de l'objet " + o.getClass().getName(), e);
+			return null;
+		}
+	}
+
+	private Collection<Object> traiteCollection(Collection<?> value) {
+		Collection<Object> objetsATraites = new ArrayList<>();
+		for (Object o : value)
+			if(o != null && !TypeExtension.isSimple(o.getClass()))
+				objetsATraites.add(setEstChargeAndReturn(o));
+		return objetsATraites;
+	}
+	
+	private Collection<Object> traiteMap(Map<?, ?> map) {
+		Collection<Object> objetsATraites = new ArrayList<>();
+		for(Entry<?,?> entry : map.entrySet()) {
+			Object k = entry.getKey();
+			Object v = entry.getValue();
+			if(k != null && !TypeExtension.isSimple(k.getClass()))
+				objetsATraites.add(setEstChargeAndReturn(k));
+			if(v != null && !TypeExtension.isSimple(v.getClass()))						
+				objetsATraites.add(setEstChargeAndReturn(v));
+		}
+		return objetsATraites;
+	}
+	
+	private Object setEstChargeAndReturn(Object o) {
+		setEstCharge(o);
+		return o;
 	}
 	
 
