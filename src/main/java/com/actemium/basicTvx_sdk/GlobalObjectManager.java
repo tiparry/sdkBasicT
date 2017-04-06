@@ -645,9 +645,10 @@ public class GlobalObjectManager implements EntityManager {
 			gestionCache.setEstEnregistreDansGisement(l);
 			this.saveReferences(l, TypeRelation.COMPOSITION, objetsASauvegarder, callBacks);
 			try {
-				this.persistanceManager.save(l, this);
-				for(CallBack c :  callBacks){
-					c.objetEnSucces(l, wasNew);
+				if(this.persistanceManager.save(l, this)){
+					for(CallBack c :  callBacks){
+						c.objetEnSucces(l, wasNew);
+					}
 				}
 			} catch (MarshallExeption | IOException | RestException e) {
 				LOGGER.error("impossible d'enregistrer " + gestionCache.getId(l) + " de type " + l.getClass().getName());

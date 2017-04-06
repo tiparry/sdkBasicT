@@ -69,13 +69,14 @@ import utils.EntityManager;
 
 
 	@Override
-	 <U> void save(U obj, EntityManager entityManager) throws MarshallExeption, RestException{
+	 <U> boolean save(U obj, EntityManager entityManager) throws MarshallExeption, RestException{
 		String dataToSend = toJson(obj, entityManager);
 		String url = annuaireWS.getUrl(obj.getClass());
 		if (url == null) {
-			return;
+			return false;
 		}
 		restClient.put(url, dataToSend, Serialisation.JSON);
+		return true;
 	}
 	
 	@Override

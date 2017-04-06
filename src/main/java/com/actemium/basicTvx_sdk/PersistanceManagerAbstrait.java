@@ -18,7 +18,7 @@ import utils.EntityManager;
 
  abstract class PersistanceManagerAbstrait {
 
-	abstract <U> void save(U l, EntityManager entityManager) throws MarshallExeption, IOException, RestException;
+	abstract <U> boolean save(U l, EntityManager entityManager) throws MarshallExeption, IOException, RestException;
 
 	abstract <U> U getObjectById(Class<U> clazz, String id, EntityManager entityManager) throws IOException, RestException, SAXException, InstanciationException;
 
