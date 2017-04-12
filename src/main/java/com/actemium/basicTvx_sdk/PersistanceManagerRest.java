@@ -185,6 +185,12 @@ import utils.EntityManager;
 		return null;
 	}
 	
+	<U> U setIdReseauManuellement(Class<U> clazz, String id,EntityManager entityManager) throws RestException, IOException, SAXException, InstanciationException{
+		if(gaiaUrl != null && RessourceAbstraite.class.isAssignableFrom(clazz))
+			return extractIdReseau(clazz, id, gaiaUrl, entityManager);
+		return null;
+	}
+	
 	private <U> U extractIdReseau(Class<U> clazz, String id, String urn, EntityManager entityManager) throws IOException, SAXException, InstanciationException, RestException{
 		U ret;
 		String url = urn.replace("{id}", id);

@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.http.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xml.sax.SAXException;
 
 import com.actemium.basicTvx_sdk.exception.GetAllObjectException;
 import com.actemium.basicTvx_sdk.exception.GetObjectException;
@@ -35,6 +36,7 @@ import com.actemium.basicTvx_sdk.restclient.RestException;
 import com.rff.wstools.Reponse;
 import com.rff.wstools.Requete;
 
+import ariane.modele.ressource.RessourceAbstraite;
 import giraudsa.marshall.annotations.TypeRelation;
 import giraudsa.marshall.deserialisation.text.json.JsonUnmarshaller;
 import giraudsa.marshall.exception.InstanciationException;
@@ -146,6 +148,19 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 
+	public <U> U  setIdReseau(Class<U> clazz, String id) throws GomException{
+		if(clazz==null || id==null)
+			return null;
+		if(!RessourceAbstraite.class.isAssignableFrom(RessourceAbstraite.class))
+			return null;
+		try {
+			 return ((PersistanceManagerRest)persistanceManager).setIdReseauManuellement(clazz, id, this);
+		} catch (RestException | IOException | SAXException | InstanciationException e) {
+			LOGGER.error("erreur dans l'attribution de l'id reseau");
+			throw new GomException("erreur dans l'attribution de l'id reseau", e);
+		}
+	}
+	
 	/**
 	 * Sauvegarde ou update dans le gisement les objets nouveaux ou modifies.
 	 *
