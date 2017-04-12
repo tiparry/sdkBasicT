@@ -148,14 +148,10 @@ public class GlobalObjectManager implements EntityManager {
 	}
 
 
-	public <U> U  setIdReseau(Class<U> clazz, String id) throws GomException{
-		if(clazz==null || id==null)
-			return null;
-		if(!RessourceAbstraite.class.isAssignableFrom(clazz))
-			return null;
+	public long getIdReseauFromIdGaia(String idGaia) throws GomException{
 		try {
-			 return ((PersistanceManagerRest)persistanceManager).setIdReseauManuellement(clazz, id, this);
-		} catch (RestException | IOException | SAXException | InstanciationException e) {
+			 return ((PersistanceManagerRest)persistanceManager).getIdReseauFromIdGaia(idGaia);
+		} catch (RestException | IOException | SAXException e) {
 			LOGGER.error("erreur dans l'attribution de l'id reseau");
 			throw new GomException("erreur dans l'attribution de l'id reseau", e);
 		}

@@ -185,10 +185,12 @@ import utils.EntityManager;
 		return null;
 	}
 	
-	<U> U setIdReseauManuellement(Class<U> clazz, String id,EntityManager entityManager) throws RestException, IOException, SAXException, InstanciationException{
-		if(gaiaUrl != null && RessourceAbstraite.class.isAssignableFrom(clazz))
-			return extractIdReseau(clazz, id, gaiaUrl, entityManager);
-		return null;
+	long getIdReseauFromIdGaia(String idGaia) throws RestException, SAXException, IOException {
+		String url = gaiaUrl.replace("{id}", idGaia);
+		Reader br = restClient.getReader(url, credentialsGaia);
+		if(br == null) 
+			return 0;
+		return getIdReseau(br);
 	}
 	
 	private <U> U extractIdReseau(Class<U> clazz, String id, String urn, EntityManager entityManager) throws IOException, SAXException, InstanciationException, RestException{
