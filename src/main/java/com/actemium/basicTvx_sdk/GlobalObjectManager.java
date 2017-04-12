@@ -151,7 +151,7 @@ public class GlobalObjectManager implements EntityManager {
 	public <U> U  setIdReseau(Class<U> clazz, String id) throws GomException{
 		if(clazz==null || id==null)
 			return null;
-		if(!RessourceAbstraite.class.isAssignableFrom(RessourceAbstraite.class))
+		if(!RessourceAbstraite.class.isAssignableFrom(clazz))
 			return null;
 		try {
 			 return ((PersistanceManagerRest)persistanceManager).setIdReseauManuellement(clazz, id, this);
