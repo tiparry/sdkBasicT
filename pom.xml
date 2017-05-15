@@ -127,7 +127,7 @@
 	<dependency>
   		<groupId>com.actemium</groupId>
   		<artifactId>Marshalling</artifactId>
-  		<version>1.0.9.c</version>
+  		<version>1.0.9.d</version>
 	</dependency>
 	
 	<dependency>
