@@ -37,11 +37,11 @@ public class UUIDFactoryRandomImpl implements IdHelper<UUID> {
 			if (!champId.isFakeId()){
 				Class<?> typeId = champId.getValueType();
 				if(typeId.equals(UUID.class))
-					champId.set(obj, id, null);
+				       champId.getInfo().set(obj, id); // on ne passe plus par la methode de la lib marshaller car elle fait rien dans notre cas
 				else 
 					throw new SetValueException("l'id n'est pas de type UUID.");
 			}
-		}catch(SetValueException e){
+		}catch(IllegalAccessException | SetValueException e){
 			LOGGER.error("impossible d'affecter l'id", e);
 		}
 	}
