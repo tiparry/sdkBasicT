@@ -282,7 +282,7 @@ import utils.Pair;
 	/**
 	 * en cas d'erreur lors du close, on lance une RestException avec code erreur 450
 	 */
-	void closeHTTPClient() throws RestException {
+	void closeHttpClient() throws RestException {
 		try {
 			restClient.close();
 		} catch (IOException e) {

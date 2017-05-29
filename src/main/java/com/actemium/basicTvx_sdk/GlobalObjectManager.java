@@ -120,37 +120,44 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param gomConfiguration
 	 */
 	public static synchronized  GlobalObjectManager init(GOMConfiguration gomConfiguration)throws RestException{
-		shutdown();//avant d'initialiser on kill le gom s'il en existe déjà un.
+		closeClientHttp();
 		instance = new GlobalObjectManager(gomConfiguration.getHttpLogin(), gomConfiguration.getHttpPwd(), gomConfiguration.getGisementBaseUrl(),gomConfiguration.isCachePurgeAutomatiquement(),
 				gomConfiguration.getConnectTimeout(), gomConfiguration.getSocketTimeout(), gomConfiguration.getIdHelper(), gomConfiguration.getAnnuaires());
 		return instance;
 	}
 	
-	public static synchronized void shutdown() throws RestException {
+	public static synchronized void closeClientHttp() throws RestException {
 		if(instance!=null)
-			instance.stopPoolConnexion();
+			instance.closeHttpClient();
 		isInit=false;
 	}
 	
+	/**
+	 * 
+	 * @return true si le gom a été initialisé, false sinon ou si l'appel à la méthod shutdown a été faite.
+	 */
 	public static boolean isInit(){
 		if(!isInit)
 			LOGGER.warn("le gom n'est pas initialisé");
 		return isInit;
 	}
 	
-    private void stopPoolConnexion() throws RestException{
+    private void closeHttpClient() throws RestException{
         if (persistanceManager != null) {
-            ((PersistanceManagerRest)persistanceManager).closeHTTPClient();
+            ((PersistanceManagerRest)persistanceManager).closeHttpClient();
         }
     }
     
+    /**
+     * retourne le nombre d'appels http fait par le gom depuis sa création ou le dernier reset du compteur 
+     */
     public long getNombreAppelHttp(){
     	if (persistanceManager != null) {
             return ((PersistanceManagerRest)persistanceManager).getNombreAppelHttp();
         }
         return 0L;
     }
-
+  
     public void resetCompteurAppelHttp(){
     	if (persistanceManager != null) {
             ((PersistanceManagerRest)persistanceManager).resetNombreAppelHttp();
