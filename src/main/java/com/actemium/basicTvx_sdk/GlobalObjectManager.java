@@ -52,6 +52,8 @@ import utils.champ.Champ;
  * Le manager global des objets communiquants avec basic travaux
  */
 public class GlobalObjectManager implements EntityManager {
+	
+	private static boolean isInit = false;
 
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(GlobalObjectManager.class);
@@ -98,6 +100,7 @@ public class GlobalObjectManager implements EntityManager {
 		this.persistanceManager = new PersistanceManagerRest(httpLogin,  httpPwd, gisementBaseUrl, connectTimeout, socketTimeout, annuaires);
 		this.gestionCache = new GestionCache();
 		this.isCachePurgeAutomatiquementSiException=isCachePurgeAutomatiquementSiException;
+		isInit=true;
 	}
 
 
@@ -107,6 +110,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @return single instance of GlobalObjectManager
 	 */
 	public static GlobalObjectManager getInstance(){
+		isInit();
 		return instance;
 	}
 
@@ -115,11 +119,43 @@ public class GlobalObjectManager implements EntityManager {
 	 * 
 	 * @param gomConfiguration
 	 */
-	public static GlobalObjectManager init(GOMConfiguration gomConfiguration)throws RestException{
+	public static synchronized  GlobalObjectManager init(GOMConfiguration gomConfiguration)throws RestException{
+		shutdown();//avant d'initialiser on kill le gom s'il en existe déjà un.
 		instance = new GlobalObjectManager(gomConfiguration.getHttpLogin(), gomConfiguration.getHttpPwd(), gomConfiguration.getGisementBaseUrl(),gomConfiguration.isCachePurgeAutomatiquement(),
 				gomConfiguration.getConnectTimeout(), gomConfiguration.getSocketTimeout(), gomConfiguration.getIdHelper(), gomConfiguration.getAnnuaires());
 		return instance;
 	}
+	
+	public static synchronized void shutdown() throws RestException {
+		if(instance!=null)
+			instance.stopPoolConnexion();
+		isInit=false;
+	}
+	
+	public static boolean isInit(){
+		if(!isInit)
+			LOGGER.warn("le gom n'est pas initialisé");
+		return isInit;
+	}
+	
+    private void stopPoolConnexion() throws RestException{
+        if (persistanceManager != null) {
+            ((PersistanceManagerRest)persistanceManager).closeHTTPClient();
+        }
+    }
+    
+    public long getNombreAppelHttp(){
+    	if (persistanceManager != null) {
+            return ((PersistanceManagerRest)persistanceManager).getNombreAppelHttp();
+        }
+        return 0L;
+    }
+
+    public void resetCompteurAppelHttp(){
+    	if (persistanceManager != null) {
+            ((PersistanceManagerRest)persistanceManager).resetNombreAppelHttp();
+        }
+    }
 	
 	public int getNombreObjetEnCache(){
 		return gestionCache.getNombreObjetEnCache();

@@ -278,4 +278,27 @@ import utils.Pair;
 		}
 
 	}
+
+	/**
+	 * en cas d'erreur lors du close, on lance une RestException avec code erreur 450
+	 */
+	void closeHTTPClient() throws RestException {
+		try {
+			restClient.close();
+		} catch (IOException e) {
+			LOGGER.error("erreur lors de la fermeture du client de connection http",e);
+			throw new RestException(450,e);
+		}
+	}
+
+
+
+	public long getNombreAppelHttp() {
+		return restClient.getNombreAppelHttp();
+	}
+
+
+	public void resetNombreAppelHttp() {
+		restClient.resetNombreAppelHttp();
+	}
 }
