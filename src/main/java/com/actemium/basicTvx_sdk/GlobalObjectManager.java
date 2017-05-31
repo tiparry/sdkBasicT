@@ -52,8 +52,6 @@ import utils.champ.Champ;
  * Le manager global des objets communiquants avec basic travaux
  */
 public class GlobalObjectManager implements EntityManager {
-	
-	private static boolean isInit = false;
 
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(GlobalObjectManager.class);
@@ -66,10 +64,10 @@ public class GlobalObjectManager implements EntityManager {
 
 
 	private final Set<Class<?>> nonRecuperableViaWebService = new HashSet<>();
-
-
+	
+	
 	/** l'usine de creation des objets. */
-	private final ObjectFactory<?> factory;
+	private ObjectFactory<?> factory;
 
 
 	/**la gestion du cache. */
@@ -77,17 +75,17 @@ public class GlobalObjectManager implements EntityManager {
 	
 	
 	/**permet de manipuler des id sans etre dépendant de la bibliothèque métier */
-	private final IdHelper<?> idHelper;
+	private IdHelper<?> idHelper;
 
 
 	/** attribut determinant la purge automatique du cache en cas d'exception GetAllObjectException 
 	 * GetObjectException, GetObjectEnProfondeurException, SaveAllException, SaveException**/
-	private final boolean isCachePurgeAutomatiquementSiException;
+	private boolean isCachePurgeAutomatiquementSiException;
 
 	private final Object lockFindOrCreate = new Object();
 
 	/** The persistance manager. */
-	final PersistanceManagerAbstrait persistanceManager;
+	PersistanceManagerAbstrait persistanceManager;
 
 
 	/**
@@ -100,7 +98,6 @@ public class GlobalObjectManager implements EntityManager {
 		this.persistanceManager = new PersistanceManagerRest(httpLogin,  httpPwd, gisementBaseUrl, connectTimeout, socketTimeout, annuaires);
 		this.gestionCache = new GestionCache();
 		this.isCachePurgeAutomatiquementSiException=isCachePurgeAutomatiquementSiException;
-		isInit=true;
 	}
 
 
@@ -110,7 +107,6 @@ public class GlobalObjectManager implements EntityManager {
 	 * @return single instance of GlobalObjectManager
 	 */
 	public static GlobalObjectManager getInstance(){
-		isInit();
 		return instance;
 	}
 
@@ -120,48 +116,31 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param gomConfiguration
 	 */
 	public static synchronized  GlobalObjectManager init(GOMConfiguration gomConfiguration)throws RestException{
-		closeClientHttp();
-		instance = new GlobalObjectManager(gomConfiguration.getHttpLogin(), gomConfiguration.getHttpPwd(), gomConfiguration.getGisementBaseUrl(),gomConfiguration.isCachePurgeAutomatiquement(),
+		if(instance==null)
+			instance = new GlobalObjectManager(gomConfiguration.getHttpLogin(), gomConfiguration.getHttpPwd(), gomConfiguration.getGisementBaseUrl(),gomConfiguration.isCachePurgeAutomatiquement(),
 				gomConfiguration.getConnectTimeout(), gomConfiguration.getSocketTimeout(), gomConfiguration.getIdHelper(), gomConfiguration.getAnnuaires());
+		else
+		{
+			((PersistanceManagerRest)instance.persistanceManager).closeHttpClient();
+			instance.idHelper = gomConfiguration.getIdHelper();
+			instance.factory = new ObjectFactory<>(instance.idHelper);
+			instance.persistanceManager = new PersistanceManagerRest(gomConfiguration.getHttpLogin(),  gomConfiguration.getHttpPwd(), gomConfiguration.getGisementBaseUrl(), gomConfiguration.getConnectTimeout(), gomConfiguration.getSocketTimeout(), gomConfiguration.getAnnuaires());
+			instance.gestionCache = new GestionCache();
+			instance.isCachePurgeAutomatiquementSiException=gomConfiguration.isCachePurgeAutomatiquement();
+		}
 		return instance;
 	}
 	
-	public static synchronized void closeClientHttp() throws RestException {
-		if(instance!=null)
-			instance.closeHttpClient();
-		isInit=false;
-	}
-	
-	/**
-	 * 
-	 * @return true si le gom a été initialisé, false sinon ou si l'appel à la méthod shutdown a été faite.
-	 */
-	public static boolean isInit(){
-		if(!isInit)
-			LOGGER.warn("le gom n'est pas initialisé");
-		return isInit;
-	}
-	
-    private void closeHttpClient() throws RestException{
-        if (persistanceManager != null) {
-            ((PersistanceManagerRest)persistanceManager).closeHttpClient();
-        }
-    }
     
     /**
      * retourne le nombre d'appels http fait par le gom depuis sa création ou le dernier reset du compteur 
      */
-    public long getNombreAppelHttp(){
-    	if (persistanceManager != null) {
-            return ((PersistanceManagerRest)persistanceManager).getNombreAppelHttp();
-        }
-        return 0L;
+    public long getCompteurAppelHttp(){
+            return ((PersistanceManagerRest)persistanceManager).getCompteurAppelHttp();
     }
   
     public void resetCompteurAppelHttp(){
-    	if (persistanceManager != null) {
-            ((PersistanceManagerRest)persistanceManager).resetNombreAppelHttp();
-        }
+            ((PersistanceManagerRest)persistanceManager).resetCompteurAppelHttp();
     }
 	
 	public int getNombreObjetEnCache(){

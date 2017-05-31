@@ -293,12 +293,12 @@ import utils.Pair;
 
 
 
-	public long getNombreAppelHttp() {
-		return restClient.getNombreAppelHttp();
+	public long getCompteurAppelHttp() {
+		return restClient.getCompteurAppelHttp();
 	}
 
 
-	public void resetNombreAppelHttp() {
-		restClient.resetNombreAppelHttp();
+	public void resetCompteurAppelHttp() {
+		restClient.resetCompteurAppelHttp();
 	}
 }

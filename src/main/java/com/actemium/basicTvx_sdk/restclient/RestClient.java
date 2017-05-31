@@ -68,7 +68,7 @@ public class RestClient implements Closeable{
 	private CloseableHttpClient client;
 	private UsernamePasswordCredentials credentials;
 	
-	private long nombreAppel=0L;
+	private long compteurAppel=0L;
 
 
 	/* Constructeur temporaire -- en cours de dev-- pour forcer les controles SSL sur les certificats 
@@ -267,7 +267,7 @@ public class RestClient implements Closeable{
 		int statusCode = 0;
 		try{
 			CloseableHttpResponse response = client.execute(request);
-			nombreAppel++;
+			compteurAppel++;
 			statusCode = response.getStatusLine().getStatusCode();
 			if (statusCode < 200 || statusCode >= 300) {
 				consumeAndClose(response, statusCode, null, url);
@@ -308,7 +308,7 @@ public class RestClient implements Closeable{
 		int statusCode = 0;
 		try{
 			CloseableHttpResponse response = client.execute(post);
-			nombreAppel++;
+			compteurAppel++;
 			statusCode = response.getStatusLine().getStatusCode();
 			if (statusCode < 200 || statusCode >= 300) {
 				consumeAndClose(response, statusCode, message, url);
@@ -391,7 +391,7 @@ public class RestClient implements Closeable{
 		CloseableHttpResponse response = null;
 		try{
 			response = client.execute(put);
-			nombreAppel++;
+			compteurAppel++;
 			statusCode = response.getStatusLine().getStatusCode();
 			HttpEntity res = response.getEntity();
 			String message = null;
@@ -423,7 +423,7 @@ public class RestClient implements Closeable{
 		int statusCode = 0;
 		try{
 			response = client.execute(del);
-			nombreAppel++;
+			compteurAppel++;
 			statusCode = response.getStatusLine().getStatusCode();
 
 
@@ -488,12 +488,12 @@ public class RestClient implements Closeable{
 		client.close();
 	}
 
-	public long getNombreAppelHttp() {
-		return nombreAppel;
+	public long getCompteurAppelHttp() {
+		return compteurAppel;
 	}
 
-	public void resetNombreAppelHttp() {
-		nombreAppel=0;
+	public void resetCompteurAppelHttp() {
+		compteurAppel=0;
 	}
 
 
