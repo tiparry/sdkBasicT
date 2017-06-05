@@ -64,10 +64,10 @@ public class GlobalObjectManager implements EntityManager {
 
 
 	private final Set<Class<?>> nonRecuperableViaWebService = new HashSet<>();
-
-
+	
+	
 	/** l'usine de creation des objets. */
-	private final ObjectFactory<?> factory;
+	private ObjectFactory<?> factory;
 
 
 	/**la gestion du cache. */
@@ -75,17 +75,17 @@ public class GlobalObjectManager implements EntityManager {
 	
 	
 	/**permet de manipuler des id sans etre dépendant de la bibliothèque métier */
-	private final IdHelper<?> idHelper;
+	private IdHelper<?> idHelper;
 
 
 	/** attribut determinant la purge automatique du cache en cas d'exception GetAllObjectException 
 	 * GetObjectException, GetObjectEnProfondeurException, SaveAllException, SaveException**/
-	private final boolean isCachePurgeAutomatiquementSiException;
+	private boolean isCachePurgeAutomatiquementSiException;
 
 	private final Object lockFindOrCreate = new Object();
 
 	/** The persistance manager. */
-	final PersistanceManagerAbstrait persistanceManager;
+	PersistanceManagerAbstrait persistanceManager;
 
 
 	/**
@@ -115,11 +115,33 @@ public class GlobalObjectManager implements EntityManager {
 	 * 
 	 * @param gomConfiguration
 	 */
-	public static GlobalObjectManager init(GOMConfiguration gomConfiguration)throws RestException{
-		instance = new GlobalObjectManager(gomConfiguration.getHttpLogin(), gomConfiguration.getHttpPwd(), gomConfiguration.getGisementBaseUrl(),gomConfiguration.isCachePurgeAutomatiquement(),
+	public static synchronized  GlobalObjectManager init(GOMConfiguration gomConfiguration)throws RestException{
+		if(instance==null)
+			instance = new GlobalObjectManager(gomConfiguration.getHttpLogin(), gomConfiguration.getHttpPwd(), gomConfiguration.getGisementBaseUrl(),gomConfiguration.isCachePurgeAutomatiquement(),
 				gomConfiguration.getConnectTimeout(), gomConfiguration.getSocketTimeout(), gomConfiguration.getIdHelper(), gomConfiguration.getAnnuaires());
+		else
+		{
+			((PersistanceManagerRest)instance.persistanceManager).closeHttpClient();
+			instance.idHelper = gomConfiguration.getIdHelper();
+			instance.factory = new ObjectFactory<>(instance.idHelper);
+			instance.persistanceManager = new PersistanceManagerRest(gomConfiguration.getHttpLogin(),  gomConfiguration.getHttpPwd(), gomConfiguration.getGisementBaseUrl(), gomConfiguration.getConnectTimeout(), gomConfiguration.getSocketTimeout(), gomConfiguration.getAnnuaires());
+			instance.gestionCache = new GestionCache();
+			instance.isCachePurgeAutomatiquementSiException=gomConfiguration.isCachePurgeAutomatiquement();
+		}
 		return instance;
 	}
+	
+    
+    /**
+     * retourne le nombre d'appels http fait par le gom depuis sa création ou le dernier reset du compteur 
+     */
+    public long getCompteurAppelHttp(){
+            return ((PersistanceManagerRest)persistanceManager).getCompteurAppelHttp();
+    }
+  
+    public void resetCompteurAppelHttp(){
+            ((PersistanceManagerRest)persistanceManager).resetCompteurAppelHttp();
+    }
 	
 	public int getNombreObjetEnCache(){
 		return gestionCache.getNombreObjetEnCache();

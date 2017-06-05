@@ -11,25 +11,27 @@ import org.slf4j.LoggerFactory;
 import com.actemium.basicTvx_sdk.restclient.RestClient;
 import com.actemium.basicTvx_sdk.restclient.RestException;
 
+
 import giraudsa.marshall.deserialisation.text.json.JsonUnmarshaller;
 import giraudsa.marshall.exception.UnmarshallExeption;
+import utils.BiHashMap;
 
-public class AnnuaireWS {
-	private static final Logger LOGGER = LoggerFactory.getLogger(AnnuaireWS.class);
+public class AnnuaireWSRest {
+	private static final Logger LOGGER = LoggerFactory.getLogger(AnnuaireWSRest.class);
 
-	private final Map<String, String> dicoNomClasseToUrl = new HashMap<>();
+	private final BiHashMap<String, String, String> dicoRestAndClassToUrl = new BiHashMap<>();
 	private final String gisementTravauxBaseUrl;
 
-	public AnnuaireWS(String gisementTravauxBaseUrl) {
+	public AnnuaireWSRest(String gisementTravauxBaseUrl) {
 		this.gisementTravauxBaseUrl=gisementTravauxBaseUrl;
 	}
 	
-	public Map<String, String> getDicoNomClasseToUrl() {
-		return dicoNomClasseToUrl;
+	public BiHashMap<String, String, String> getDicoRestAndClasseToUrl() {
+		return dicoRestAndClassToUrl;
 	}
 
-	public String getUrl(Class<?> clazz){
-		String urn = dicoNomClasseToUrl.get(clazz.getCanonicalName());
+	public String getUrl(String restCommand, Class<?> clazz){
+		String urn = dicoRestAndClassToUrl.get(restCommand, clazz.getCanonicalName());
 		if (urn==null)
 			return null;
 		return gisementTravauxBaseUrl+urn;
@@ -37,13 +39,13 @@ public class AnnuaireWS {
 
 	public void loadAnnuaire(RestClient restClient, String urlClasseToLoad) throws RestException {
 		try(Reader br = restClient.getReader(gisementTravauxBaseUrl+urlClasseToLoad)){
-			Map<String, String> obj = null;
+			BiHashMap<String, String, String> obj = null;
 			if (br != null) {
 				obj = fromJson(br);
 			}
 			if (obj==null)
 				return;
-			dicoNomClasseToUrl.putAll(obj);
+			dicoRestAndClassToUrl.putAll(obj);//TODO putall marche pas je pense? ajouter manuellement ou faire méthode putall
 		} catch (IOException e) {
 			throw new RestException(-1, "problème avec la connexion", e);
 		}

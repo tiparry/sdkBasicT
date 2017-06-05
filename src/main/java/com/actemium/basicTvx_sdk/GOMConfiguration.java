@@ -25,7 +25,7 @@ public class GOMConfiguration {
 		this.httpLogin=httpLogin;
 		this.httpPwd=httpPwd;
 		this.gisementBaseUrl=gisementBaseUrl;
-		annuaires.add("annuaire");
+		annuaires.add("annuaire_rest");
 	}
 	
 	public GOMConfiguration setCachePurgeAutomatiquement(boolean isCachePurgeAutomatiquement) {

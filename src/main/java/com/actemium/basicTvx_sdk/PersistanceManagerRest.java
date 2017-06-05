@@ -35,11 +35,15 @@ import giraudsa.marshall.exception.UnmarshallExeption;
 import giraudsa.marshall.serialisation.text.json.JsonMarshaller;
 import utils.ConfigurationMarshalling;
 import utils.EntityManager;
+import utils.Pair;
 
  class PersistanceManagerRest extends PersistanceManagerAbstrait {
 	private static final Logger LOGGER = LoggerFactory.getLogger(PersistanceManagerRest.class);
 	private RestClient restClient;
-	private AnnuaireWS annuaireWS;
+	private AnnuaireWSRest annuaireWS;
+	
+	private static final String GET="GET";
+	private static final String POST="POST";
 
 	
 ////////////////Hack pour CORTE qui veut les idReseau dans les objets Ariane
@@ -54,7 +58,7 @@ import utils.EntityManager;
 	PersistanceManagerRest(String httpLogin, String httpPwd, String gisementBaseUrl, int connectTimeout, int socketTimeout, List<String> annuaires) throws RestException{
 		super();
 		restClient = new RestClient(httpLogin, httpPwd, connectTimeout, socketTimeout);
-		annuaireWS = new AnnuaireWS(gisementBaseUrl);
+		annuaireWS = new AnnuaireWSRest(gisementBaseUrl);
 		for (String annuaire : annuaires) {
 			try {
 				annuaireWS.loadAnnuaire(restClient, annuaire);
@@ -71,7 +75,7 @@ import utils.EntityManager;
 	@Override
 	 <U> boolean save(U obj, EntityManager entityManager) throws MarshallExeption, RestException{
 		String dataToSend = toJson(obj, entityManager);
-		String url = annuaireWS.getUrl(obj.getClass());
+		String url = annuaireWS.getUrl(GET,obj.getClass()); //mot clé identique pour get et put dans l'annuaire
 		if (url == null) {
 			return false;
 		}
@@ -81,7 +85,7 @@ import utils.EntityManager;
 	
 	@Override
 	Reponse getReponse(Requete requete, EntityManager entityManager) throws MarshallExeption, RestException, IOException{
-		String url = annuaireWS.getUrl(requete.getClass());
+		String url = annuaireWS.getUrl(POST, requete.getClass());
 		if (url == null) {
 			LOGGER.error("la requete " + requete.getClass() + " n'est pas dans l'annuaire");
 			throw new RestException(0, "la requete " + requete.getClass() + " n'est pas dans l'annuaire");
@@ -98,7 +102,7 @@ import utils.EntityManager;
 
 	@Override
 	<U> U getObjectById(Class<U> clazz, String id, EntityManager entityManager) throws IOException, RestException, SAXException, InstanciationException{
-		String urn = annuaireWS.getUrl(clazz);
+		String urn = annuaireWS.getUrl(GET, clazz);
 		if (urn == null) {
 			return chargeIdReseau(clazz, id, entityManager);
 		}
@@ -122,7 +126,7 @@ import utils.EntityManager;
 
 	@Override
 	<U> boolean getAllObject(Class<U> clazz, EntityManager entityManager, List<U> listeARemplir) throws RestException, IOException{
-		String url = annuaireWS.getUrl(clazz);
+		String url = annuaireWS.getUrl(GET, clazz);
 		if (url == null) {
 			return false;
 		}
@@ -143,9 +147,12 @@ import utils.EntityManager;
 	@Override
 	Set<Class<?>> getAllClasses() throws GetAllObjectException {
 		Set<Class<?>> classes = new HashSet<>();
-		for (String nomClasse : annuaireWS.getDicoNomClasseToUrl().keySet()){
+		for (Pair<String, String> pair : annuaireWS.getDicoRestAndClasseToUrl().keySet()){
+			String nomClasse = null;
 			try {
-				classes.add(Class.forName(nomClasse));
+				nomClasse=pair.getKey()==GET?pair.getValue():null;
+				if(nomClasse!=null)
+					classes.add(Class.forName(nomClasse));
 			} catch (ClassNotFoundException e) {
 				LOGGER.error("Impossible de trouver la classe " + nomClasse + " dans le classloader", e);
 				throw new GetAllObjectException("Impossible de trouver la classe " + nomClasse + " dans le classloader", e);
@@ -270,5 +277,28 @@ import utils.EntityManager;
 	        }
 		}
 
+	}
+
+	/**
+	 * en cas d'erreur lors du close, on lance une RestException avec code erreur 450
+	 */
+	void closeHttpClient() throws RestException {
+		try {
+			restClient.close();
+		} catch (IOException e) {
+			LOGGER.error("erreur lors de la fermeture du client de connection http",e);
+			throw new RestException(450,e);
+		}
+	}
+
+
+
+	public long getCompteurAppelHttp() {
+		return restClient.getCompteurAppelHttp();
+	}
+
+
+	public void resetCompteurAppelHttp() {
+		restClient.resetCompteurAppelHttp();
 	}
 }
