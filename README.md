@@ -28,7 +28,7 @@ L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes
 	<dependency>
   		<groupId>com.actemium</groupId>
   		<artifactId>Marshalling</artifactId>
-  		<version>1.0.7</version>
+  		<version>1.0.9.d</version>
 	</dependency>
 	
 <!-- logs-->
@@ -58,8 +58,9 @@ On passe par une classe de configuration pour les parametres du GOM, qui utilise
 	String login = "LOGIN_BT";
 	String pwd = "PASSWORD_BT";
 	String baseUrl = "http://ip:port/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/";
-	GOMConfiguration gomConfiguration= new GOMConfiguration(System.getProperty("gisement.bt.login"), System.getProperty("gisement.bt.pwd"), System.getProperty("gisement.bt.baseurl"));
+	GOMConfiguration gomConfiguration= new GOMConfiguration(login, pwd, baseUrl);
 	GlobalObjectManager.init(gomConfiguration);
+	GlobalObjectManager gom = GlobalObjectManager.getInstance();
 	
 	
 Des instanciations avec un autre paramétrage sont possibles , par ex : 
@@ -67,11 +68,12 @@ Des instanciations avec un autre paramétrage sont possibles , par ex :
 String login = "LOGIN_BT";
 	String pwd = "PASSWORD_BT";
 	String baseUrl = "http://ip:port/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/";
-	GOMConfiguration gomConfiguration= new GOMConfiguration(System.getProperty("gisement.bt.login"), System.getProperty("gisement.bt.pwd"), System.getProperty("gisement.bt.baseurl"));
+	GOMConfiguration gomConfiguration= new GOMConfiguration(login, pwd, baseUrl);
 	gomConfiguration.setCachePurgeAutomatiquement(true);
 	gomConfiguration.setConnectTimeout(15000) //15000 ms
 	gomConfiguration.setSocketTimeout(-1) // la valeur -1 correspond a un timeout infini
 	GlobalObjectManager.init(gomConfiguration);
+	GlobalObjectManager gom = GlobalObjectManager.getInstance();
 	
 Nous conseillons  d'instancier le gom de telle manière qu'il se purge automatiquement en cas de certaines exceptions, pour se prémunir d'un état potentiellement incohérent, susceptible de générer des erreurs par la suite.
 

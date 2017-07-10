@@ -28,7 +28,7 @@ L'usage du SDK client BasicTravaux nécessite l'ajout des dépendances suivantes
 	<dependency>
   		<groupId>com.actemium</groupId>
   		<artifactId>Marshalling</artifactId>
-  		<version>1.0.7</version>
+  		<version>1.0.9.d</version>
 	</dependency>
 	
 	<!-- logs-->
@@ -60,7 +60,7 @@ On passe par une classe de configuration pour les parametres du GOM, qui utilise
 	String login = "LOGIN_BT";
 	String pwd = "PASSWORD_BT";
 	String baseUrl = "http://ip:port/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/";
-	GOMConfiguration gomConfiguration= new GOMConfiguration(System.getProperty("gisement.bt.login"), System.getProperty("gisement.bt.pwd"), System.getProperty("gisement.bt.baseurl"));
+	GOMConfiguration gomConfiguration= new GOMConfiguration(login, pwd, baseUrl);
 	GlobalObjectManager.init(gomConfiguration);
 	
 	
@@ -69,7 +69,7 @@ Des instanciations avec un autre paramétrage sont possibles  :
 String login = "LOGIN_BT";
 	String pwd = "PASSWORD_BT";
 	String baseUrl = "http://ip:port/BasicTravaux/Maintenance/GisementDeDonneeMaintenance/v1/";
-	GOMConfiguration gomConfiguration= new GOMConfiguration(System.getProperty("gisement.bt.login"), System.getProperty("gisement.bt.pwd"), System.getProperty("gisement.bt.baseurl"));
+	GOMConfiguration gomConfiguration= new GOMConfiguration(login, pwd, baseUrl);
 	gomConfiguration.setCachePurgeAutomatiquement(true);
 	gomConfiguration.setConnectTimeout(15000) //15000 ms
 	gomConfiguration.setSocketTimeout(-1) // la valeur -1 correspond a un timeout infini
@@ -94,7 +94,7 @@ La durée de cache par défaut des objets dans le GOM est de 1h. Il est possible
 	
 La valeur du cache minimum est de 1 minute. 
 	
-Afin d'éviter au GOM d'occuper toujours plus de mémoire au fil du temps si la JVM n'est jamais redémarrée, il est nécessaire d'invoquer la méthode suivante en fin de traitement pour nettoyer le cache. 
+Afin d'éviter au GOM d'occuper toujours plus de mémoire au fil du temps si la JVM n'est jamais redémarrée, il est nécessaire d'invoquer la méthode suivante en fin de traitement ou perodiquement pour nettoyer le cache. 
 	
 	/**
 	 * Purge le Cache du GOM pour éviter les fuites mémoires lorsqu'on a fini un traitement.
@@ -142,10 +142,16 @@ ATTENTION : lorsque les méthodes saveAll, save, getAllObject, getObject, getRep
     
      
      /**
-     * Sauvegarde de l'objet avec sa grappe d'objet
+     * Sauvegarde de l'objet et de sa grappe d'objets nécessaires
      * @param objet
      */
     public synchronized <U> void save(U objet) 
+
+
+	/**
+	*Sauvegarde de l'objet et de sa grappe d'objets dans leur intégralité
+	*/
+	public synchronized <U> void saveEnProfondeur(U objet)
 	   
 	    
 	   
