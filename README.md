@@ -145,10 +145,14 @@ ATTENTION : lorsque les méthodes saveAll, save, getAllObject, getObject, getRep
      * Sauvegarde de l'objet avec sa grappe d'objet
      * @param objet
      */
-    public synchronized <U> void save(U objet) 
+    public synchronized <U> void save(U objet, CallBack... callBacks) 
 	   
-	    
+	/**
+	*Sauvegarde de l'objet et de sa grappe d'objets dans leur intégralité
+	*/
+	public synchronized <U> void saveEnProfondeur(U objet, CallBack... callBacks)
 	   
+
 	/**
 	 * Retourne tous les objets présent dans le gisement pour le type U .
 	 *

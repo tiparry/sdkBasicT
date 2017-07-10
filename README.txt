@@ -145,13 +145,13 @@ ATTENTION : lorsque les méthodes saveAll, save, getAllObject, getObject, getRep
      * Sauvegarde de l'objet et de sa grappe d'objets nécessaires
      * @param objet
      */
-    public synchronized <U> void save(U objet) 
+    public synchronized <U> void save(U objet, CallBack... callBacks) 
 
 
 	/**
 	*Sauvegarde de l'objet et de sa grappe d'objets dans leur intégralité
 	*/
-	public synchronized <U> void saveEnProfondeur(U objet)
+	public synchronized <U> void saveEnProfondeur(U objet, CallBack... callBacks)
 	   
 	    
 	   
