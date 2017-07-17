@@ -85,7 +85,22 @@ On peut demander au GOM de nourrir automatiquement les id Reseau lorsqu'on fait 
 	
 	gom.nourrirIdReseau("https://int-ws-gaia.rff.ferre", "loginGaia", "mdpGaia");
 	
-	2.2 - Gestion du cache
+	2.2 - Close du Gom
+	----------------------
+	
+Le gom implémente l'interface AutoCloseable
+	
+	/**
+	 * ferme le gom et libère les ressources qu'il utilisait, notamment son pool de connexion http.
+	 * après l'appel à close, les autres méthodes du gom lanceront une IllegalStateException tant que la méthode init()  n'aura pas été appelée à nouveau
+	 * @throws RestException
+	 */
+	@Override
+	public  synchronized void close() throws RestException;
+	
+	
+	
+	2.3 - Gestion du cache
 	----------------------
 	
 La durée de cache par défaut des objets dans le GOM est de 1h. Il est possible de modifier cette valeur en appelant :
@@ -112,7 +127,7 @@ il est aussi possible de supprimer un objet du cache unitairement si par exemple
 
  
 	
-	2.2 - Autres méthodes publiques du GOM
+	2.4 - Autres méthodes publiques du GOM
 	--------------------------------------
 
 Voila la liste des autres méthodes publiques disponible dans le GOM : 
@@ -207,6 +222,18 @@ ATTENTION : lorsque les méthodes saveAll, save, getAllObject, getObject, getRep
      */
      public boolean hasChanged(final Object objet){
 	
+	
+
+     /**
+     * retourne le nombre d'appels http fait par le gom depuis sa création ou le dernier reset du compteur 
+     */
+     public long getCompteurAppelHttp();
+	
+
+     /**
+     * met à 0  le compteur d'appels http
+     */
+     public void resetCompteurAppelHttp();
 	
 
 	

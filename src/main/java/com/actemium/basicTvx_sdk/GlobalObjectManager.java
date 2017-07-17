@@ -51,7 +51,7 @@ import utils.champ.Champ;
 /**
  * Le manager global des objets communiquants avec basic travaux
  */
-public class GlobalObjectManager implements EntityManager {
+public class GlobalObjectManager implements EntityManager, AutoCloseable {
 
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(GlobalObjectManager.class);
@@ -63,7 +63,9 @@ public class GlobalObjectManager implements EntityManager {
 	private static GlobalObjectManager instance = null;
 
 
-	private final Set<Class<?>> nonRecuperableViaWebService = new HashSet<>();
+	private final Set<Class<?>> nonRecuperableViaWebService = new HashSet<>(); 
+	
+	private static boolean isInit = false;
 	
 	
 	/** l'usine de creation des objets. */
@@ -82,7 +84,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * GetObjectException, GetObjectEnProfondeurException, SaveAllException, SaveException**/
 	private boolean isCachePurgeAutomatiquementSiException;
 
-	private final Object lockFindOrCreate = new Object();
+	private  Object lockFindOrCreate = new Object(); 
 
 	/** The persistance manager. */
 	PersistanceManagerAbstrait persistanceManager;
@@ -107,7 +109,20 @@ public class GlobalObjectManager implements EntityManager {
 	 * @return single instance of GlobalObjectManager
 	 */
 	public static GlobalObjectManager getInstance(){
+		checkInit();
 		return instance;
+	}
+	
+	/**
+	 * methode à appeler au début de chaque méthode publique du gom, pour vérifier son état
+	 * @return
+	 */
+	private static   boolean checkInit() {
+		if (!isInit) {
+			LOGGER.error("le gom n'est pas initialisé");
+			throw new IllegalStateException("le gom n'est pas initialisé");
+		}
+		return true;
 	}
 
 	/**
@@ -116,34 +131,65 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param gomConfiguration
 	 */
 	public static synchronized  GlobalObjectManager init(GOMConfiguration gomConfiguration)throws RestException{
+		LOGGER.info("initialisation du GOM");
 		if(instance==null)
 			instance = new GlobalObjectManager(gomConfiguration.getHttpLogin(), gomConfiguration.getHttpPwd(), gomConfiguration.getGisementBaseUrl(),gomConfiguration.isCachePurgeAutomatiquement(),
 				gomConfiguration.getConnectTimeout(), gomConfiguration.getSocketTimeout(), gomConfiguration.getIdHelper(), gomConfiguration.getAnnuaires());
 		else
 		{
-			((PersistanceManagerRest)instance.persistanceManager).closeHttpClient();
+			if(instance.persistanceManager!=null)
+				((PersistanceManagerRest)instance.persistanceManager).closeHttpClient();
 			instance.idHelper = gomConfiguration.getIdHelper();
 			instance.factory = new ObjectFactory<>(instance.idHelper);
 			instance.persistanceManager = new PersistanceManagerRest(gomConfiguration.getHttpLogin(),  gomConfiguration.getHttpPwd(), gomConfiguration.getGisementBaseUrl(), gomConfiguration.getConnectTimeout(), gomConfiguration.getSocketTimeout(), gomConfiguration.getAnnuaires());
 			instance.gestionCache = new GestionCache();
 			instance.isCachePurgeAutomatiquementSiException=gomConfiguration.isCachePurgeAutomatiquement();
+			instance.nonRecuperableViaWebService.clear(); 
+			instance.lockFindOrCreate = new Object();
 		}
+		isInit=true;
 		return instance;
+	}
+	
+	/**
+	 * ferme le gom et libère les ressources qu'il utilisait, notamment son pool de connexion http.
+	 * après l'appel à close, les autres méthodes du gom lanceront une IllegalStateException tant que la méthode init()  n'aura pas été appelée à nouveau
+	 * @throws RestException
+	 */
+	@Override
+	public  synchronized void close() throws RestException{
+		LOGGER.info("fermeture du GOM");
+		isInit=false;
+		if(instance.persistanceManager!=null)
+			((PersistanceManagerRest)instance.persistanceManager).closeHttpClient();
+		instance.idHelper = null;
+		instance.factory = null;
+		instance.persistanceManager = null;
+		instance.gestionCache = null;
+		instance.isCachePurgeAutomatiquementSiException=false;	
+		instance.nonRecuperableViaWebService.clear();
+		instance.lockFindOrCreate =null;
 	}
 	
     
     /**
      * retourne le nombre d'appels http fait par le gom depuis sa création ou le dernier reset du compteur 
      */
-    public long getCompteurAppelHttp(){
-            return ((PersistanceManagerRest)persistanceManager).getCompteurAppelHttp();
-    }
-  
-    public void resetCompteurAppelHttp(){
-            ((PersistanceManagerRest)persistanceManager).resetCompteurAppelHttp();
-    }
-	
+	public long getCompteurAppelHttp(){
+		checkInit();
+		return ((PersistanceManagerRest)persistanceManager).getCompteurAppelHttp();
+	}
+
+	/**
+	 * met à 0  le compteur d'appels http
+	 */
+	public void resetCompteurAppelHttp(){
+		checkInit();
+		((PersistanceManagerRest)persistanceManager).resetCompteurAppelHttp();
+	}
+
 	public int getNombreObjetEnCache(){
+		checkInit();
 		return gestionCache.getNombreObjetEnCache();
 	}
 
@@ -154,6 +200,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @return the boolean
 	 */
 	public boolean hasChanged(final Object objet){
+		checkInit();
 		return gestionCache.aChangeDepuisChargement(objet);
 	}
 
@@ -166,11 +213,13 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param password le mot de passe gaia
 	 */
 	public void nourrirIdReseau(String host, String username, String password){
+		checkInit();
 		((PersistanceManagerRest)persistanceManager).setConfigAriane(host, username, password);
 	}
 
 
 	public long getIdReseauFromIdGaia(String idGaia) throws GomException{
+		checkInit();
 		try {
 			 return ((PersistanceManagerRest)persistanceManager).getIdReseauFromIdGaia(idGaia);
 		} catch (RestException | IOException | SAXException e) {
@@ -185,6 +234,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws SaveAllException 
 	 */
 	public synchronized void saveAll(CallBack... callBacks) throws GomException {
+		checkInit();
 		try{
 			Set<Object> objetsASauvegarder = gestionCache.objetsModifiesDepuisChargementOuNouveau();
 			save(objetsASauvegarder, callBacks);
@@ -209,6 +259,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws SaveException
 	 */
 	public synchronized <U> void save(U objet, CallBack... callBacks) throws GomException{
+		checkInit();
 		if (objet == null)
 			return;
 		if (!isNew(objet) && !hasChanged(objet)) 
@@ -250,6 +301,7 @@ public class GlobalObjectManager implements EntityManager {
 	}
 	
 	public synchronized <U> void saveEnProfondeur(U objet, CallBack... callBacks) throws GomException{
+		checkInit();
 		if (objet == null)
 			return;
 		try{
@@ -280,6 +332,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws InstanciationException 
 	 */
 	public synchronized <U> U createObject(final Class<U> clazz, final Date date) throws InstanciationException {
+		checkInit();
 		return factory.newObject(clazz, date, gestionCache);
 	}
 
@@ -292,6 +345,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws GetAllObjectException 
 	 */
 	public synchronized <U> List<U> getAllObject(final Class<U> clazz) throws GetAllObjectException{
+		checkInit();
 		try{
 			if(gestionCache.estDejaCharge(clazz)) {
 				return gestionCache.getClasse(clazz);
@@ -327,6 +381,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws GetObjetEnProfondeurException
 	 */
 	public synchronized <U> U getObject(final Class<U> clazz, final String id, boolean enProfondeur) throws GetObjectException, GetObjetEnProfondeurException{
+		checkInit();
 		try{
 			if(id == null || clazz == null) 
 				return null;
@@ -355,6 +410,7 @@ public class GlobalObjectManager implements EntityManager {
 	 *
 	 */
 	public synchronized void purgeCache() {
+		checkInit();
 		this.gestionCache.purge();
 	}
 
@@ -363,6 +419,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param obj
 	 */
 	public synchronized void remove(Object obj){
+		checkInit();
 		gestionCache.remove(obj);
 	}
 
@@ -372,6 +429,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @param unite
 	 */
 	public void setDureeCache(long duree, TimeUnit unite){
+		checkInit();
 		gestionCache.setDureeCache(unite.toMillis(duree));
 	}
 
@@ -385,6 +443,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws GetObjectException
 	 */
 	public synchronized Reponse getReponse(Requete request, boolean enProfondeur) throws GetObjetEnProfondeurException, GetObjectException  {
+		checkInit();
 		Reponse reponse;
 		try {
 			reponse = persistanceManager.getReponse(request, this);
@@ -415,10 +474,12 @@ public class GlobalObjectManager implements EntityManager {
 	 * @return true, if is new
 	 */
 	public <U> boolean isNew(final U obj) {
+		checkInit();
 		return gestionCache.isNew(obj);
 	}
 
 	public synchronized  void metEnCache(Object objetPere,boolean enProfondeur, boolean isNew) throws IllegalAccessException{
+		checkInit();
 		metEnCache(objetPere, enProfondeur, isNew, new HashSet<Object>());
 	}
 	
@@ -457,6 +518,7 @@ public class GlobalObjectManager implements EntityManager {
 	@Override
 	public <U> U findObjectOrCreate(final String id, final Class<U> clazz) throws InstanciationException {
 		synchronized(lockFindOrCreate){
+			checkInit();
 			U obj = gestionCache.getObject(clazz, id); //on regarde en cache
 			if(obj == null){
 				obj = this.factory.newObjectWithOnlyId(clazz, id, gestionCache);
@@ -474,6 +536,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws DumpException 
 	 */
 	public synchronized void dumpGisementToJson(String pathFile) throws GomException{
+		checkInit();
 		try {
 			loadGisementInCache();
 			dumpCacheToJson(pathFile);
@@ -491,6 +554,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws GetAllObjectException
 	 */
 	public synchronized void loadGisementInCache() throws GetAllObjectException{
+		checkInit();
 		this.purgeCache();
 		Set<Class<?>> classes = persistanceManager.getAllClasses();
 		this.purgeCache(); //peut etre pas necessaire
@@ -506,6 +570,7 @@ public class GlobalObjectManager implements EntityManager {
 	 */
 	@SuppressWarnings("unchecked")
 	public synchronized void dumpCacheToJson(String pathFile) throws GomException{
+		checkInit();
 		File dump = new File(pathFile);
 		try (FileOutputStream file = new FileOutputStream(dump);
 				Writer writer = new BufferedWriter(new OutputStreamWriter(file,"UTF-8"))){
@@ -544,6 +609,7 @@ public class GlobalObjectManager implements EntityManager {
 	 * @throws NoSuchFieldException 
 	 */
 	public void saveToGisementFromJsonFile(String pathFile) throws GomException{
+		checkInit();
 		try {
 			loadJsonFile(pathFile);
 			this.saveAll();
@@ -561,6 +627,7 @@ public class GlobalObjectManager implements EntityManager {
 	 */
 	@SuppressWarnings("unchecked")
 	public void loadJsonFile(String pathFile) throws GomException{
+		checkInit();
 		File dump = new File(pathFile);
 		try(FileInputStream file = new FileInputStream(dump);
 				Reader reader = new BufferedReader(new InputStreamReader(file,"UTF-8"))){
@@ -602,6 +669,7 @@ public class GlobalObjectManager implements EntityManager {
 
 	@Override
 	public String getId(Object objetDontOnVeutLId) {
+		checkInit();
 		return gestionCache.getId(objetDontOnVeutLId);
 	}
 
