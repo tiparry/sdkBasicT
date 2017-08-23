@@ -64,6 +64,7 @@ import utils.Pair;
 				annuaireWS.loadAnnuaire(restClient, annuaire);
 			} catch (RestException e) {
 				LOGGER.error("Erreur lors de la récupération de l'annuaire : " + annuaire, e);
+				closeHttpClient();
 				throw e;
 			}
 		}

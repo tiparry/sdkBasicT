@@ -66,6 +66,7 @@ public class RestClient implements Closeable{
 	private static boolean bouchon = false;
 
 	private CloseableHttpClient client;
+	private PoolingHttpClientConnectionManager cm;
 	private UsernamePasswordCredentials credentials;
 	
 	private long compteurAppel=0L;
@@ -113,7 +114,7 @@ public class RestClient implements Closeable{
 		// Create an HttpClient with the ThreadSafeClientConnManager.
 		// This connection manager must be used if more than one thread will
 		// be using the HttpClient.
-		PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+		cm = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
 		cm.setMaxTotal(HTTP_CLIENT_MAX_POOL_SIZE);
 		cm.setDefaultMaxPerRoute(HTTP_CLIENT_MAX_POOL_PER_ROOT);
 		//cm.setDefaultSocketConfig( SocketConfig.custom().setSoKeepAlive( true ).setSoReuseAddress( true ).setSoTimeout( 3000 ).build() 
@@ -189,7 +190,7 @@ public class RestClient implements Closeable{
 		// Create an HttpClient with the ThreadSafeClientConnManager.
 		// This connection manager must be used if more than one thread will
 		// be using the HttpClient.
-		PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+		cm = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
 		cm.setMaxTotal(HTTP_CLIENT_MAX_POOL_SIZE);
 		cm.setDefaultMaxPerRoute(HTTP_CLIENT_MAX_POOL_PER_ROOT);
 		//cm.setDefaultSocketConfig( SocketConfig.custom().setSoKeepAlive( true ).setSoReuseAddress( true ).setSoTimeout( 3000 ).build() 
@@ -485,7 +486,14 @@ public class RestClient implements Closeable{
 
 	@Override
 	public void close() throws IOException {
-		client.close();
+		if(client!=null)
+			client.close();
+		if(cm!=null){
+			cm.close();
+			cm.shutdown();
+		}
+		client=null;
+		cm=null;
 	}
 
 	public long getCompteurAppelHttp() {

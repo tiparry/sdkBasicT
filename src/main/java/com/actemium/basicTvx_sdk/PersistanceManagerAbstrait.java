@@ -27,5 +27,7 @@ import utils.EntityManager;
 	abstract Reponse getReponse(Requete requete, EntityManager entityManager) throws MarshallExeption, RestException, IOException;
 	
 	abstract Set<Class<?>> getAllClasses() throws GetAllObjectException;
+	
+	abstract void closeHttpClient() throws RestException;
 
 }

@@ -36,7 +36,6 @@ import com.actemium.basicTvx_sdk.restclient.RestException;
 import com.rff.wstools.Reponse;
 import com.rff.wstools.Requete;
 
-import ariane.modele.ressource.RessourceAbstraite;
 import giraudsa.marshall.annotations.TypeRelation;
 import giraudsa.marshall.deserialisation.text.json.JsonUnmarshaller;
 import giraudsa.marshall.exception.InstanciationException;
@@ -124,6 +123,14 @@ public class GlobalObjectManager implements EntityManager, AutoCloseable {
 		}
 		return true;
 	}
+	
+	/**
+	 * dit si le gom est initialisé
+	 * @return isInit
+	 */
+	public  boolean isInit(){
+		return isInit;
+	}
 
 	/**
 	 * methode d'initialisation du GlobalObjectManager. 
@@ -138,7 +145,7 @@ public class GlobalObjectManager implements EntityManager, AutoCloseable {
 		else
 		{
 			if(instance.persistanceManager!=null)
-				((PersistanceManagerRest)instance.persistanceManager).closeHttpClient();
+				instance.persistanceManager.closeHttpClient();
 			instance.idHelper = gomConfiguration.getIdHelper();
 			instance.factory = new ObjectFactory<>(instance.idHelper);
 			instance.persistanceManager = new PersistanceManagerRest(gomConfiguration.getHttpLogin(),  gomConfiguration.getHttpPwd(), gomConfiguration.getGisementBaseUrl(), gomConfiguration.getConnectTimeout(), gomConfiguration.getSocketTimeout(), gomConfiguration.getAnnuaires());
@@ -161,7 +168,7 @@ public class GlobalObjectManager implements EntityManager, AutoCloseable {
 		LOGGER.info("fermeture du GOM");
 		isInit=false;
 		if(instance.persistanceManager!=null)
-			((PersistanceManagerRest)instance.persistanceManager).closeHttpClient();
+			instance.persistanceManager.closeHttpClient();
 		instance.idHelper = null;
 		instance.factory = null;
 		instance.persistanceManager = null;
@@ -795,5 +802,10 @@ public class GlobalObjectManager implements EntityManager, AutoCloseable {
 			this.save(l, this.hasChanged(l), objetsASauvegarder, callBacks);
 		}
 	}
+	
+
+	
+	
+		
 
 }
